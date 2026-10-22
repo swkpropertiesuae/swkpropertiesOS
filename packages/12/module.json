@@ -1,0 +1,10 @@
+{
+  "id": "12",
+  "name": "Workflow Automation",
+  "description": "Triggers, conditions, actions, delays, escalations and retries. Overdue invoice reminders, lead assignment, stock and licence-expiry alerts. Execution history for every run. Automation is auditable and never bypasses business controls.",
+  "category": "automation",
+  "key_features": ["triggers", "conditions", "actions", "delays", "escalations", "retries", "overdue-reminders", "lead-assignment", "stock-alerts", "licence-alerts", "execution-history", "auditability", "business-controls"],
+  "brand": "SWKPROPOS",
+  "os": "DigitalBurj Business OS",
+  "elvora_design": true
+}

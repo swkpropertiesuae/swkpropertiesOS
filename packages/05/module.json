@@ -1,0 +1,10 @@
+{
+  "id": "05",
+  "name": "Tax & e-Invoicing",
+  "description": "Tax codes, inclusive/exclusive pricing, tax invoices and credit notes. Period reporting, reconciliation, exports and audit evidence. Structured e-invoices via accredited providers, with status tracking and retries. Country requirements delivered as separate localization modules.",
+  "category": "finance",
+  "key_features": ["tax-codes", "pricing", "tax-invoices", "credit-notes", "period-reporting", "reconciliation", "exports", "audit-evidence", "e-invoicing", "localization-modules", "status-tracking", "retries"],
+  "brand": "SWKPROPOS",
+  "os": "DigitalBurj Business OS",
+  "elvora_design": true
+}

@@ -1,0 +1,10 @@
+{
+  "id": "09",
+  "name": "Project Management",
+  "description": "Projects, milestones, tasks, dependencies and timesheets. Billable time, budgets, expenses and resource allocation. Client portal, progress and profitability.",
+  "category": "projects",
+  "key_features": ["projects", "milestones", "tasks", "dependencies", "timesheets", "billable-time", "budgets", "expenses", "resource-allocation", "client-portal", "progress", "profitability"],
+  "brand": "SWKPROPOS",
+  "os": "DigitalBurj Business OS",
+  "elvora_design": true
+}

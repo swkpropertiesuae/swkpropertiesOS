@@ -1,0 +1,10 @@
+{
+  "id": "04",
+  "name": "Accounting & Finance",
+  "description": "Chart of accounts, GL, journals, AR/AP, statements and bank reconciliation. Advances, partial payments, credit notes and multicurrency. Cost centres, budgets, fixed assets, accruals and consolidation. P&L, balance sheet, cash flow, trial balance and ageing.",
+  "category": "finance",
+  "key_features": ["chart-of-accounts", "general-ledger", "journals", "ar-ap", "bank-reconciliation", "advances", "partial-payments", "credit-notes", "multicurrency", "cost-centres", "budgets", "fixed-assets", "accruals", "consolidation", "p-and-l", "balance-sheet", "cash-flow", "trial-balance", "ageing"],
+  "brand": "SWKPROPOS",
+  "os": "DigitalBurj Business OS",
+  "elvora_design": true
+}

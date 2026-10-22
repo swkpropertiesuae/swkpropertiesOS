@@ -1,0 +1,10 @@
+{
+  "id": "10",
+  "name": "Document Management",
+  "description": "Customer, supplier and employee documents with versions and permissions. Expiry, approvals, secure links, retention and audit trail. AI extraction and summarisation.",
+  "category": "documentation",
+  "key_features": ["documents", "versions", "permissions", "expiry-tracking", "approvals", "secure-links", "retention", "audit-trail", "ai-extraction", "ai-summarisation"],
+  "brand": "SWKPROPOS",
+  "os": "DigitalBurj Business OS",
+  "elvora_design": true
+}

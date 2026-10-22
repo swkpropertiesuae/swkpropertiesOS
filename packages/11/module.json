@@ -1,0 +1,10 @@
+{
+  "id": "11",
+  "name": "Universal Approval Engine",
+  "description": "Chains for purchases, discounts, refunds, payments, leave and credit limits. Conditional thresholds, routing, escalation and delegation. Full approval history. One approval engine serves every module.",
+  "category": "approvals",
+  "key_features": ["approval-chains", "purchases", "discounts", "refunds", "payments", "leave-limits", "credit-limits", "conditional-thresholds", "routing", "escalation", "delegation", "approval-history", "cross-module-engine"],
+  "brand": "SWKPROPOS",
+  "os": "DigitalBurj Business OS",
+  "elvora_design": true
+}
