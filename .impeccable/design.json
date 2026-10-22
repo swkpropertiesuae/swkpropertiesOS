@@ -1,0 +1,649 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-08T03:46:42.401568+00:00",
+  "title": "Design System: Elvora Logistics OS",
+  "extensions": {
+    "colorMeta": {
+      "emerald": {
+        "role": "primary",
+        "displayName": "Emerald",
+        "canonical": "#007b52",
+        "tonalRamp": [
+          "oklch(15% 0.120 160.0)",
+          "oklch(25% 0.120 160.0)",
+          "oklch(35% 0.120 160.0)",
+          "oklch(45% 0.120 160.0)",
+          "oklch(55% 0.120 160.0)",
+          "oklch(65% 0.120 160.0)",
+          "oklch(80% 0.120 160.0)",
+          "oklch(95% 0.120 160.0)"
+        ]
+      },
+      "fold": {
+        "role": "primary",
+        "displayName": "Fold",
+        "canonical": "#025e3d",
+        "tonalRamp": [
+          "oklch(15% 0.115 158.5)",
+          "oklch(25% 0.115 158.5)",
+          "oklch(35% 0.115 158.5)",
+          "oklch(45% 0.115 158.5)",
+          "oklch(55% 0.115 158.5)",
+          "oklch(65% 0.115 158.5)",
+          "oklch(80% 0.115 158.5)",
+          "oklch(95% 0.115 158.5)"
+        ]
+      },
+      "signal": {
+        "role": "tertiary",
+        "displayName": "Signal",
+        "canonical": "#c32135",
+        "tonalRamp": [
+          "oklch(15% 0.085 352.6)",
+          "oklch(25% 0.085 352.6)",
+          "oklch(35% 0.085 352.6)",
+          "oklch(45% 0.085 352.6)",
+          "oklch(55% 0.085 352.6)",
+          "oklch(65% 0.085 352.6)",
+          "oklch(80% 0.085 352.6)",
+          "oklch(95% 0.085 352.6)"
+        ]
+      },
+      "graphite": {
+        "role": "neutral",
+        "displayName": "Graphite",
+        "canonical": "#161d1a",
+        "tonalRamp": [
+          "oklch(15% 0.016 154.3)",
+          "oklch(25% 0.016 154.3)",
+          "oklch(35% 0.016 154.3)",
+          "oklch(45% 0.016 154.3)",
+          "oklch(55% 0.016 154.3)",
+          "oklch(65% 0.016 154.3)",
+          "oklch(80% 0.016 154.3)",
+          "oklch(95% 0.016 154.3)"
+        ]
+      },
+      "bg": {
+        "role": "neutral",
+        "displayName": "Bg",
+        "canonical": "#f5f6f4",
+        "tonalRamp": [
+          "oklch(15% 0.012 90.0)",
+          "oklch(25% 0.012 90.0)",
+          "oklch(35% 0.012 90.0)",
+          "oklch(45% 0.012 90.0)",
+          "oklch(55% 0.012 90.0)",
+          "oklch(65% 0.012 90.0)",
+          "oklch(80% 0.012 90.0)",
+          "oklch(95% 0.012 90.0)"
+        ]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "Card",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "oklch(15% 0.000 0.0)",
+          "oklch(25% 0.000 0.0)",
+          "oklch(35% 0.000 0.0)",
+          "oklch(45% 0.000 0.0)",
+          "oklch(55% 0.000 0.0)",
+          "oklch(65% 0.000 0.0)",
+          "oklch(80% 0.000 0.0)",
+          "oklch(95% 0.000 0.0)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#161d1a",
+        "tonalRamp": [
+          "oklch(15% 0.016 154.3)",
+          "oklch(25% 0.016 154.3)",
+          "oklch(35% 0.016 154.3)",
+          "oklch(45% 0.016 154.3)",
+          "oklch(55% 0.016 154.3)",
+          "oklch(65% 0.016 154.3)",
+          "oklch(80% 0.016 154.3)",
+          "oklch(95% 0.016 154.3)"
+        ]
+      },
+      "body": {
+        "role": "neutral",
+        "displayName": "Body",
+        "canonical": "#3f4f47",
+        "tonalRamp": [
+          "oklch(15% 0.014 150.0)",
+          "oklch(25% 0.014 150.0)",
+          "oklch(35% 0.014 150.0)",
+          "oklch(45% 0.014 150.0)",
+          "oklch(55% 0.014 150.0)",
+          "oklch(65% 0.014 150.0)",
+          "oklch(80% 0.014 150.0)",
+          "oklch(95% 0.014 150.0)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted",
+        "canonical": "#53655b",
+        "tonalRamp": [
+          "oklch(15% 0.012 146.7)",
+          "oklch(25% 0.012 146.7)",
+          "oklch(35% 0.012 146.7)",
+          "oklch(45% 0.012 146.7)",
+          "oklch(55% 0.012 146.7)",
+          "oklch(65% 0.012 146.7)",
+          "oklch(80% 0.012 146.7)",
+          "oklch(95% 0.012 146.7)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Line",
+        "canonical": "#e6ebe7",
+        "tonalRamp": [
+          "oklch(15% 0.013 132.0)",
+          "oklch(25% 0.013 132.0)",
+          "oklch(35% 0.013 132.0)",
+          "oklch(45% 0.013 132.0)",
+          "oklch(55% 0.013 132.0)",
+          "oklch(65% 0.013 132.0)",
+          "oklch(80% 0.013 132.0)",
+          "oklch(95% 0.013 132.0)"
+        ]
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Line Strong",
+        "canonical": "#cbd6ce",
+        "tonalRamp": [
+          "oklch(15% 0.014 136.4)",
+          "oklch(25% 0.014 136.4)",
+          "oklch(35% 0.014 136.4)",
+          "oklch(45% 0.014 136.4)",
+          "oklch(55% 0.014 136.4)",
+          "oklch(65% 0.014 136.4)",
+          "oklch(80% 0.014 136.4)",
+          "oklch(95% 0.014 136.4)"
+        ]
+      },
+      "soft": {
+        "role": "neutral",
+        "displayName": "Soft",
+        "canonical": "#edf2ee",
+        "tonalRamp": [
+          "oklch(15% 0.019 132.0)",
+          "oklch(25% 0.019 132.0)",
+          "oklch(35% 0.019 132.0)",
+          "oklch(45% 0.019 132.0)",
+          "oklch(55% 0.019 132.0)",
+          "oklch(65% 0.019 132.0)",
+          "oklch(80% 0.019 132.0)",
+          "oklch(95% 0.019 132.0)"
+        ]
+      },
+      "hover": {
+        "role": "neutral",
+        "displayName": "Hover",
+        "canonical": "#f0f5f1",
+        "tonalRamp": [
+          "oklch(15% 0.024 132.0)",
+          "oklch(25% 0.024 132.0)",
+          "oklch(35% 0.024 132.0)",
+          "oklch(45% 0.024 132.0)",
+          "oklch(55% 0.024 132.0)",
+          "oklch(65% 0.024 132.0)",
+          "oklch(80% 0.024 132.0)",
+          "oklch(95% 0.024 132.0)"
+        ]
+      },
+      "focus": {
+        "role": "tertiary",
+        "displayName": "Focus",
+        "canonical": "#1fa06b",
+        "tonalRamp": [
+          "oklch(15% 0.081 155.3)",
+          "oklch(25% 0.081 155.3)",
+          "oklch(35% 0.081 155.3)",
+          "oklch(45% 0.081 155.3)",
+          "oklch(55% 0.081 155.3)",
+          "oklch(65% 0.081 155.3)",
+          "oklch(80% 0.081 155.3)",
+          "oklch(95% 0.081 155.3)"
+        ]
+      },
+      "green-tint": {
+        "role": "tertiary",
+        "displayName": "Green Tint",
+        "canonical": "#edf5f0",
+        "tonalRamp": [
+          "oklch(15% 0.034 142.5)",
+          "oklch(25% 0.034 142.5)",
+          "oklch(35% 0.034 142.5)",
+          "oklch(45% 0.034 142.5)",
+          "oklch(55% 0.034 142.5)",
+          "oklch(65% 0.034 142.5)",
+          "oklch(80% 0.034 142.5)",
+          "oklch(95% 0.034 142.5)"
+        ]
+      },
+      "champagne-tint": {
+        "role": "tertiary",
+        "displayName": "Champagne Tint",
+        "canonical": "#f5f1e9",
+        "tonalRamp": [
+          "oklch(15% 0.045 40.0)",
+          "oklch(25% 0.045 40.0)",
+          "oklch(35% 0.045 40.0)",
+          "oklch(45% 0.045 40.0)",
+          "oklch(55% 0.045 40.0)",
+          "oklch(65% 0.045 40.0)",
+          "oklch(80% 0.045 40.0)",
+          "oklch(95% 0.045 40.0)"
+        ]
+      },
+      "reverse-muted": {
+        "role": "tertiary",
+        "displayName": "Reverse Muted",
+        "canonical": "#d3eee0",
+        "tonalRamp": [
+          "oklch(15% 0.053 148.9)",
+          "oklch(25% 0.053 148.9)",
+          "oklch(35% 0.053 148.9)",
+          "oklch(45% 0.053 148.9)",
+          "oklch(55% 0.053 148.9)",
+          "oklch(65% 0.053 148.9)",
+          "oklch(80% 0.053 148.9)",
+          "oklch(95% 0.053 148.9)"
+        ]
+      },
+      "ocean": {
+        "role": "secondary",
+        "displayName": "Ocean",
+        "canonical": "#15526b",
+        "tonalRamp": [
+          "oklch(15% 0.081 197.4)",
+          "oklch(25% 0.081 197.4)",
+          "oklch(35% 0.081 197.4)",
+          "oklch(45% 0.081 197.4)",
+          "oklch(55% 0.081 197.4)",
+          "oklch(65% 0.081 197.4)",
+          "oklch(80% 0.081 197.4)",
+          "oklch(95% 0.081 197.4)"
+        ]
+      },
+      "teal": {
+        "role": "secondary",
+        "displayName": "Teal",
+        "canonical": "#0f7f8c",
+        "tonalRamp": [
+          "oklch(15% 0.097 186.2)",
+          "oklch(25% 0.097 186.2)",
+          "oklch(35% 0.097 186.2)",
+          "oklch(45% 0.097 186.2)",
+          "oklch(55% 0.097 186.2)",
+          "oklch(65% 0.097 186.2)",
+          "oklch(80% 0.097 186.2)",
+          "oklch(95% 0.097 186.2)"
+        ]
+      },
+      "aviation": {
+        "role": "secondary",
+        "displayName": "Aviation",
+        "canonical": "#344d77",
+        "tonalRamp": [
+          "oklch(15% 0.047 217.6)",
+          "oklch(25% 0.047 217.6)",
+          "oklch(35% 0.047 217.6)",
+          "oklch(45% 0.047 217.6)",
+          "oklch(55% 0.047 217.6)",
+          "oklch(65% 0.047 217.6)",
+          "oklch(80% 0.047 217.6)",
+          "oklch(95% 0.047 217.6)"
+        ]
+      },
+      "copper": {
+        "role": "secondary",
+        "displayName": "Copper",
+        "canonical": "#8c4329",
+        "tonalRamp": [
+          "oklch(15% 0.066 15.8)",
+          "oklch(25% 0.066 15.8)",
+          "oklch(35% 0.066 15.8)",
+          "oklch(45% 0.066 15.8)",
+          "oklch(55% 0.066 15.8)",
+          "oklch(65% 0.066 15.8)",
+          "oklch(80% 0.066 15.8)",
+          "oklch(95% 0.066 15.8)"
+        ]
+      },
+      "violet": {
+        "role": "secondary",
+        "displayName": "Violet",
+        "canonical": "#493d72",
+        "tonalRamp": [
+          "oklch(15% 0.036 253.6)",
+          "oklch(25% 0.036 253.6)",
+          "oklch(35% 0.036 253.6)",
+          "oklch(45% 0.036 253.6)",
+          "oklch(55% 0.036 253.6)",
+          "oklch(65% 0.036 253.6)",
+          "oklch(80% 0.036 253.6)",
+          "oklch(95% 0.036 253.6)"
+        ]
+      },
+      "champagne": {
+        "role": "secondary",
+        "displayName": "Champagne",
+        "canonical": "#e5d1a4",
+        "tonalRamp": [
+          "oklch(15% 0.067 41.5)",
+          "oklch(25% 0.067 41.5)",
+          "oklch(35% 0.067 41.5)",
+          "oklch(45% 0.067 41.5)",
+          "oklch(55% 0.067 41.5)",
+          "oklch(65% 0.067 41.5)",
+          "oklch(80% 0.067 41.5)",
+          "oklch(95% 0.067 41.5)"
+        ]
+      },
+      "mint": {
+        "role": "tertiary",
+        "displayName": "Mint",
+        "canonical": "#dcf1e6",
+        "tonalRamp": [
+          "oklch(15% 0.051 148.6)",
+          "oklch(25% 0.051 148.6)",
+          "oklch(35% 0.051 148.6)",
+          "oklch(45% 0.051 148.6)",
+          "oklch(55% 0.051 148.6)",
+          "oklch(65% 0.051 148.6)",
+          "oklch(80% 0.051 148.6)",
+          "oklch(95% 0.051 148.6)"
+        ]
+      },
+      "sky": {
+        "role": "tertiary",
+        "displayName": "Sky",
+        "canonical": "#dfecfa",
+        "tonalRamp": [
+          "oklch(15% 0.088 211.1)",
+          "oklch(25% 0.088 211.1)",
+          "oklch(35% 0.088 211.1)",
+          "oklch(45% 0.088 211.1)",
+          "oklch(55% 0.088 211.1)",
+          "oklch(65% 0.088 211.1)",
+          "oklch(80% 0.088 211.1)",
+          "oklch(95% 0.088 211.1)"
+        ]
+      },
+      "sand": {
+        "role": "tertiary",
+        "displayName": "Sand",
+        "canonical": "#f7ead8",
+        "tonalRamp": [
+          "oklch(15% 0.079 34.8)",
+          "oklch(25% 0.079 34.8)",
+          "oklch(35% 0.079 34.8)",
+          "oklch(45% 0.079 34.8)",
+          "oklch(55% 0.079 34.8)",
+          "oklch(65% 0.079 34.8)",
+          "oklch(80% 0.079 34.8)",
+          "oklch(95% 0.079 34.8)"
+        ]
+      },
+      "lilac": {
+        "role": "tertiary",
+        "displayName": "Lilac",
+        "canonical": "#e8e3f7",
+        "tonalRamp": [
+          "oklch(15% 0.067 255.0)",
+          "oklch(25% 0.067 255.0)",
+          "oklch(35% 0.067 255.0)",
+          "oklch(45% 0.067 255.0)",
+          "oklch(55% 0.067 255.0)",
+          "oklch(65% 0.067 255.0)",
+          "oklch(80% 0.067 255.0)",
+          "oklch(95% 0.067 255.0)"
+        ]
+      },
+      "blush": {
+        "role": "tertiary",
+        "displayName": "Blush",
+        "canonical": "#fbe1e4",
+        "tonalRamp": [
+          "oklch(15% 0.092 353.1)",
+          "oklch(25% 0.092 353.1)",
+          "oklch(35% 0.092 353.1)",
+          "oklch(45% 0.092 353.1)",
+          "oklch(55% 0.092 353.1)",
+          "oklch(65% 0.092 353.1)",
+          "oklch(80% 0.092 353.1)",
+          "oklch(95% 0.092 353.1)"
+        ]
+      },
+      "gold": {
+        "role": "tertiary",
+        "displayName": "Gold",
+        "canonical": "#f6e9c3",
+        "tonalRamp": [
+          "oklch(15% 0.089 44.7)",
+          "oklch(25% 0.089 44.7)",
+          "oklch(35% 0.089 44.7)",
+          "oklch(45% 0.089 44.7)",
+          "oklch(55% 0.089 44.7)",
+          "oklch(65% 0.089 44.7)",
+          "oklch(80% 0.089 44.7)",
+          "oklch(95% 0.089 44.7)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Welcome Display",
+        "purpose": "Dashboard and workspace greetings."
+      },
+      "headline": {
+        "displayName": "Page Heading",
+        "purpose": "Shared operational page titles."
+      },
+      "title": {
+        "displayName": "Workspace Title",
+        "purpose": "Workspace card names."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Operational reading and fields."
+      },
+      "label": {
+        "displayName": "Field Label",
+        "purpose": "Visible field labels."
+      },
+      "navigation": {
+        "displayName": "Navigation",
+        "purpose": "Primary pill navigation."
+      }
+    },
+    "shadows": [
+      {
+        "name": "surface-raised",
+        "value": "0 8px 24px -14px #173d2926",
+        "purpose": "Resting cards and panels."
+      },
+      {
+        "name": "surface-floating",
+        "value": "0 20px 48px -24px #173d2940",
+        "purpose": "Workspace hover, sign-in and expanded demo details."
+      },
+      {
+        "name": "cash-card",
+        "value": "0 15px 28px -19px #025e3d80",
+        "purpose": "Deep green cash card."
+      },
+      {
+        "name": "focus-field",
+        "value": "0 0 0 3px #007b5226",
+        "purpose": "Focused input ring."
+      }
+    ],
+    "motion": [
+      {
+        "name": "motion-fast",
+        "value": "180ms",
+        "purpose": "Shared interaction state transitions."
+      },
+      {
+        "name": "ease",
+        "value": "cubic-bezier(.16,1,.3,1)",
+        "purpose": "Shared surface and control easing."
+      },
+      {
+        "name": "reduced-motion",
+        "value": ".01ms",
+        "purpose": "Reduced-motion animation and transition duration."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "narrow-phone-max",
+        "value": "359px"
+      },
+      {
+        "name": "phone-max",
+        "value": "639px"
+      },
+      {
+        "name": "compact-controls-max",
+        "value": "767px"
+      },
+      {
+        "name": "tablet-max",
+        "value": "900px"
+      },
+      {
+        "name": "feature-grid-max",
+        "value": "1023px"
+      },
+      {
+        "name": "overview-compact-max",
+        "value": "1199px"
+      },
+      {
+        "name": "wide-min",
+        "value": "1600px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Shared capsule action control.",
+      "html": "<button class=\"ds-button-primary\">Save changes</button>",
+      "css": ".ds-button-primary{font-family:var(--font-sans, Instrument Sans, system-ui, sans-serif);display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 17px;border-radius:999px;border:1px solid transparent;background:var(--emerald, #007b52);color:#fff;font-size:12.5px;font-weight:600;cursor:pointer;transition:background 180ms,box-shadow 180ms,transform 180ms var(--ease,cubic-bezier(.16,1,.3,1));} .ds-button-primary:hover{filter:brightness(.93);box-shadow:0 5px 12px -6px #102d2060;} .ds-button-primary:active{transform:translateY(1px);} .ds-button-primary:focus-visible{outline:3px solid var(--focus, #1fa06b);outline-offset:2px;}"
+    },
+    {
+      "name": "Dark Button",
+      "kind": "button",
+      "refersTo": "button-dark",
+      "description": "Shared capsule action control.",
+      "html": "<button class=\"ds-button-dark\">Save changes</button>",
+      "css": ".ds-button-dark{font-family:var(--font-sans, Instrument Sans, system-ui, sans-serif);display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 17px;border-radius:999px;border:1px solid transparent;background:var(--graphite, #161d1a);color:#fff;font-size:12.5px;font-weight:600;cursor:pointer;transition:background 180ms,box-shadow 180ms,transform 180ms var(--ease,cubic-bezier(.16,1,.3,1));} .ds-button-dark:hover{filter:brightness(.93);box-shadow:0 5px 12px -6px #102d2060;} .ds-button-dark:active{transform:translateY(1px);} .ds-button-dark:focus-visible{outline:3px solid var(--focus, #1fa06b);outline-offset:2px;}"
+    },
+    {
+      "name": "Outlined Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Shared capsule action control.",
+      "html": "<button class=\"ds-button-outline\">Save changes</button>",
+      "css": ".ds-button-outline{font-family:var(--font-sans, Instrument Sans, system-ui, sans-serif);display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 17px;border-radius:999px;border:1px solid var(--line-strong, #cbd6ce);background:var(--card, #fff);color:var(--ink, #161d1a);font-size:12.5px;font-weight:600;cursor:pointer;transition:background 180ms,box-shadow 180ms,transform 180ms var(--ease,cubic-bezier(.16,1,.3,1));} .ds-button-outline:hover{background:var(--hover, #f0f5f1);} .ds-button-outline:active{transform:translateY(1px);} .ds-button-outline:focus-visible{outline:3px solid var(--focus, #1fa06b);outline-offset:2px;}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Shared capsule action control.",
+      "html": "<button class=\"ds-button-ghost\">Save changes</button>",
+      "css": ".ds-button-ghost{font-family:var(--font-sans, Instrument Sans, system-ui, sans-serif);display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 17px;border-radius:999px;border:1px solid transparent;background:transparent;color:var(--body, #3f4f47);font-size:12.5px;font-weight:600;cursor:pointer;transition:background 180ms,box-shadow 180ms,transform 180ms var(--ease,cubic-bezier(.16,1,.3,1));} .ds-button-ghost:hover{background:var(--hover, #f0f5f1);} .ds-button-ghost:active{transform:translateY(1px);} .ds-button-ghost:focus-visible{outline:3px solid var(--focus, #1fa06b);outline-offset:2px;}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Labelled field with emerald focus.",
+      "html": "<label class=\"ds-field-label\" for=\"ds-field\">Reference</label><input id=\"ds-field\" class=\"ds-field\" placeholder=\"Shipment reference\" />",
+      "css": ".ds-field-label{font-family:var(--font-sans, Instrument Sans, system-ui, sans-serif);display:block;font-size:12px;font-weight:600;color:var(--muted, #53655b);margin-bottom:7px}.ds-field{font-family:var(--font-sans, Instrument Sans, system-ui, sans-serif);width:100%;min-height:42px;padding:9px 10px;border:1px solid var(--line-strong, #cbd6ce);border-radius:12px;background:var(--card, #fff);color:var(--ink, #161d1a);font-size:14px;transition:border-color 150ms,box-shadow 150ms}.ds-field:hover{border-color:#9fb3a7}.ds-field:focus-visible{outline:none;border-color:var(--emerald, #007b52);box-shadow:0 0 0 3px #007b5226}"
+    },
+    {
+      "name": "Primary Navigation",
+      "kind": "nav",
+      "refersTo": "navigation-pill",
+      "description": "Pill navigation with graphite current state.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Primary navigation\"><a class=\"ds-pill ds-active\" href=\"#\" aria-current=\"page\">Dashboard</a><a class=\"ds-pill\" href=\"#\">Workspaces</a></nav>",
+      "css": ".ds-nav{display:flex;gap:7px}.ds-pill{font-family:var(--font-sans, Instrument Sans, system-ui, sans-serif);display:inline-flex;padding:11px 16px;border-radius:999px;background:var(--card, #fff);color:var(--body, #3f4f47);font-size:12px;font-weight:650;text-decoration:none}.ds-pill:hover{background:var(--soft, #edf2ee)}.ds-pill.ds-active{background:var(--graphite, #161d1a);color:#fff}.ds-pill:focus-visible{outline:3px solid var(--focus, #1fa06b);outline-offset:2px;}"
+    },
+    {
+      "name": "Status Chip",
+      "kind": "chip",
+      "refersTo": "status-chip",
+      "description": "Compact semantic status capsule.",
+      "html": "<span class=\"ds-chip\">Open</span>",
+      "css": ".ds-chip{font-family:var(--font-sans, Instrument Sans, system-ui, sans-serif);display:inline-flex;padding:3px 9px;border-radius:999px;background:#dcf1e6;color:#025e3d;font-size:10.5px;font-weight:600}"
+    },
+    {
+      "name": "Workspace Card",
+      "kind": "card",
+      "refersTo": "workspace-card",
+      "description": "Lifted workspace entry with full feature destination.",
+      "html": "<a class=\"ds-workspace\" href=\"#\"><svg width=\"26\" height=\"26\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/></svg><h2>Operations</h2><p>Jobs<br>Shipments<br>Documents</p><span>Open workspace \u2197</span></a>",
+      "css": ".ds-workspace{font-family:var(--font-sans, Instrument Sans, system-ui, sans-serif);display:block;min-height:230px;padding:24px;border-radius:16px;background:#edf5f0;color:var(--ink, #161d1a);text-decoration:none;box-shadow:var(--surface-raised, 0 8px 24px -14px #173d2926);transition:background 180ms,box-shadow 180ms}.ds-workspace svg{color:var(--emerald, #007b52);margin-bottom:26px}.ds-workspace h2{font-family:var(--font-display, Plus Jakarta Sans, sans-serif);font-size:23px;font-weight:650;margin:0 0 12px}.ds-workspace p{font-size:12px;line-height:1.45;color:var(--muted, #53655b)}.ds-workspace span{font-size:12px;font-weight:700;color:var(--emerald, #007b52)}.ds-workspace:hover{background:var(--hover, #f0f5f1);box-shadow:var(--surface-floating, 0 20px 48px -24px #173d2940)}.ds-workspace:focus-visible{outline:3px solid var(--focus, #1fa06b);outline-offset:2px;}"
+    },
+    {
+      "name": "Cash Account Card",
+      "kind": "custom",
+      "refersTo": "cash-card",
+      "description": "Deep green account surface; preview uses a value placeholder.",
+      "html": "<section class=\"ds-cash\"><header>Cash &amp; bank</header><strong>\u2014 <small>AED</small></strong><footer>Elvora Shipping L.L.C. <a href=\"#\">Accounts \u2197</a></footer></section>",
+      "css": ".ds-cash{font-family:var(--font-sans, Instrument Sans, system-ui, sans-serif);padding:24px;border-radius:16px;background:#025e3d;color:#fff;box-shadow:0 15px 28px -19px #025e3d80}.ds-cash header,.ds-cash footer{font-size:12px;color:#d3eee0}.ds-cash strong{display:block;font-family:var(--font-display, Plus Jakarta Sans, sans-serif);font-size:38px;letter-spacing:-.03em;margin:22px 0 24px}.ds-cash small{font-size:14px;font-weight:400}.ds-cash footer{display:flex;justify-content:space-between;gap:12px;font-size:11px}.ds-cash a{color:#fff;text-decoration:none}.ds-cash a:hover{text-decoration:underline}.ds-cash a:focus-visible{outline:3px solid var(--focus, #1fa06b);outline-offset:2px;}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Calm Operating Wallet",
+    "overview": "Elvora translates the supplied wallet reference into a calm operating workspace for the owner and operations team. Quiet pill navigation, a narrow icon rail and floating rounded surfaces create clear access to financial context and shipment work. Emerald, graphite and warm neutral tints retain the existing Elvora brand.\n\nThe same surface language spans workspaces, dashboards, records, forms, dialogs and sign-in. Repository logos, icon marks and self-hosted fonts remain the only brand assets. The reference supplies composition; real API data and permission-filtered operational workflows supply the content.",
+    "keyCharacteristics": [
+      "Capsule navigation and circular shortcuts.",
+      "Light neutral canvas, white floating surfaces and restrained brand tints.",
+      "Readable operating tables and wrapping labels.",
+      "Equal access to owner figures and operational actions."
+    ],
+    "rules": [
+      {
+        "name": "The Brand Continuity Rule",
+        "body": "Translate the reference composition using Elvora's existing identity assets and palette.",
+        "section": "colors"
+      },
+      {
+        "name": "The Surface Lift Rule",
+        "body": "Reserve diffuse lift for surfaces and state; keep the surrounding application canvas quiet.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use the supplied Elvora assets, fonts and brand palette.",
+      "Do derive navigation and displayed figures from permitted metadata and actual API data.",
+      "Do keep table scrolling inside its surface and labels able to wrap.",
+      "Do keep keyboard focus visible and respect reduced motion.",
+      "Do preserve existing routes, task actions, demo isolation and print document content."
+    ],
+    "donts": [
+      "Don't substitute reference branding, stock imagery or invented financial figures.",
+      "Don't hide permitted tasks behind workspace previews.",
+      "Don't turn the narrow shortcut rail into a competing full module sidebar.",
+      "Don't clip operational fields or hide modal actions inside scrolling field content.",
+      "Don't redraw the verified favicon mark; retain exports from public/brand/icon-primary.png."
+    ]
+  }
+}

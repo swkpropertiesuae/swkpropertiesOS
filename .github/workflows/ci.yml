@@ -1,0 +1,45 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Install OCR acceptance dependencies
+        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr tesseract-ocr-eng poppler-utils
+      - run: npm run typecheck
+      - run: npm run build
+      - name: Check dashboard, email and calendar in desktop and mobile browsers
+        run: |
+          node tests/dashboard-ui.mjs
+          node tests/calendar-ui.mjs
+          node tests/documents-ui.mjs
+        env: { UI_CAPTURE_PRINT: 'true', CALENDAR_CAPTURE_DIR: '.impeccable/review/calendar' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: dashboard-review, path: .impeccable/review/*.png }
+      - name: Run every suite against a fresh, empty database
+        run: bash tests/run-all.sh
+  verify-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: postgres }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Install OCR acceptance dependencies
+        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr tesseract-ocr-eng poppler-utils
+      - run: npm run build
+      - name: Run every suite against PostgreSQL (a fresh database per suite)
+        run: bash tests/run-all.sh
+        env: { TEST_PG_ADMIN_URL: 'postgresql://postgres:postgres@localhost:5432/postgres' }

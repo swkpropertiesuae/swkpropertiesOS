@@ -1,0 +1,35 @@
+[
+  {
+    "code": "CO-FACTS",
+    "title": "Company particulars",
+    "html": "<h1>Company particulars</h1><table class=\"fields\"><tbody><tr><th>Company</th><td>{{company.name}}</td></tr><tr><th>Office</th><td>{{company.address}}</td></tr><tr><th>Telephone</th><td>{{company.phone}}</td></tr><tr><th>Email</th><td>{{company.email}}</td></tr><tr><th>Website</th><td>{{company.website}}</td></tr></tbody></table><p>Prepared on {{today}}.</p>",
+    "category": "Corporate",
+    "kind": "Form",
+    "orientation": "Portrait",
+    "letterhead": true,
+    "description": "English company document using shared contact details.",
+    "tags": "company particulars letterhead english"
+  },
+  {
+    "code": "CO-LETTER",
+    "title": "Company letterhead",
+    "html": "<h1>[Subject]</h1><p>{{today}}</p><p>[Recipient name and address]</p><p>Dear [Recipient],</p><p>[Write the letter here.]</p><p>For {{company.name}}</p><p>[Authorised signatory name and title]</p>",
+    "category": "Corporate",
+    "kind": "Form",
+    "orientation": "Portrait",
+    "letterhead": true,
+    "description": "English company document using shared contact details.",
+    "tags": "company particulars letterhead english"
+  },
+  {
+    "code": "CO-REG",
+    "title": "Company document checklist",
+    "html": "<h1>Company document checklist</h1><p>{{company.name}}<br>{{company.address}}</p><table class=\"fields\"><tbody><tr><th>Document</th><th>Review status</th></tr><tr><td>Business authorisations</td><td>[Reviewed / pending]</td></tr><tr><td>Tax registration evidence</td><td>[Reviewed / pending]</td></tr><tr><td>Office tenancy evidence</td><td>[Reviewed / pending]</td></tr></tbody></table><p>Keep supporting references in the internal compliance register.</p>",
+    "category": "Corporate",
+    "kind": "Form",
+    "orientation": "Portrait",
+    "letterhead": true,
+    "description": "English company document using shared contact details.",
+    "tags": "company particulars letterhead english"
+  }
+]

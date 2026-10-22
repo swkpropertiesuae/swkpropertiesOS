@@ -1,0 +1,55 @@
+# DigitalBurj OS
+
+Full-stack freight-forwarding and logistics ERP with AI employees, WhatsApp automation and integrations for SWK Properties L.L.C.: CRM, quotations, master jobs and
+shipments, tracking, customs, transport, warehouse, double-entry accounting, HR, support, projects, documents,
+reports/KPI and administration — in one app.
+
+**Stack:** Node 22, Fastify 5, SQLite (better-sqlite3, WAL) or PostgreSQL/Supabase ([docs/POSTGRES.md](docs/POSTGRES.md)), zod · React 19, Vite, Tailwind 4, react-query, recharts.
+
+## Run
+
+```bash
+npm install
+npm run dev            # API :8080 + web :5173
+# production
+npm run build && npm start
+# or
+docker compose up -d --build
+```
+
+Copy `.env.example` to `.env` to configure. The fictional **demo workspace** is off by default (`DEMO_ENABLED=true` turns it on, see [docs/HANDOVER.md](docs/HANDOVER.md)); production data is never mixed with it. A new production workspace starts with DigitalBurj's own starter data (clients, vendors, invoices ES101–ES102A); see [docs/STUDIO.md](docs/STUDIO.md) for the Document Studio and the starter-data / reset options.
+
+## Sign-in
+
+| Account | E-mail | Password | Workspace |
+|---|---|---|---|
+| Administrator (all access) | admin@swkpropertiesuae.com | DigitalBurj@Admin2026 | Production – empty, no sample data |
+| Manager (all access) | manager@swkpropertiesuae.com | DigitalBurj@Manager2026 | Production – empty, no sample data |
+| Demo presenter (all access) | demo@swkpropertiesuae.com | Demo@DigitalBurj2026 | Isolated demo – fictional data, resets nightly |
+
+The two production accounts must set their own password at first sign-in (the app blocks everything else until they do), or set
+`ADMIN_PASSWORD` / `MANAGER_PASSWORD` before the first start. The demo account only exists when `DEMO_ENABLED=true`.
+
+## Design
+
+One entity definition (`src/shared/entities/*`) drives the SQLite schema, REST API, validation, list/form UI, CSV
+import/export, permissions and audit — 97 entities across 18 permission modules (view / create / edit / delete /
+approve / export). Money is stored as integer cents; invoices post to a double-entry ledger; job numbers follow
+`{branch}{MM}{YY}{seq}` (e.g. DXB10260136).
+
+Security: scrypt password hashing, httpOnly session cookie, CSRF header, login lockout, optional TOTP, API keys,
+helmet, rate limiting, audit log. Backups via Administration → Backup.
+
+UAE compliance (licence register, licensed-activity guard, VAT/TRN rules, sanctions, calendar): [docs/UAE-COMPLIANCE.md](docs/UAE-COMPLIANCE.md).
+
+See [docs/FEATURES.md](docs/FEATURES.md) (features & limits), [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md) (Resend, R2, Supabase, WhatsApp, e-invoicing…), [docs/AI-TEAM.md](docs/AI-TEAM.md) (Jarvis & AI employees) and [docs/DEPLOY.md](docs/DEPLOY.md).
+
+## Company calendar
+
+Open Calendar to view dated records across the OS in Month, Week, Day or Agenda view. Filter by activity color, assignment and urgency; schedule meetings, calls, visits and tasks; review your unread alerts. See [docs/CALENDAR.md](docs/CALENDAR.md).
+
+## Tests
+
+`npm run typecheck`; with the server running on an empty database: `npm test` (135 API checks). Integrations/AI/finance extensions: start the API with `WA_GRAPH_URL=http://localhost:9099/graph RESEND_API_URL=http://localhost:9099/resend R2_ENDPOINT=http://localhost:9099/r2` on a fresh data dir, then `npm run test:integrations` (83 checks against built-in mock providers). `npm run test:compliance` (65 checks, UAE rules) and `npm run test:handover` (48 checks) proves production is empty, the demo is rich and the two are isolated; run it on a fresh data directory.
+
+The complete acceptance runner is `npm run test:all`. It includes enterprise approvals, durable automation (including a process restart), work queues/handovers, RFQ/knowledge/competency, BL/AWB custody, container deposits and real PDF/image OCR. Install `tesseract-ocr tesseract-ocr-eng poppler-utils` for OCR checks; these executables are included in the production Docker image and CI. Each suite uses an isolated empty data directory and, when `TEST_PG_ADMIN_URL` is supplied, its own fresh PostgreSQL database.
