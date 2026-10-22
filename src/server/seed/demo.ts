@@ -17,7 +17,7 @@ const STAFF: [string, string, string, string][] = [
   ['Mohammed Al Qubaisi', 'mohammed@demo.swkproperties.ae', 'HR', 'HR'],
 ]
 
-export function seedDemoScenarios(): void {
+export async function seedDemoScenarios(): Promise<void> {
   const sys: Ctx = { user: null, system: true }
   
   // Ensure roles exist (fallback in case seedReference hasn't run or failed)
@@ -52,6 +52,24 @@ export function seedDemoScenarios(): void {
   const dept = (c: string) => idBy('departments', 'code', c)
   const dxb = idBy('branches', 'code', 'DXB')
   const presenter = createRecord(getDef('users'), { name: 'Demo Presenter', email: config.demo.email, password: config.demo.password, role_id: role('Admin'), branch_id: dxb, department_id: dept('MGT'), designation: 'General Manager (demo)', active: true, must_change_password: false }, sys)
+  // Create or update admin user from ADMIN_EMAIL/ADMIN_PASSWORD env vars
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@swkpropertiesuae.com'
+  const adminPassword = process.env.ADMIN_PASSWORD || 'SWK@Admin2026'
+  console.log('Checking for admin user:', adminEmail)
+  const existingAdmin = idBy('users', 'email', adminEmail)
+  console.log('Existing admin:', existingAdmin)
+  if (!existingAdmin) {
+    const created = createRecord(getDef('users'), { name: 'Admin User', email: adminEmail, password: adminPassword, role_id: role('Admin'), branch_id: dxb, department_id: dept('MGT'), designation: 'Administrator', active: true, must_change_password: false }, sys)
+    console.log('Created admin user:', created.id, created.email)
+  } else {
+    // Update password for existing admin
+    const { hashPassword } = await import('../auth')
+    q.run(`UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?`, hashPassword(adminPassword), existingAdmin)
+    console.log('Updated admin user password:', existingAdmin)
+  }
+  // Delete any other user with the same email (e.g., from seedReference)
+  q.run(`DELETE FROM users WHERE email = ? AND id != ?`, adminEmail, existingAdmin)
+  console.log('Cleaned up duplicate admin users')
   for (const [name, email, r, d] of STAFF) createRecord(getDef('users'), { name, email, password: 'Demo-' + Math.random().toString(36).slice(2) + 'Aa1!x', role_id: role(r), branch_id: dxb, department_id: dept(d), active: true, must_change_password: false }, sys)
 
   const admin = loadUser(presenter.id)

@@ -115,7 +115,7 @@ export async function loadDigitalBurjStarterData(ctx: Ctx = SYSTEM_CTX): Promise
   if (starterLoaded()) return { loaded: false, reason: 'already loaded' }
   
   const { seedDemoScenarios } = await import("../seed/demo")
-  seedDemoScenarios()
+  await seedDemoScenarios()
   
   q.run(`INSERT INTO settings(key, value, updated_at) VALUES (?, '1', ?) ON CONFLICT(key) DO NOTHING`, MARK, nowIso())
   return { loaded: true }
