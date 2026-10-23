@@ -31,18 +31,18 @@ export function Login() {
     <div className="login-world min-h-full grid lg:grid-cols-[1.05fr_1fr]">
       <div className="login-brand hidden lg:flex flex-col justify-between text-white p-12 relative overflow-hidden" style={{ background: 'linear-gradient(160deg,#025e3d 0%,#007b52 55%,#0b6e4c 100%)' }}>
         <img src="/brand/route-pattern.svg" alt="" className="absolute inset-0 w-full h-full object-cover opacity-20" aria-hidden />
-        <img src="/brand/logo-reverse.png?v=digitalburj-website-4" alt="DigitalBurj Shipping LLC" className="relative w-[280px]" />
+        <img src="/brand/logo-reverse.svg" alt="SWK Properties" className="relative w-[280px]" />
         <div className="relative max-w-[460px]">
           <h1 className="text-white text-[38px] font-extrabold leading-[1.1] m-0">One system for every shipment.</h1>
-          <p className="text-[17px] text-white/85 mt-4 leading-relaxed">Track and manage sales, shipments, jobs, accounts and warehouse — from enquiry to cash — in a single workspace built for DigitalBurj Shipping.</p>
+          <p className="text-[17px] text-white/85 mt-4 leading-relaxed">Track and manage sales, shipments, jobs, accounts and warehouse — from enquiry to cash — in a single workspace built for SWK Properties.</p>
           <div className="grid grid-cols-2 gap-3 mt-8 text-sm">{['Master jobs & sub-jobs', 'Quotations & rate cards', 'Customs SB / BOE', 'Ledger, VAT & banking', 'Warehouse & transport', 'Track & trace + EDI'].map(x => <div key={x} className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#7ce3b6]" />{x}</div>)}</div>
         </div>
         <div className="relative text-xs text-white/70">© {new Date().getFullYear()} SWK Properties L.L.C. · Dubai, United Arab Emirates</div>
       </div>
       <div className="flex items-center justify-center p-6 bg-pearl">
         <form onSubmit={submit} className="w-full max-w-[400px]" aria-labelledby="signin-h">
-          <img src="/brand/logo-primary.png?v=digitalburj-website-4" alt="DigitalBurj Shipping LLC" className="w-[210px] mb-8 lg:hidden" />
-          <img src="/brand/icon-primary.png?v=digitalburj-website-4" alt="" aria-hidden width="46" className="mb-5 hidden lg:block" />
+          <img src="/brand/logo-primary.svg" alt="SWK Properties" className="w-[210px] mb-8 lg:hidden" />
+          <img src="/brand/icon-primary.svg" alt="" aria-hidden width="46" className="mb-5 hidden lg:block" />
           <h2 id="signin-h" className="text-[28px] font-extrabold m-0">Sign in</h2>
           <p className="text-muted mt-1 mb-6">Welcome back to DigitalBurj OS.</p>
           {err && <div role="alert" className="mb-4 px-3 py-2.5 rounded-lg bg-blush border border-[#f2bcc3] text-[#8f1325] text-sm font-medium">{err}</div>}

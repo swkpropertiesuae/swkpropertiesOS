@@ -20,12 +20,12 @@ import { cls, fmtDate, todayIso } from '../lib/format'
 interface Tpl { id: number; code: string; title: string; category: string; kind: string; description?: string; tags?: string; orientation: string; letterhead: boolean; is_system: boolean; active: boolean }
 
 const ACCOUNTING_HINT: Record<string, { text: string; to: string; label: string }> = {
-  'ELV-023': { text: 'This is a blank form. To issue an invoice that is numbered, posted to accounts and tracked for payment, create it in Accounts.', to: '/finance/new-invoice', label: 'Create an invoice' },
-  'ELV-024': { text: 'To issue a service invoice that posts to accounts and tracks payment, create it in Accounts. You do not need a job.', to: '/finance/new-invoice', label: 'Create an invoice' },
-  'ELV-025': { text: 'To issue a numbered pro forma invoice, create it in Accounts and choose Proforma Invoice.', to: '/finance/new-invoice', label: 'Create an invoice' },
-  'ELV-027': { text: 'Credit notes that reduce what a customer owes are issued from the original invoice in Accounts.', to: '/e/invoices', label: 'Open invoices' },
-  'ELV-029': { text: 'Receipts that settle invoices are recorded in Accounts so the balance updates.', to: '/e/receipts', label: 'Open receipts' },
-  'ELV-031': { text: 'The customer statement in Accounts is calculated from the ledger. Open the customer and choose Statement of account.', to: '/e/parties', label: 'Open customers' },
+  'SWK-023': { text: 'This is a blank form. To issue an invoice that is numbered, posted to accounts and tracked for payment, create it in Accounts.', to: '/finance/new-invoice', label: 'Create an invoice' },
+  'SWK-024': { text: 'To issue a service invoice that posts to accounts and tracks payment, create it in Accounts. You do not need a job.', to: '/finance/new-invoice', label: 'Create an invoice' },
+  'SWK-025': { text: 'To issue a numbered pro forma invoice, create it in Accounts and choose Proforma Invoice.', to: '/finance/new-invoice', label: 'Create an invoice' },
+  'SWK-027': { text: 'Credit notes that reduce what a customer owes are issued from the original invoice in Accounts.', to: '/e/invoices', label: 'Open invoices' },
+  'SWK-029': { text: 'Receipts that settle invoices are recorded in Accounts so the balance updates.', to: '/e/receipts', label: 'Open receipts' },
+  'SWK-031': { text: 'The customer statement in Accounts is calculated from the ledger. Open the customer and choose Statement of account.', to: '/e/parties', label: 'Open customers' },
 }
 
 export function StudioHome() {

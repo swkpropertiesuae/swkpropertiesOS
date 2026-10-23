@@ -18,7 +18,7 @@ export function Letterhead() {
   const s = S()
   return (
     <div className="flex items-start justify-between gap-6 pb-3 mb-4" style={{ borderBottom: '3px solid #007b52' }}>
-      <img src="/brand/logo-primary.png" alt={s.company_name} style={{ height: 52 }} />
+      <img src="/brand/logo-primary.svg" alt={s.company_name} style={{ height: 52 }} />
       <div style={{ textAlign: 'right', fontSize: 10.5, lineHeight: 1.45 }}><b style={{ fontSize: 12.5 }}>{s.company_name}</b><div style={{ whiteSpace: 'pre-line' }}>{s.company_address}</div>{s.company_phone && <div>Tel {s.company_phone}</div>}<div>{s.company_email}{s.company_info_email && s.company_info_email !== s.company_email ? ` · ${s.company_info_email}` : ''}{s.company_website ? ` · ${String(s.company_website).replace(/^https?:\/\//, '')}` : ''}</div></div>
     </div>
   )
@@ -167,7 +167,7 @@ function JobDoc({ j, doc }: { j: any; doc: string | null }) {
   }
   if (doc === 'labels') {
     const n = Math.max(1, Math.min(200, Number(j.packages) || 1))
-    return <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>{Array.from({ length: n }, (_, i) => <div key={i} className="box" style={{ pageBreakInside: 'avoid', padding: 12 }}><div className="flex justify-between items-start"><img src="/brand/logo-primary.png" alt="" style={{ height: 30 }} />{qr && <img src={qr} alt="" style={{ height: 62 }} />}</div><div style={{ fontSize: 20, fontWeight: 800, marginTop: 6 }}>{j.job_no}</div><div style={{ fontSize: 11 }}>To: <b>{L.consignee_id ?? L.client_id}</b></div><div style={{ fontSize: 11 }}>Dest: <b>{L.pod_id}</b></div><div style={{ fontSize: 11 }}>HBL: {j.hbl_no ?? '—'} · {j.gross_weight ? `${j.gross_weight} kg` : ''}</div><div style={{ fontSize: 24, fontWeight: 800, textAlign: 'right' }}>{i + 1} / {n}</div></div>)}</div>
+    return <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>{Array.from({ length: n }, (_, i) => <div key={i} className="box" style={{ pageBreakInside: 'avoid', padding: 12 }}><div className="flex justify-between items-start"><img src="/brand/logo-primary.svg" alt="" style={{ height: 30 }} />{qr && <img src={qr} alt="" style={{ height: 62 }} />}</div><div style={{ fontSize: 20, fontWeight: 800, marginTop: 6 }}>{j.job_no}</div><div style={{ fontSize: 11 }}>To: <b>{L.consignee_id ?? L.client_id}</b></div><div style={{ fontSize: 11 }}>Dest: <b>{L.pod_id}</b></div><div style={{ fontSize: 11 }}>HBL: {j.hbl_no ?? '—'} · {j.gross_weight ? `${j.gross_weight} kg` : ''}</div><div style={{ fontSize: 24, fontWeight: 800, textAlign: 'right' }}>{i + 1} / {n}</div></div>)}</div>
   }
   // internal job report
   return (<>
