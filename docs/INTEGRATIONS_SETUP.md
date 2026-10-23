@@ -1,4 +1,4 @@
-# DigitalBurj integrations: admin setup
+# SWK OS integrations: admin setup
 
 Checked against the application on 8 October 2026. Use your real workspace and an administrator account. Enter credentials in the OS; do not put them in GitHub issues, screenshots or chat. A configured badge is not proof of successful delivery, restore, bank reconciliation or regulatory acceptance.
 
@@ -103,7 +103,7 @@ Credentials: provider API key, a currently available model ID, and optional base
 
 ### Free starting setup: OpenRouter
 
-1. Sign up at https://openrouter.ai and open https://openrouter.ai/keys. Create an API key named `DigitalBurj OS`.
+1. Sign up at https://openrouter.ai and open https://openrouter.ai/keys. Create an API key named `SWK OS`.
 2. In the real OS workspace, open Admin → Integrations → AI employees and enable AI.
 3. Select OpenRouter. Replace the API key with your OpenRouter key, set Base URL to `https://openrouter.ai/api/v1`, and Model to `openrouter/free`. Explicitly replace any old model/address left from another provider.
 4. Leave fallback provider empty for the first test. Click Save & test connection; expect a successful connection and a short reply.

@@ -4,7 +4,7 @@ The target should be a single coherent system capable of replacing the relevant 
 
 I would treat the following as the **canonical master scope**.
 
-> **Important:** “100% complete” here means a complete product/architecture baseline. Production go-live still requires Vega/DigitalBurj-specific SOPs, chart of accounts, authority matrices, contracts, customs credentials, bank/payment setup and regulatory validation.
+> **Important:** “100% complete” here means a complete product/architecture baseline. Production go-live still requires Vega/SWK OS-specific SOPs, chart of accounts, authority matrices, contracts, customs credentials, bank/payment setup and regulatory validation.
 
 # ELVORA / VEGA-CLASS LOGISTICS OS
 
@@ -2710,7 +2710,7 @@ BI
 
 # What I would now call the product
 
-## **DIGITALBURJ CONTROL**
+## **SWK OS CONTROL**
 ### Enterprise Freight & Logistics Operating System
 
 Six primary areas exposed to users:

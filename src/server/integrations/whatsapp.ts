@@ -159,7 +159,7 @@ async function onMessage(m: any, profile: string) {
       leadId = lead.id
       notifyRole('crm', `New WhatsApp lead: ${profile || from}`, text.slice(0, 160), `/e/leads/${lead.id}`, 'info')
       q.run(`UPDATE whatsapp_messages SET lead_id = ? WHERE id = ?`, leadId, rowId)
-      if (Date.now() - (lastAck.get(from) ?? 0) > 6 * 3600_000) { lastAck.set(from, Date.now()); await reply(`Hello${profile ? ' ' + profile : ''}, thank you for contacting DigitalBurj Shipping. We have received your enquiry and a specialist will get back to you shortly.`) }
+      if (Date.now() - (lastAck.get(from) ?? 0) > 6 * 3600_000) { lastAck.set(from, Date.now()); await reply(`Hello${profile ? ' ' + profile : ''}, thank you for contacting SWK Properties. We have received your enquiry and a specialist will get back to you shortly.`) }
     } else q.run(`UPDATE whatsapp_messages SET lead_id = ? WHERE id = ?`, leadId, rowId)
   }
 }
@@ -176,7 +176,7 @@ export async function overdueReminders() {
   for (const i of rows) {
     const last = q.val<string>(`SELECT MAX(at) FROM whatsapp_messages WHERE origin = ? AND direction = 'out'`, `reminder:${i.id}`)
     if (last && last.slice(0, 10) > cut) continue
-    const text = `Dear ${i.name}, a friendly reminder that invoice ${i.invoice_no} for ${i.currency} ${fromCents(i.balance).toLocaleString('en-US')} was due on ${i.due_date}. Please arrange payment or reply if you need a copy. Thank you – DigitalBurj Shipping.`
+    const text = `Dear ${i.name}, a friendly reminder that invoice ${i.invoice_no} for ${i.currency} ${fromCents(i.balance).toLocaleString('en-US')} was due on ${i.due_date}. Please arrange payment or reply if you need a copy. Thank you – SWK Properties.`
     for (const ph of phonesForParty(i.party_id).slice(0, 2)) await sendWhatsApp(ph, text, { origin: `reminder:${i.id}`, party_id: i.party_id, tpl: 'wa_tpl_reminder' })
   }
 }

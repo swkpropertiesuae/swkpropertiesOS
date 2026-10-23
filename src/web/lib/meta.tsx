@@ -26,7 +26,7 @@ export function MetaProvider({ children }: { children: ReactNode }) {
     } catch { setMe(null); setMeta(null) } finally { setLoading(false) }
   }, [])
   useEffect(() => { void reload() }, [reload])
-  useEffect(() => { const h = () => { setMe(null); setMeta(null) }; window.addEventListener('digitalburj:unauthorized', h); return () => window.removeEventListener('digitalburj:unauthorized', h) }, [])
+  useEffect(() => { const h = () => { setMe(null); setMeta(null) }; window.addEventListener('swk:unauthorized', h); return () => window.removeEventListener('swk:unauthorized', h) }, [])
   const byKey = useMemo(() => new Map((meta?.entities ?? []).map(e => [e.key, e])), [meta])
   const def = useCallback((k: string) => { const e = byKey.get(k); if (!e) throw new Error('Unknown entity ' + k); return e }, [byKey])
   const can = useCallback((module: string, a: Action = 'view') => {

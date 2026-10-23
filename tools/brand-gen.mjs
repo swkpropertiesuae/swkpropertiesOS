@@ -1,5 +1,5 @@
 /**
- * SWK Properties brand asset pipeline for DigitalBurj Business OS.
+ * SWK Properties brand asset pipeline for SWK OS.
  *
  * Source assets (from swkpropertiesuae.com brand kit):
  *   - swk-logo.png  (512x512, white mark, transparent)  -- logos / reverse surfaces
@@ -28,7 +28,7 @@ const brandDir = path.join(root, 'public', 'brand')
 const favDir = path.join(root, 'public', 'favicon')
 const srcLogo = path.join(root, 'assets-src', 'swk-logo.png')
 const srcFav = path.join(root, 'assets-src', 'favicon.png')
-const INK = [15, 23, 20] // #0f1714 DigitalBurj ink
+const INK = [15, 23, 20] // #0f1714 SWK OS ink
 const TILE = [13, 19, 16] // #0d1310 favicon tile
 
 fs.mkdirSync(brandDir, { recursive: true })

@@ -6,7 +6,7 @@ Every document includes a system-generated notice. Invoices say: **“This is a 
 
 ## Configure the seal
 
-In **Company settings → Document text → Company seal**, upload the original DigitalBurj stamp image as PNG or JPEG (up to 1 MB, at most 4096 pixels in either dimension). The image is retained without redrawing it. A transparent PNG or a tightly cropped image with a white background prints best. Remote URLs and SVG files are not accepted.
+In **Company settings → Document text → Company seal**, upload the original SWK OS stamp image as PNG or JPEG (up to 1 MB, at most 4096 pixels in either dimension). The image is retained without redrawing it. A transparent PNG or a tightly cropped image with a white background prints best. Remote URLs and SVG files are not accepted.
 
 Choose **Include the company seal by default**, then **Save settings**. Removing the seal also clears this default. Settings changes require administration edit access and are audited. Demo settings remain isolated from the live company.
 

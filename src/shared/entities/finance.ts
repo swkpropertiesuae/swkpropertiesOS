@@ -144,7 +144,7 @@ export const finance: EntityDef[] = [
     numbering: { field: 'expense_no', pattern: 'EXP{YY}{seq:5}' },
     fields: [
       T('expense_no', 'Claim no.', { readonly: true, list: true, search: true, section: 'Expense' }), R('employee_id', 'Employee', 'employees', { required: true, list: true }), D('expense_date', 'Date', { required: true, default: 'today', list: true }),
-      S('category', 'Category', ['Travel', 'Fuel', 'Client entertainment', 'Meals', 'Communication', 'Office supplies', 'Courier', 'Accommodation', 'Marketing', 'Training', 'Other'], { required: true, list: true }),
+      S('category', 'Category', ['Travel', 'Fuel', 'Client entertainment', 'Meals', 'Communication', 'Office supplies', 'Accommodation', 'Marketing', 'Training', 'Other'], { required: true, list: true }),
       T('description', 'Description', { list: true, span: 2 }), M('amount', 'Amount', { required: true, list: true }), M('vat_amount', 'VAT included'), R('property_id', 'Property', 'properties'), R('unit_id', 'Unit', 'units'),
       R('account_id', 'Expense account', 'accounts'), S('status', 'Status', ['Draft', 'Submitted', 'Approved', 'Rejected', 'Paid'], { default: 'Draft', list: true, readonly: true }), R('approver_id', 'Approver', 'users', { readonly: true }),
       R('paid_from_id', 'Paid from', 'bank_accounts', { readonly: true }), D('paid_on', 'Paid on', { readonly: true }), R('journal_id', 'Journal', 'journal_entries', { readonly: true }), TA('notes', 'Notes'),

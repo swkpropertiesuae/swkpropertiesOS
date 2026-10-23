@@ -26,7 +26,7 @@ function plan() {
 }
 
 export function schemaSql(): string {
-  const lines: string[] = ['-- DigitalBurj OS → Supabase mirror schema (generated)', '-- Run once in the Supabase SQL editor. RLS is enabled with no policies: only the service key can read/write.', '']
+  const lines: string[] = ['-- SWK OS → Supabase mirror schema (generated)', '-- Run once in the Supabase SQL editor. RLS is enabled with no policies: only the service key can read/write.', '']
   for (const t of plan()) {
     lines.push(`create table if not exists public."${t.table}" (`)
     lines.push(t.cols.map(c => `  "${c}" ${c === 'id' ? 'bigint primary key' : t.types[c]}`).join(',\n'))

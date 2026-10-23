@@ -13,7 +13,7 @@ export function documentNotice(entity: string, record?: any): string {
 
 export function documentRecipient(record: any): string {
   const labels = record?._labels ?? {}
-  return labels.party_id || labels.customer_id || labels.vendor_id || labels.issued_to_id || labels.client_id || labels.consignee_id || labels.employee_id || record?.consignee || 'To whom it may concern'
+  return labels.party_id || labels.customer_id || labels.vendor_id || labels.issued_to_id || labels.client_id || labels.tenant_id || labels.employee_id || record?.tenant || 'To whom it may concern'
 }
 
 export function useDocumentSeal(value: string | null | undefined, defaultValue: boolean): boolean {

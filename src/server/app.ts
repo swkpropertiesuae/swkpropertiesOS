@@ -18,7 +18,7 @@ declare module 'fastify' {
   interface FastifyRequest { user: SessionUser | null; ctx: Ctx; sessionHash?: string }
 }
 
-export const COOKIE = 'digitalburj_sid'
+export const COOKIE = 'swk_sid'
 export const DEMO_PREFIX = 'demo.'
 const PUBLIC = [/^\/api\/demo\/status$/, /^\/api\/health$/, /^\/api\/health\/db$/, /^\/api\/auth\/login$/, /^\/api\/public\//, /^\/api\/auth\/branding$/]
 /**
@@ -85,7 +85,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     if (PUBLIC.some(r => r.test(url))) return
     if (!req.user) throw new HttpError(401, 'Please sign in')
     // CSRF: cookie-authenticated mutations must carry the custom header (cannot be set cross-site without CORS)
-    if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && !req.user.apiKey && req.headers['x-digitalburj-client'] !== 'web') throw new HttpError(403, 'Missing client header')
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && !req.user.apiKey && req.headers['x-swk-client'] !== 'web') throw new HttpError(403, 'Missing client header')
     const mustChange = q.val<number>('SELECT must_change_password FROM users WHERE id = ?', req.user.id)
     if (mustChange && !(PASSWORD_SETUP.has(url) && !req.user.apiKey)) throw new HttpError(403, 'Change your temporary password before using the application')
     if (req.user.party_id && !PORTAL_OK.some(r => r.test(url))) throw new HttpError(403, 'This area is for company staff')

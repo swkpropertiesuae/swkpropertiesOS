@@ -79,7 +79,7 @@ export async function verifySmtp(): Promise<{ ok: boolean; error?: string; provi
     catch (e: any) { return { ok: false, provider: account.provider, error: String(e?.message ?? e) } }
   }
   if (resendOn()) {
-    if (!fromAddr()) return { ok: false, error: 'Resend needs a verified From address (e.g. DigitalBurj <ops@yourdomain.com>)' }
+    if (!fromAddr()) return { ok: false, error: 'Resend needs a verified From address (e.g. SWK Properties <ops@yourdomain.com>)' }
     const r = await http((process.env.RESEND_API_URL || 'https://api.resend.com') + '/domains', { headers: { Authorization: `Bearer ${getSetting('resend_api_key')}` } })
     return r.ok || (r.status === 401 && r.data?.name === 'restricted_api_key') ? { ok: true, provider: 'resend' } : { ok: false, provider: 'resend', error: `Resend ${r.status}: ${r.data?.message ?? 'key rejected'}` }
   }

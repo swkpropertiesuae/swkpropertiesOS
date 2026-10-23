@@ -5,7 +5,7 @@ export const AGENT_TEMPLATES = [
     name: 'Deal Pipeline Review',
     title: 'Sales Ops Analyst',
     description: 'Weekly review of active deals - stalled, upcoming closures, and revenue leakage',
-    instructions: `You are the DigitalBurj Sales Ops AI. Every Monday at 9 AM you review the deal pipeline.
+    instructions: `You are the SWK OS Sales Ops AI. Every Monday at 9 AM you review the deal pipeline.
     1. Call search_deals with status "Lead" and "Active Mandate" - identify deals with no activity in 14+ days.
     2. Call search_deals with status "Offer Submitted" - check if offers have responses or need follow-up.
     3. Call search_deals with status "Contract Signed" or "DLD Submitted" - verify DLD process is on track.
@@ -29,7 +29,7 @@ export const AGENT_TEMPLATES = [
     name: 'Rent Roll & Lease Expiry Monitor',
     title: 'Property Management Analyst',
     description: 'Track lease expiries, rent collections, and service charge arrears',
-    instructions: `You are the DigitalBurj Property Management AI. Daily at 8 AM:
+    instructions: `You are the SWK OS Property Management AI. Daily at 8 AM:
     1. Call expiring_leases with days=90 - flag leases expiring in 30/60/90 days.
     2. Call rent_roll - check for leases with overdue rent (cross-reference with overdue_invoices).
     3. Create tasks for agents to initiate renewals 90 days before expiry.
@@ -52,7 +52,7 @@ export const AGENT_TEMPLATES = [
     name: 'Mandate Health Check',
     title: 'Mandate Compliance Officer',
     description: 'Ensure active mandates have recent activity, viewings, and portal presence',
-    instructions: `You are the DigitalBurj Mandate Compliance AI. Every Tuesday at 10 AM:
+    instructions: `You are the SWK OS Mandate Compliance AI. Every Tuesday at 10 AM:
     1. Find active mandates (via search_deals with status "Active Mandate").
     2. For each, check viewings in last 21 days - if none, flag.
     3. Check if property is published on portals (portal_publish = true).
@@ -75,7 +75,7 @@ export const AGENT_TEMPLATES = [
     name: 'Collections Chaser',
     title: 'Collections Specialist',
     description: 'Chase overdue invoices and send payment reminders',
-    instructions: `You are the DigitalBurj Collections AI. Daily at 9:30 AM:
+    instructions: `You are the SWK OS Collections AI. Daily at 9:30 AM:
     1. Call overdue_invoices with min_days_overdue=1 - get all overdue.
     2. For invoices 1-7 days overdue: queue polite reminder email via send_email.
     3. For invoices 8-30 days overdue: queue firm reminder + WhatsApp via send_whatsapp to customer contacts.
@@ -98,7 +98,7 @@ export const AGENT_TEMPLATES = [
     name: 'Vendor Payment Monitor',
     title: 'AP Coordinator',
     description: 'Ensure vendor bills are paid on time to maintain relationships',
-    instructions: `You are the DigitalBurj AP AI. Daily at 9 AM:
+    instructions: `You are the SWK OS AP AI. Daily at 9 AM:
     1. Call bills_due with days=7.
     2. For bills due in 1-3 days: confirm payment is scheduled (create_task for AP if not).
     3. For overdue bills: alert finance manager + create task.

@@ -77,11 +77,11 @@ export function Shell() {
   const isPrint = loc.pathname.startsWith('/print')
   return (
     <div className="workspace-frame h-full flex flex-col">
-      <img src="/brand/digitalburj-wordmark.webp" alt="" aria-hidden={true} draggable={false} className="app-watermark no-print" />
+      <img src="/brand/SWK OS-wordmark.webp" alt="" aria-hidden={true} draggable={false} className="app-watermark no-print" />
       <header className="topbar no-print">
         <Link to="/" className="flex items-center gap-2.5 mr-2" aria-label="SWK Properties home">
           <img src="/brand/swk-logo-ink.png" alt="SWK Properties" width="40" height="40" className="h-[40px] w-auto object-contain" />
-          <span className="font-display font-extrabold text-[16px] tracking-tight hidden sm:block">Business OS<span>Brand partner · DigitalBurj</span></span>
+          <span className="font-display font-extrabold text-[16px] tracking-tight hidden sm:block">Business OS<span>Brand partner · SWK</span></span>
         </Link>
         <nav className="primary-pills" aria-label="Primary navigation">
           <Link to="/dashboard" className={cls('primary-pill', loc.pathname === '/dashboard' && 'active')}><LayoutGrid size={15} />Dashboard</Link>

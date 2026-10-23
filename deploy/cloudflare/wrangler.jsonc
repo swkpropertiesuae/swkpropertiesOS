@@ -11,7 +11,7 @@
 
   "containers": [
     {
-      "class_name": "DigitalBurjOS",
+      "class_name": "SWK OS",
       "image": "../../Dockerfile",
       "image_build_context": "../..",
       // 4 GiB: Node + the Chromium used for PDFs. Do not go below "basic" (1 GiB) and expect PDFs to work.
@@ -22,6 +22,6 @@
       "constraints": { "regions": ["APAC"] }
     }
   ],
-  "durable_objects": { "bindings": [{ "name": "ELVORA", "class_name": "DigitalBurjOS" }] },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DigitalBurjOS"] }]
+  "durable_objects": { "bindings": [{ "name": "ELVORA", "class_name": "SWK OS" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["SWK OS"] }]
 }

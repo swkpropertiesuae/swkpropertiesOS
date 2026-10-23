@@ -3,7 +3,7 @@ import path from 'node:path'
 import JSZip from 'jszip'
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, ImageRun, Header, Footer, PageNumber, AlignmentType, BorderStyle, ShadingType, TabStopType, Tab, VerticalAlign, TableLayoutType, LevelFormat } from 'docx'
 
-export const CO = { name: 'DigitalBurj Shipping LLC', addr: 'Bur Dubai, Dubai, UAE', tel: '+971 50 422 1950', mail: 'sales@swkpropertiesuae.com', web: 'www.swkpropertiesuae.com', hours: 'Sun–Thu 09:00–18:00 GST; 24/7 for active shipments' }
+export const CO = { name: 'SWK OS Shipping LLC', addr: 'Bur Dubai, Dubai, UAE', tel: '+971 50 422 1950', mail: 'sales@swkpropertiesuae.com', web: 'www.swkpropertiesuae.com', hours: 'Sun–Thu 09:00–18:00 GST; 24/7 for active shipments' }
 export const ROOT = path.resolve(import.meta.dirname, '../..')
 const LOGO = fs.readFileSync(path.join(ROOT, 'public/brand/logo-primary.png'))
 const W = 9504 // content width in twips (8.5in − 2 × 0.95in)
@@ -95,7 +95,7 @@ function block(b) {
 }
 
 function header() {
-  return new Header({ children: [new Paragraph({ spacing: { after: 160 }, children: [new ImageRun({ type: 'png', data: LOGO, transformation: { width: 150, height: 34 }, altText: { title: 'DigitalBurj Shipping', description: 'DigitalBurj Shipping logo', name: 'logo' } })] })] })
+  return new Header({ children: [new Paragraph({ spacing: { after: 160 }, children: [new ImageRun({ type: 'png', data: LOGO, transformation: { width: 150, height: 34 }, altText: { title: 'SWK OS Shipping', description: 'SWK OS Shipping logo', name: 'logo' } })] })] })
 }
 function footer(code, title) {
   const s = { size: 15, color: MUTE, font: FONT }

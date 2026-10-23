@@ -4,7 +4,7 @@ import { config, dirs } from './config'
 import { isPg, PgDatabase, q } from './db'
 import { SYSTEM_CTX } from './engine'
 import { nowIso } from './util'
-import { businessDataSummary, clearStarterDeclined, loadDigitalBurjStarterData, resetBusinessData, starterDeclined, starterLoaded } from './domain/business-data'
+import { businessDataSummary, clearStarterDeclined, loadSwkStarterData, resetBusinessData, starterDeclined, starterLoaded } from './domain/business-data'
 
 /** Fictional demo databases left from an earlier start are deleted when the demo workspace is switched off. */
 function removeDisabledDemo() {
@@ -18,7 +18,7 @@ function removeDisabledDemo() {
 /**
  * Start-up data tasks for the production workspace:
  *  1. RESET_BUSINESS_DATA_ON_START=<token> clears all business data once per token, after taking a backup.
- *  2. An empty production database receives the DigitalBurj starter data (STARTER_DATA=false switches this off).
+ *  2. An empty production database receives the SWK OS starter data (STARTER_DATA=false switches this off).
  */
 export async function runStartupDataTasks() {
   removeDisabledDemo()
@@ -31,7 +31,7 @@ export async function runStartupDataTasks() {
     console.log(`Business data cleared (${r.total} rows). Backup: ${r.backup}`)
   }
   if (config.starterData && !starterLoaded() && !starterDeclined() && businessDataSummary().total === 0) {
-    const r = loadDigitalBurjStarterData(SYSTEM_CTX) as any
-    if (r.loaded) console.log(`DigitalBurj starter data loaded (${r.invoices?.length} invoices, ${r.jobs?.length} jobs).`)
+    const r = loadSwkStarterData(SYSTEM_CTX) as any
+    if (r.loaded) console.log(`SWK OS starter data loaded (${r.invoices?.length} invoices, ${r.jobs?.length} jobs).`)
   }
 }

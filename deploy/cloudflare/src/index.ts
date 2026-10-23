@@ -2,7 +2,7 @@ import { Container, getContainer } from '@cloudflare/containers'
 
 /** Secrets and settings, set with `npx wrangler secret put NAME` (see docs/DEPLOY-CLOUDFLARE.md). */
 interface Env {
-  ELVORA: DurableObjectNamespace<DigitalBurjOS>
+  ELVORA: DurableObjectNamespace<SWK OS>
   DATABASE_URL: string
   APP_SECRET: string
   ADMIN_PASSWORD: string
@@ -14,7 +14,7 @@ interface Env {
 
 const INSTANCE = 'main' // one instance only – the app holds a single database connection and runs its own scheduler
 
-export class DigitalBurjOS extends Container<Env> {
+export class SWK OS extends Container<Env> {
   defaultPort = 8080
   // Idle containers sleep; the cron trigger below keeps this one awake, so it is effectively always on.
   sleepAfter = '1h'
@@ -59,7 +59,7 @@ export default {
       headers.set('x-forwarded-host', url.host)
       return await c.fetch(new Request(request, { headers }))
     } catch (e) {
-      return new Response('DigitalBurj OS is starting or temporarily unavailable. Please retry in a minute.\n' + (e instanceof Error ? e.message : ''), { status: 503, headers: { 'retry-after': '30' } })
+      return new Response('SWK OS is starting or temporarily unavailable. Please retry in a minute.\n' + (e instanceof Error ? e.message : ''), { status: 503, headers: { 'retry-after': '30' } })
     }
   },
   // Cron: make sure the app is awake so scheduled jobs (reminders, outbox, backups) keep running.

@@ -32,7 +32,7 @@ const same = (a: string, b: string) => { const x = Buffer.from(a), y = Buffer.fr
 const origin = (req: any) => String(config.baseUrl || `${req.protocol}://${req.headers.host}`).replace(/\/+$/, '')
 
 export async function backupToR2(): Promise<string> {
-  const name = `digitalburj-${nowIso().replace(/[:.]/g, '-').slice(0, 19)}${BACKUP_EXT}`
+  const name = `SWK OS-${nowIso().replace(/[:.]/g, '-').slice(0, 19)}${BACKUP_EXT}`
   const p = path.join(dirs.backups, name)
   await db.backup(p)
   if (r2Configured()) await r2Put(`backups/${name}`, fs.readFileSync(p), 'application/octet-stream')
@@ -69,7 +69,7 @@ export default async function (app: FastifyInstance) {
     audit(req.ctx, getDef('branches'), 0, 'settings', { [key]: ['***', '***'] }, 'Webhook secret regenerated')
     return { url: `${origin(req)}/api/public/${which}/${secret}`, note: 'Copy this URL now – it is not shown again.' }
   })
-  app.get('/api/integrations/supabase/schema.sql', async (req, reply) => { need(req, 'admin', 'view'); reply.header('content-type', 'text/plain; charset=utf-8').header('content-disposition', 'attachment; filename="digitalburj-supabase-schema.sql"'); return schemaSql() })
+  app.get('/api/integrations/supabase/schema.sql', async (req, reply) => { need(req, 'admin', 'view'); reply.header('content-type', 'text/plain; charset=utf-8').header('content-disposition', 'attachment; filename="SWK OS supabase schema.sql"'); return schemaSql() })
   app.post('/api/integrations/supabase/sync', async (req) => { need(req, 'admin', 'edit'); const b = (req.body ?? {}) as any; if (b.full) resetSupabaseCursors(); return syncToSupabase() })
   app.post('/api/integrations/backup-r2', async (req) => { need(req, 'admin', 'edit'); const name = await backupToR2(); audit(req.ctx, getDef('branches'), 0, 'backup', { file: [null, name] }, name); return { name, r2: r2Configured() } })
 

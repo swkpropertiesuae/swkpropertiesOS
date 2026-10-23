@@ -10,7 +10,7 @@ A library of ready-made company documents (company profile, brochure, quotations
 Create a tax invoice, proforma or credit note directly: choose the customer, add lines (per-line foreign currency and rate of exchange, billed in AED), optional round-to-whole-amount with a rounding account, own invoice number or the shared series, shipment details printed on the invoice. Numbering rules: Admin → Invoice numbering.
 
 ## Starter data
-On an empty production workspace the first start loads DigitalBurj's own clients, vendors and the four supplied invoices (ES101, ES101A, ES102, ES102A). `STARTER_DATA=false` skips it. The company TRN, licence and bank details are **not** invented; enter them in Admin → Company settings (invoices cannot be posted for VAT until the TRN exists).
+On an empty production workspace the first start loads SWK OS's own clients, vendors and the four supplied invoices (ES101, ES101A, ES102, ES102A). `STARTER_DATA=false` skips it. The company TRN, licence and bank details are **not** invented; enter them in Admin → Company settings (invoices cannot be posted for VAT until the TRN exists).
 
 ## Clearing data
 Customers, leads, jobs, invoices and every record tied to them can be removed:

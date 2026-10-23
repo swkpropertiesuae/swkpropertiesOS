@@ -1,10 +1,10 @@
 import { AR } from './ar'
 
 export type Lang = 'en' | 'ar'
-export const lang: Lang = (() => { try { return localStorage.getItem('digitalburj_lang') === 'ar' ? 'ar' : 'en' } catch { return 'en' } })()
+export const lang: Lang = (() => { try { return localStorage.getItem('swk_lang') === 'ar' ? 'ar' : 'en' } catch { return 'en' } })()
 export const isRtl = lang === 'ar'
 export const tr = (s: string | undefined | null): string => (s && lang === 'ar' ? (AR[s] ?? s) : (s ?? ''))
-export function setLang(l: Lang) { try { localStorage.setItem('digitalburj_lang', l) } catch { /* ignore */ } window.location.reload() }
+export function setLang(l: Lang) { try { localStorage.setItem('swk_lang', l) } catch { /* ignore */ } window.location.reload() }
 export function applyLangToDocument() { document.documentElement.lang = lang; document.documentElement.dir = isRtl ? 'rtl' : 'ltr' }
 
 /** Arabic mode: translate any rendered text node whose whole text matches the dictionary (buttons, headings, statuses, table headers). */

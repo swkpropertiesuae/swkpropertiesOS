@@ -4,9 +4,9 @@
 
 | Purpose | E-mail | Initial password | Data |
 |---|---|---|---|
-| **Administrator** – all features | admin@swkpropertiesuae.com | DigitalBurj@Admin2026 | Production workspace, **empty** |
-| **Manager** – all features | manager@swkpropertiesuae.com | DigitalBurj@Manager2026 | Production workspace, **empty** |
-| **Demo presenter** – all features | demo@swkpropertiesuae.com | Demo@DigitalBurj2026 | Isolated demo workspace |
+| **Administrator** – all features | admin@swkpropertiesuae.com | SWK OS@Admin2026 | Production workspace, **empty** |
+| **Manager** – all features | manager@swkpropertiesuae.com | SWK OS@Manager2026 | Production workspace, **empty** |
+| **Demo presenter** – all features | demo@swkpropertiesuae.com | Demo@SWK OS2026 | Isolated demo workspace |
 
 * Administrator and Manager have full access to every module. The only difference is naming; both can administer users, roles and integrations.
 * On first sign-in each is forced to choose a personal password; nothing else in the application is reachable until they do. Rotate the initial passwords by setting `ADMIN_PASSWORD` / `MANAGER_PASSWORD` before the very first start if you prefer not to hand over known defaults.

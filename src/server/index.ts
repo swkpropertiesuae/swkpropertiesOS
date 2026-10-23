@@ -21,6 +21,6 @@ async function main() {
   const shutdown = async (sig: string) => { app.log.info(`${sig} received, shutting down`); await app.close(); db.close(); process.exit(0) }
   process.on('SIGTERM', () => void shutdown('SIGTERM'))
   process.on('SIGINT', () => void shutdown('SIGINT'))
-  console.log(`DigitalBurj OS listening on http://${config.host}:${config.port} (${config.env})`)
+  console.log(`SWK OS listening on http://${config.host}:${config.port} (${config.env})`)
 }
 main().catch(e => { console.error(e); process.exit(1) })

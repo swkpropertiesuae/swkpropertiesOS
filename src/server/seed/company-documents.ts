@@ -22,9 +22,9 @@ export function seedCompanyDocuments() {
   if (getSetting('company_name') === 'ELVORA SHIPPING L.L.C') patch.company_name = 'SWK Properties L.L.C'
   setSettings(patch)
   const items = [
-    { type: 'ICP establishment card', name: 'ICP establishment card', reference_no: '2/1/1336642', status: 'Active', expiry_date: '2027-08-16', notes: 'Electronic establishment card supplied by DigitalBurj. Not evidence of MOHRE/WPS enrolment.' },
+    { type: 'ICP establishment card', name: 'ICP establishment card', reference_no: '2/1/1336642', status: 'Active', expiry_date: '2027-08-16', notes: 'Electronic establishment card supplied by SWK Properties. Not evidence of MOHRE/WPS enrolment.' },
     { type: 'Corporate tax registration (FTA)', name: 'Corporate tax registration', reference_no: '101002831255', status: 'To verify', issue_date: '2026-10-13', notes: 'Application submitted 13 October 2026, 19:20 GST. Approval and TRN not supplied. This reference is not a VAT or corporate tax TRN.' },
-    { type: 'Tenancy contract (Ejari)', name: 'Tenancy evidence review - supplied DEWA bill', status: 'To verify', notes: 'The file labelled EJARI Bill is a residential DEWA utility invoice in another account holder’s name, not an Ejari certificate. Do not use its address, account number or DEWA VAT number as DigitalBurj company details. Obtain the actual tenancy certificate.' },
+    { type: 'Tenancy contract (Ejari)', name: 'Tenancy evidence review - supplied DEWA bill', status: 'To verify', notes: 'The file labelled EJARI Bill is a residential DEWA utility invoice in another account holder’s name, not an Ejari certificate. Do not use its address, account number or DEWA VAT number as SWK Properties company details. Obtain the actual tenancy certificate.' },
   ]
   for (const item of items) {
     const existing = q.get<{ id: number; reference_no: string; status: string }>('SELECT id, reference_no, status FROM compliance_items WHERE name = ? AND deleted_at IS NULL', item.name)

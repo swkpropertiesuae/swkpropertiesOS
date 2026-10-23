@@ -1,4 +1,4 @@
-# DigitalBurj Business OS – SWKPROPOS
+# SWK OS – SWKPROPOS
 
 A sovereign, agentic operating system for SWK Properties' UAE real estate enterprise. Built by adapting the ElvoraLogisticsOS codebase into a comprehensive property management and real estate OS with 14 core SME modules, agentic workflow orchestration, and full UAE regulatory compliance.
 
@@ -8,7 +8,7 @@ This is not a logistics ERP rebranded — it is a purpose-built real estate oper
 
 ## 🏢 What It Is
 
-DigitalBurj Business OS – SWKPROPOS is a complete real estate operating system that covers every function an SME runs on: from company administration and CRM through accounting, procurement, HR, project management, and communications. It is presented as 14 core modules, branded as DigitalBurj Business OS, with a dashboard designed exactly to the elvora OS specification (Instrument Sans + Plus Jakarta Sans fonts, emerald `#007b52` + graphite `#161d1a` palette).
+SWK OS – SWKPROPOS is a complete real estate operating system that covers every function an SME runs on: from company administration and CRM through accounting, procurement, HR, project management, and communications. It is presented as 14 core modules, branded as SWK OS, with a dashboard designed exactly to the elvora OS specification (Instrument Sans + Plus Jakarta Sans fonts, emerald `#007b52` + graphite `#161d1a` palette).
 
 The system includes:
 - **14 seeded SWK properties** across UAE locations (Dubai Marina, Palm Jumeirah, Downtown Dubai, Dubai Hills Estate, Arabian Ranches, JVC, Business Bay)
@@ -71,7 +71,7 @@ MANAGER_EMAIL=manager@swkpropertiesuae.com
 MANAGER_PASSWORD=SWK@Manager2026
 DEMO_ENABLED=true
 DEMO_EMAIL=demo@swkpropertiesuae.com
-DEMO_PASSWORD=Demo@DigitalBurj2026
+DEMO_PASSWORD=Demo@SWK2026
 ```
 
 ### Sign-in Accounts
@@ -80,7 +80,7 @@ DEMO_PASSWORD=Demo@DigitalBurj2026
 |---|---|---|---|
 | Administrator (all access) | admin@swkpropertiesuae.com | SWK@Admin2026 | Production – empty, no sample data |
 | Manager (all access) | manager@swkpropertiesuae.com | SWK@Manager2026 | Production – empty, no sample data |
-| Demo presenter (all access) | demo@swkpropertiesuae.com | Demo@DigitalBurj2026 | Isolated demo – fictional data, resets nightly |
+| Demo presenter (all access) | demo@swkpropertiesuae.com | Demo@SWK OS2026 | Isolated demo – fictional data, resets nightly |
 
 Production accounts must set their own password at first sign-in, or set `ADMIN_PASSWORD` / `MANAGER_PASSWORD` before the first start.
 
@@ -104,14 +104,14 @@ All CSS in `src/web/index.css` follows this system — buttons, cards, tables, a
 ## 📁 Repository Structure
 
 ```
-DigitalBurj-OS/
+SWK OS/
 ├── packages/              # 14 core SWKPROPOS modules (packages/01 → packages/14)
 ├── src/                   # Source code
 │   ├── server/            # Fastify API server (port 8081)
 │   └── web/               # React + Vite frontend (port 5173)
 ├── data/                  # Runtime data directory
 ├── .env                   # Configuration (PORT=8081, AED currency, credentials)
-├── package.json           # swkpropos / DigitalBurj Business OS
+├── package.json           # swkpropos / SWK OS
 ├── vite.config.ts         # Vite config with elvora design system
 ├── index.css              # Complete elvora OS design system stylesheet
 ├── .impeccable/design.json  # Design system metadata
@@ -157,7 +157,7 @@ Key docs are available in the `docs/` directory and referenced from the app:
 
 This operating system is tailored for **SWK Properties**, a UAE real estate enterprise. The system incorporates UAE-specific compliance (DLD regulations, 5% VAT, escrow accounts, Ejari structures, RERA BRN tracking) and is designed as a sovereign agentic OS — meaning it has agent harnessing, data fabric, intelligence layer, transaction surfaces, asset rails, and governance fabric all unified on one regulatory and financial substrate.
 
-The OS is branded as **DigitalBurj Business OS** and presents 14 SME modules that any growing company can run on, from a single-entity startup to a multi-branch real estate enterprise.
+The OS is branded as **SWK OS** and presents 14 SME modules that any growing company can run on, from a single-entity startup to a multi-branch real estate enterprise.
 
 ---
 
@@ -194,4 +194,4 @@ The API esbuild target is `node22`. The web Vite build outputs to `dist/web/`. B
 
 ---
 
-*DigitalBurj Business OS – SWKPROPOS. Sovereign agentic operating system for UAE real estate enterprises. 14 core SME modules. elvora OS design system consistent throughout.*
+*SWK OS – SWKPROPOS. Sovereign agentic operating system for UAE real estate enterprises. 14 core SME modules. elvora OS design system consistent throughout.*

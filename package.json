@@ -1,8 +1,8 @@
 {
-  "name": "swkpropos",
+  "name": "swkpropos-os",
   "version": "1.0.0",
   "private": true,
-  "description": "DigitalBurj Business OS – SWK Properties UAE Real Estate Enterprise",
+  "description": "SWK OS – UAE Real Estate Operating System",
   "type": "module",
   "engines": {
     "node": ">=22.0.0"

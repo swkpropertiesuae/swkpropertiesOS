@@ -206,7 +206,7 @@ Object.assign(AR, {
   'Log Out': 'تسجيل الخروج', Help: 'مساعدة', Blog: 'المدونة', Notifications: 'الإشعارات', Report: 'تقرير', 'Bulk Mail / Print': 'بريد / طباعة جماعية', KPI: 'مؤشرات الأداء',
   Comments: 'التعليقات', 'Follow Up': 'المتابعة', References: 'المراجع', Tags: 'الوسوم', Links: 'الروابط', Likes: 'الإعجابات', Complaints: 'الشكاوى', 'Video Call': 'مكالمة فيديو', History: 'السجل',
   Overview: 'نظرة عامة', 'Recent Deals': 'أحدث الصفقات', 'Recent Call List': 'أحدث المكالمات', 'Sales (Branch)': 'المبيعات (حسب الفرع)',
-  'Welcome to DigitalBurj OS': 'مرحباً بكم في نظام ديجيتال بورج للعقارات', 'Track and Manage Deals, Properties, Leases, Accounts and Compliance': 'تتبع وإدارة الصفقات والعقارات والإيجارات والحسابات والامتثال',
+  'Welcome to SWK OS': 'مرحباً بكم في نظام ديجيتال بورج للعقارات', 'Track and Manage Deals, Properties, Leases, Accounts and Compliance': 'تتبع وإدارة الصفقات والعقارات والإيجارات والحسابات والامتثال',
   'All statuses': 'كل الحالات', 'Page': 'صفحة', 'No records': 'لا توجد سجلات', Loading: 'جارٍ التحميل…', Records: 'سجلات', 'New': 'جديد', Draft: 'مسودة', Posted: 'مرحّل', Paid: 'مدفوع', Open: 'مفتوح', Closed: 'مغلق', Pending: 'قيد الانتظار', Approved: 'معتمد', Rejected: 'مرفوض', Cancelled: 'ملغى',
   'Language': 'اللغة', 'Signed in as': 'تم الدخول باسم', 'Change it now': 'غيّرها الآن', 'You are signed in with the default password.': 'أنت تستخدم كلمة المرور الافتراضية.',
 })

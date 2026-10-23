@@ -91,7 +91,7 @@ export const ticketHooks: Hooks = {
 export const activityHooks: Hooks = {
   beforeSave({ rec }) {
     if (rec.start_at && rec.end_at) { if (rec.end_at < rec.start_at) throw bad('End is before start'); rec.duration_min = Math.round((Date.parse(rec.end_at) - Date.parse(rec.start_at)) / 60000) }
-    if (rec.type === 'Video call' && !rec.video_link) rec.video_link = `https://meet.jit.si/DigitalBurj-${crypto.randomBytes(5).toString('hex')}`
+    if (rec.type === 'Video call' && !rec.video_link) rec.video_link = `https://meet.jit.si/SWK-${crypto.randomBytes(5).toString('hex')}`
   },
 }
 

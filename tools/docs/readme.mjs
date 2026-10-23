@@ -4,7 +4,7 @@ import { ROOT } from './lib.mjs'
 const OUT = path.join(ROOT, 'corporate-templates')
 const inv = JSON.parse(fs.readFileSync(path.join(OUT, 'inventory.json'), 'utf8'))
 const cats = [...new Set(inv.map(d => d.cat))]
-const md = `# DigitalBurj Shipping LLC Corporate Template Set
+const md = `# SWK OS Shipping LLC Corporate Template Set
 
 ## Start here
 This pack contains ${inv.length} document designs, each supplied as editable DOCX and reusable DOTX, plus 16 e-mails in HTML and plain text, an HTML e-mail signature, the logo asset, and ready-to-print marketing material (company pamphlet, corporate brochure, capability statement and four service flyers, as HTML source and PDF).
@@ -27,7 +27,7 @@ Before issue, verify and enter the full registered address, trade licence, VAT T
 - \`assets/\` – logo files (primary, reverse, icon)
 - \`inventory.json\` – machine-readable list of all documents
 
-To regenerate everything after editing the content: \`npm run docs:build\`. The same content, plus the e-mail and marketing pieces, is built into the DigitalBurj OS **Document Studio** (\`npm run docs:studio\`), where staff fill, edit, generate text with AI and print the documents without Word.
+To regenerate everything after editing the content: \`npm run docs:build\`. The same content, plus the e-mail and marketing pieces, is built into the SWK OS **Document Studio** (\`npm run docs:studio\`), where staff fill, edit, generate text with AI and print the documents without Word.
 
 ## Format
 Letter portrait 8.5 x 11 inches; 0.95 inch side margins; Arial 10.5 pt body; 22 pt black titles; 11 pt bold black section headings; 1.12 body line spacing; 9 pt tables with repeatable header rows, light grey borders and expandable rows. Colour is concentrated in the approved logo; restrained charcoal tables keep operational forms readable. Headers have no decorative rule. Footer contact details and automatic page number repeat on every page. Marketing pieces use the brand green and red on a dark band and are designed for Letter; resize to A4 before printing in the UAE if your printer requires it.
@@ -37,7 +37,7 @@ Body text and descriptions are left aligned. Short quantities, dates and status 
 ## Operational and regulatory boundaries
 Use the current official carrier, customs, employment and dangerous-goods documents when required. The corresponding preparation worksheets in this pack do not replace them. A company letter is not a carrier release order. The commercial invoice for goods is for the seller to complete and issue. Contracts are editable starting templates with essential fields and schedules to complete and approve before signature. Employment offer and appointment summaries support administration and do not replace official employment contracts.
 
-Tax document fields follow the referenced FTA invoice guidance, but finance must determine registration, place of supply, VAT rate, exchange rate and any applicable electronic invoicing requirements. Do not automatically apply one VAT rate to all freight services. These documents are not connected to an accounting or electronic invoicing platform (the DigitalBurj OS application in this repository produces its own invoices and e-invoice files).
+Tax document fields follow the referenced FTA invoice guidance, but finance must determine registration, place of supply, VAT rate, exchange rate and any applicable electronic invoicing requirements. Do not automatically apply one VAT rate to all freight services. These documents are not connected to an accounting or electronic invoicing platform (the SWK OS application in this repository produces its own invoices and e-invoice files).
 
 ## Official reference sources
 - FTA Tax Invoices clarification VATP006: https://tax.gov.ae/DataFolder/Files/Pdf/06-Tax-Invoices.pdf

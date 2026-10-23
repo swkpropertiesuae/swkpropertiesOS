@@ -90,7 +90,7 @@ export function KpiPage() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {q.data.kpis.map((k: any) => <Kpi key={k.key} label={k.label} value={<span className="flex items-center gap-2">{fmt(k)}{k.status === 'good' ? <Check size={18} className="text-emerald" /> : k.status === 'bad' ? <X size={18} className="text-signal" /> : null}</span>} tone={k.status === 'good' ? 'green' : k.status === 'bad' ? 'red' : undefined} hint={<>{k.hint}{k.target !== null && <span className="block">Target {k.target}{k.unit === '%' ? '%' : k.unit ? ' ' + k.unit : ''}</span>}</>} />)}
       </div>
-      <p className="text-xs text-muted mt-4">Targets are management defaults for freight forwarders — adjust expectations to your own service levels. The minimum-margin target follows Company Settings.</p>
+      <p className="text-xs text-muted mt-4">Targets are management defaults for property managers — adjust expectations to your own service levels. The minimum-margin target follows Company Settings.</p>
     </div>
   )
 }

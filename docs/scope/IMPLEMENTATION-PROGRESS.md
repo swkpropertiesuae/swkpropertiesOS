@@ -63,7 +63,7 @@ Carrier RFQs, container deposits, BL/AWB records, original document custody, OCR
 
 ## Branding and acceptance remediation
 
-The application uses the exact public/brand wordmark and E icon from swkpropertiesuaellc/ElovoraShippingLLC, matching the current website instead of the 3D brand kit. The website's circular-white favicon assets are copied unchanged. DigitalBurj Business OS attribution remains visible.
+The application uses the exact public/brand wordmark and E icon from swkpropertiesuaellc/ElovoraShippingLLC, matching the current website instead of the 3D brand kit. The website's circular-white favicon assets are copied unchanged. SWK OS attribution remains visible.
 
 The shared query engine casts searchable fields to text so PostgreSQL can search numeric revision/original numbers. The sweep covers numeric text filters and empty/nonempty filtering. CI includes the previously separate enterprise domain/API suites and a workflow process restart on SQLite and PostgreSQL. Production Docker and CI include Tesseract English OCR and Poppler PDF extraction.
 

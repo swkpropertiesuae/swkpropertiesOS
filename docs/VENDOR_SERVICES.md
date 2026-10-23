@@ -1,6 +1,6 @@
 # Buying vendor services and serving your customer
 
-DigitalBurj can hire equipment or buy a subcontracted service from a supplier, then charge its customer through the same job. The supplier and customer are different parties; their rates, quantities, currencies and taxes can also differ.
+SWK OS can hire equipment or buy a subcontracted service from a supplier, then charge its customer through the same job. The supplier and customer are different parties; their rates, quantities, currencies and taxes can also differ.
 
 Open **Operations → Vendor services & hired equipment**, or open a customer job and select **Vendor services**. Use one record for each agreed service, hire or extra charge. Supported types include container, truck and trailer hire, transport, forklift/crane, storage, customs clearance and other services.
 

@@ -9,7 +9,7 @@ export default async function (app: FastifyInstance) {
   app.post('/api/demo/reset', async (req, reply) => {
     if (!inDemo()) throw bad('Only available in the demo workspace')
     setImmediate(() => { try { void Promise.resolve(resetDemoWorkspace()).catch(e => console.error('demo reset', e)) } catch (e) { console.error('demo reset', e) } })
-    reply.clearCookie('digitalburj_sid', { path: '/' })
+    reply.clearCookie('SWK_sid', { path: '/' })
     return { ok: true }
   })
 }

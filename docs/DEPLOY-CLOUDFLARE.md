@@ -1,4 +1,4 @@
-# Deploy DigitalBurj OS on Cloudflare (step by step)
+# Deploy SWK OS on Cloudflare (step by step)
 
 You will run a handful of commands on your own computer. Nothing here needs coding. Allow about **1–1½ hours the first time** (most of it waiting for builds and DNS).
 
@@ -48,8 +48,8 @@ Use **port 5432 (Session pooler)**, not 6543. **First reset the database passwor
 ## 2. Get the code
 
 ```bash
-git clone https://github.com/swkpropertiesuaellc/DigitalBurjLogisticsOS.git
-cd DigitalBurjLogisticsOS
+git clone https://github.com/swkpropertiesuaellc/SWK OSLogisticsOS.git
+cd SWK OSLogisticsOS
 git checkout claude/sharp-thompson-9y53sg      # skip this once pull request #3 is merged
 cd deploy/cloudflare
 npm install
@@ -134,7 +134,7 @@ You need `swkpropertiesuae.com` on Cloudflare first:
 ## 10. Updating later
 
 ```bash
-cd DigitalBurjLogisticsOS && git pull
+cd SWK OSLogisticsOS && git pull
 cd deploy/cloudflare && npm install && npx wrangler deploy
 ```
 Your data stays in Supabase; the app restarts with the new version.

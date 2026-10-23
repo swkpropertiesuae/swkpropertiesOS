@@ -193,5 +193,5 @@ export async function seedDemoScenarios(): Promise<void> {
   const rec1 = mk(ctx, 'receipts', { party_id: buyer, bank_account_id: main_bank.id, receipt_date: today, method: 'Bank transfer', currency: 'AED', amount: 57000, status: 'Posted' })
   // Note: allocations would need receipt_allocations table
 
-  console.log('DigitalBurj demo data seeded')
+  console.log('SWK OS demo data seeded')
 }

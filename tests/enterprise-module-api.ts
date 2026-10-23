@@ -30,7 +30,7 @@ const event=await api(`/api/container-deposits/${deposit.id}/request`,'POST',{ki
 await api(`/api/deposit-events/${event.id}/approve`,'POST',{reason:'Maker cannot approve own deposit'},maker,400);await api(`/api/deposit-events/${event.id}/approve`,'POST',{reason:'Independent bank evidence accepted'},checker);assert.equal((await api(`/api/e/container_deposits/${deposit.id}`)).balance,100)
 await api(`/api/deposit-events/${event.id}/approve`,'POST',{reason:'Duplicate must be rejected'},checker,400)
 // Uploaded text is extracted using the same authenticated file/association flow as an image or PDF.
-const data=new FormData();data.append('category','Bill of Lading');data.append('file',new Blob([`BILL OF LADING\nJob reference ${job.job_no}\nShipper Test shipper\nConsignee Test consignee\n`],{type:'text/plain'}),'api-bl.txt')
+const data=new FormData();data.append('category','Sale Agreement');data.append('file',new Blob([`SALE AGREEMENT\nJob reference ${job.job_no}\nSeller Test seller\nBuyer Test buyer\n`],{type:'text/plain'}),'api-bl.txt')
 const upload=await fetch(base+'/api/files',{method:'POST',headers:{'x-digitalburj-client':'web',cookie:maker},body:data});assert.equal(upload.status,200);const files=await upload.json() as any
 const extraction=await api(`/api/files/${files[0].id}/extract`,'POST');assert.equal(extraction.status,'Ready for review');assert.ok(extraction.candidates.some((c:any)=>c.job_id===job.id))
 await api(`/api/extractions/${extraction.id}/review`,'POST',{job_id:job.id,note:'Verified original job reference and shipper'});await api(`/api/extractions/${extraction.id}/review`,'POST',{job_id:job.id,note:'Duplicate review cannot overwrite association'},maker,400)

@@ -5,6 +5,6 @@
   "category": "sales",
   "key_features": ["leads", "contacts", "companies", "pipelines", "activities", "follow-ups", "duplicate-detection", "lead-scoring", "assignment", "decay-analysis", "lost-reason", "revenue-reports"],
   "brand": "SWKPROPOS",
-  "os": "DigitalBurj Business OS",
+  "os": "SWK OS",
   "elvora_design": true
 }

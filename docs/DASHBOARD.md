@@ -1,6 +1,6 @@
 # Dashboard and workspace navigation
 
-This page documents the implemented dashboard and navigation refinements. The existing DigitalBurj identity, colors, font families and DigitalBurj attribution remain the source of truth in the application.
+This page documents the implemented dashboard and navigation refinements. The existing SWK OS identity, colors, font families and SWK OS attribution remain the source of truth in the application.
 
 ## Dashboard sections
 
@@ -58,7 +58,7 @@ Font families remain **Instrument Sans** for body text and controls and **Plus J
 
 Some existing compact text retains its individual size: compact buttons 12.5px. Dashboard introductions are 15px, table cells 14px, panel headings 16px and status badges 12px. The refinement does not claim that every label is 16px.
 
-The palette continues to use the existing emerald (`#007b52`), graphite (`#161d1a`) and module chart colors defined in `index.css` and `Dashboard.tsx`. `reference.css` retains its existing neutral surface overrides. The header retains `/brand/logo-primary.png?v=digitalburj-website-4`. The footer retains **A product of DigitalBurj Business OS**, `/brand/digitalburj-business-os.png` and its [DigitalBurj product link](https://digitalburj.com/business-os).
+The palette continues to use the existing emerald (`#007b52`), graphite (`#161d1a`) and module chart colors defined in `index.css` and `Dashboard.tsx`. `reference.css` retains its existing neutral surface overrides. The header retains `/brand/logo-primary.png?v=digitalburj-website-4`. The footer retains **A product of SWK OS**, `/brand/digitalburj-business-os.png` and its [SWK OS product link](https://digitalburj.com/business-os).
 
 ## Related implementation and guidance
 

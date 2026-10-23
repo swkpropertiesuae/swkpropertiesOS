@@ -156,7 +156,7 @@ export default async function (app: FastifyInstance) {
   })
   app.post('/api/admin/backups', async (req) => {
     need(req, 'admin', 'edit')
-    const name = `digitalburj-${nowIso().replace(/[:.]/g, '-').slice(0, 19)}${BACKUP_EXT}`
+    const name = `swk-${nowIso().replace(/[:.]/g, '-').slice(0, 19)}${BACKUP_EXT}`
     await db.backup(path.join(dirs.backups, name))
     audit(req.ctx, getDef('branches'), 0, 'backup', { file: [null, name] }, name)
     return { name }
@@ -170,7 +170,7 @@ export default async function (app: FastifyInstance) {
     return reply.send(fs.createReadStream(p))
   })
 
-  // ---- business data: clear customers, jobs and money records, and load the DigitalBurj starter set
+  // ---- business data: clear customers, jobs and money records, and load the SWK OS starter set
   app.get('/api/admin/business-data', async (req) => {
     need(req, 'admin', 'view')
     const { businessDataSummary, starterLoaded } = await import('../domain/business-data')
@@ -180,17 +180,17 @@ export default async function (app: FastifyInstance) {
     need(req, 'admin', 'delete')
     const b = z.object({ confirm: z.string(), load_starter: z.boolean().default(true) }).parse(req.body ?? {})
     if (b.confirm !== RESET_PHRASE) throw bad(`Type ${RESET_PHRASE} exactly to confirm`)
-    const { resetBusinessData, loadDigitalBurjStarterData, declineStarter, clearStarterDeclined } = await import('../domain/business-data')
+    const { resetBusinessData, loadSwkStarterData, declineStarter, clearStarterDeclined } = await import('../domain/business-data')
     const r = await resetBusinessData(req.ctx)
     let starter: any = null
-    if (b.load_starter) { clearStarterDeclined(); starter = await loadDigitalBurjStarterData(req.ctx) } else declineStarter()
+    if (b.load_starter) { clearStarterDeclined(); starter = await loadSwkStarterData(req.ctx) } else declineStarter()
     return { ...r, starter }
   })
   app.post('/api/admin/business-data/load-starter', async (req) => {
     need(req, 'admin', 'create')
-    const { loadDigitalBurjStarterData } = await import('../domain/business-data')
-    const r = await loadDigitalBurjStarterData(req.ctx)
-    if (!r.loaded) throw bad(r.reason === 'already loaded' || r.reason === 'customer already exists' ? 'The DigitalBurj starter data is already in this workspace.' : `Starter data was not loaded (${r.reason}).`)
+    const { loadSwkStarterData } = await import('../domain/business-data')
+    const r = await loadSwkStarterData(req.ctx)
+    if (!r.loaded) throw bad(r.reason === 'already loaded' || r.reason === 'customer already exists' ? 'The SWK OS starter data is already in this workspace.' : `SWK OS starter data was not loaded (${r.reason}).`)
     return r
   })
 

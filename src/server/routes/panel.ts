@@ -115,7 +115,7 @@ export default async function (app: FastifyInstance) {
   app.get('/api/panel/:entity/:id/video', async (req) => { const { def, id } = rec(req); return q.all(`SELECT v.id, v.url, v.created_at, u.name AS user_name FROM video_calls v LEFT JOIN users u ON u.id = v.created_by WHERE v.entity = ? AND v.record_id = ? ORDER BY v.id DESC`, def.key, id) })
   app.post('/api/panel/:entity/:id/video', async (req) => {
     const { def, id, r } = rec(req)
-    const room = `DigitalBurj-${def.key}-${id}-${crypto.randomBytes(4).toString('hex')}`
+    const room = `SWK OS-${def.key}-${id}-${crypto.randomBytes(4).toString('hex')}`
     const url = `https://meet.jit.si/${room}`
     q.run(`INSERT INTO video_calls(entity, record_id, room, url, created_by, created_at) VALUES (?,?,?,?,?,?)`, def.key, id, room, url, req.user!.id, nowIso())
     q.run(`INSERT INTO comments(entity, record_id, user_id, body, created_at) VALUES (?,?,?,?,?)`, def.key, id, req.user!.id, `Started a video call about ${r._title}: ${url}`, nowIso())

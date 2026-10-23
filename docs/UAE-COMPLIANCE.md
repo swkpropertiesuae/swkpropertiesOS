@@ -34,7 +34,7 @@ Action: obtain the activities/permits from DET, or subcontract those legs to lic
 Footer snippet:
 ```html
 <footer>ELVORA SHIPPING L.L.C · إلفورا للشحن ش.ذ.م.م · Licensed by Dubai Economy and Tourism, licence no. 1645802 · Commercial register 2911510 · Naif, Dubai, U.A.E. · TRN [15 digits once registered]</footer>
-<label><input type="checkbox" required> I agree that DigitalBurj Shipping may use these details to respond to my enquiry, as described in the <a href="/privacy">privacy notice</a>.</label>
+<label><input type="checkbox" required> I agree that SWK OS Shipping may use these details to respond to my enquiry, as described in the <a href="/privacy">privacy notice</a>.</label>
 ```
 
 ### C. Application gaps (now addressed – §3)
@@ -87,7 +87,7 @@ Invoices could be posted without a supplier TRN or reason on credit notes; VAT c
 4. Update the *Licences & registrations* statuses from *To verify* to *Active* with numbers and expiries; attach copies in the Documents library.
 5. Screen customers and vendors; record results; flag related parties (owner/group companies).
 6. Choose an accredited e-invoicing provider before 31 Mar 2027; connect it under Integrations.
-7. Fix the website (§2B) and regenerate the corporate templates, which still read "DigitalBurj Shipping LLC" and advertise unlicensed services (`tools/docs`, then `npm run docs:build`).
+7. Fix the website (§2B) and regenerate the corporate templates, which still read "SWK OS Shipping LLC" and advertise unlicensed services (`tools/docs`, then `npm run docs:build`).
 8. Keep tax records for at least 7 years (Tax Procedures law) – do not delete documents; the OS soft-deletes only.
 
 ## 5. Not covered / to decide with your advisers

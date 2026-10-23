@@ -17,8 +17,8 @@ export function emitWebhooks(event: string, payload: any) {
 
 async function deliver(h: any, event: string, payload: any) {
   const body = JSON.stringify({ event, at: nowIso(), data: payload })
-  const headers: Record<string, string> = { 'content-type': 'application/json', 'x-digitalburj-event': event }
-  if (h.secret) headers['x-digitalburj-signature'] = 'sha256=' + crypto.createHmac('sha256', h.secret).update(body).digest('hex')
+  const headers: Record<string, string> = { 'content-type': 'application/json', 'x-swk-event': event }
+  if (h.secret) headers['x-swk-signature'] = 'sha256=' + crypto.createHmac('sha256', h.secret).update(body).digest('hex')
   let status = 0, ok = 0, response = ''
   try {
     const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 7000)

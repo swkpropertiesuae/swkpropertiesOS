@@ -50,7 +50,7 @@ export function businessDataSummary(): { rows: ResetSummary[]; journals: number;
 const journalCondition = () => `source_type NOT IN (${KEPT_JOURNAL_SOURCES.map(() => '?').join(',')}) AND NOT (source_type = 'Reversal' AND source_id IN (SELECT id FROM journal_entries WHERE source_type IN (${KEPT_JOURNAL_SOURCES.map(() => '?').join(',')})))`
 
 export async function backupBeforeReset(label = 'before-reset'): Promise<string> {
-  const name = `digitalburj-${label}-${nowIso().replace(/[:.]/g, '-').slice(0, 19)}${BACKUP_EXT}`
+  const name = `swk-${label}-${nowIso().replace(/[:.]/g, '-').slice(0, 19)}${BACKUP_EXT}`
   fs.mkdirSync(dirs.backups, { recursive: true })
   await db.backup(path.join(dirs.backups, name))
   return name
@@ -100,8 +100,8 @@ export async function resetBusinessData(ctx: Ctx, opts: { backup?: boolean } = {
   return { backup, deleted, files_removed: files, total: Object.values(deleted).reduce((s, n) => s + n, 0) }
 }
 
-export const STARTER_MARK = 'seed:digitalburj-starter-2026'
-export const STARTER_DECLINED = 'seed:digitalburj-starter-declined'
+export const STARTER_MARK = 'seed:swk-starter-2026'
+export const STARTER_DECLINED = 'seed:swk-starter-declined'
 const MARK = STARTER_MARK
 const hasKey = (k: string) => !!q.val(`SELECT 1 FROM settings WHERE key = ?`, k)
 export const starterLoaded = () => hasKey(MARK)
@@ -110,7 +110,7 @@ export const declineStarter = () => q.run(`INSERT INTO settings(key, value, upda
 export const clearStarterDeclined = () => q.run(`DELETE FROM settings WHERE key = ?`, STARTER_DECLINED)
 
 
-export async function loadDigitalBurjStarterData(ctx: Ctx = SYSTEM_CTX): Promise<{ loaded: boolean; reason?: string }> {
+export async function loadSwkStarterData(ctx: Ctx = SYSTEM_CTX): Promise<{ loaded: boolean; reason?: string }> {
   if (inDemo()) return { loaded: false, reason: 'demo workspace' }
   if (starterLoaded()) return { loaded: false, reason: 'already loaded' }
   

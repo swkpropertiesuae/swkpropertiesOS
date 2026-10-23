@@ -2,7 +2,7 @@
   "name": "swkpropos-cloudflare",
   "private": true,
   "version": "1.0.0",
-  "description": "Cloudflare Containers wrapper for DigitalBurj Business OS – SWKPROPOS",
+  "description": "Cloudflare Containers wrapper for SWK OS – SWKPROPOS",
   "scripts": {
     "typecheck": "tsc --noEmit",
     "deploy": "wrangler deploy",

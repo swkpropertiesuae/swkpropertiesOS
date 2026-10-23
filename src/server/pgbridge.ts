@@ -20,7 +20,7 @@ const sig = new Int32Array(workerData.sig)
 let client = null
 async function ensure() {
   if (client) return client
-  const c = new Client({ ...options, application_name: 'digitalburj-os', connectionTimeoutMillis: 15000 })
+  const c = new Client({ ...options, application_name: 'SWK OS', connectionTimeoutMillis: 15000 })
   c.on('error', () => { client = null })
   await c.connect()
   client = c

@@ -38,11 +38,11 @@ export function Login() {
   return (
     <div className="login-world min-h-full grid lg:grid-cols-[1.05fr_1fr]">
       <div className="login-brand hidden lg:flex flex-col justify-between text-white p-12 relative overflow-hidden" style={{ background: 'linear-gradient(160deg,#1a2620 0%,#0f1714 55%,#0d1310 100%)' }}>
-        <img src="/brand/digitalburj-mark.webp" alt="" aria-hidden className="absolute -right-16 -bottom-14 w-[440px] opacity-[.13] pointer-events-none brand-invert" />
+        <img src="/brand/SWK OS-mark.webp" alt="" aria-hidden className="absolute -right-16 -bottom-14 w-[440px] opacity-[.13] pointer-events-none brand-invert" />
         <img src="/brand/swk-logo.png" alt="SWK Properties" className="relative w-[240px]" />
         <div className="relative max-w-[480px]">
-          <h1 className="text-white text-[36px] font-extrabold leading-[1.12] m-0">DigitalBurj Growth</h1>
-          <p className="text-[16px] text-white/80 mt-4 leading-relaxed">The Real Estate Growth Engine</p>
+          <h1 className="text-white text-[36px] font-extrabold leading-[1.12] m-0">SWK OS</h1>
+          <p className="text-[16px] text-white/80 mt-4 leading-relaxed">The SWK OS Engine</p>
           <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 mt-8 text-[13.5px]">
             {ROLES.map(x => (
               <div key={x} className="flex items-center gap-2.5">
@@ -52,16 +52,16 @@ export function Login() {
             ))}
           </div>
         </div>
-        <a className="brand-partner-wrap relative w-fit no-underline" href="https://digitalburj.com/business-os" target="_blank" rel="noopener noreferrer">
+        <a className="brand-partner-wrap relative w-fit no-underline" href="https://swkpropertiesuae.com" target="_blank" rel="noopener noreferrer">
           <span className="mr-2.5 text-[11.5px] font-semibold text-white/70">Brand partner</span>
-          <img src="/brand/digitalburj-wordmark.webp" alt="DigitalBurj Business OS" width="408" height="78" className="brand-invert inline-block h-[26px] w-auto" />
+          <img src="/brand/SWK OS-wordmark.webp" alt="SWK OS Business OS" width="408" height="78" className="brand-invert inline-block h-[26px] w-auto" />
         </a>
         <div className="relative text-xs text-white/55">© {new Date().getFullYear()} SWK Properties L.L.C. · Dubai, United Arab Emirates</div>
       </div>
       <div className="flex items-center justify-center p-6 bg-pearl">
         <form onSubmit={submit} className="w-full max-w-[440px]" aria-labelledby="signin-h">
           <img src="/brand/swk-logo-ink.png" alt="SWK Properties" className="w-[140px] mb-6" />
-          <h2 id="signin-h" className="text-[28px] font-extrabold m-0">Sign in to DigitalBurj Growth</h2>
+          <h2 id="signin-h" className="text-[28px] font-extrabold m-0">Sign in to SWK OS</h2>
           <p className="text-muted mt-1 mb-6">Select your role to access the dashboard.</p>
           {err && <div role="alert" className="mb-4 px-3 py-2.5 rounded-lg bg-blush border border-[#f2bcc3] text-[#8f1325] text-sm font-medium">{err}</div>}
           <div className="grid grid-cols-2 gap-3 mb-6">

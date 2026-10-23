@@ -27,7 +27,7 @@ export const compliance: EntityDef[] = [
     fields: [
       T('activity_en', 'Activity (English)', { required: true, list: true, search: true, section: 'Activity', span: 2 }), T('activity_ar', 'Activity (Arabic)', { list: true }),
       S('status', 'Status', ['Active', 'Suspended', 'Cancelled'], { default: 'Active', list: true }),
-      T('covers', 'Service codes covered', { list: true, span: 2, help: 'Comma separated: SEA_FREIGHT, CUSTOMS, SEA_AGENCY, CARGO_HANDLING, AIR_FREIGHT, ROAD_TRANSPORT, WAREHOUSING, COURIER' }),
+      T('covers', 'Service codes covered', { list: true, span: 2, help: 'Comma separated: BROKER, PROPERTY_MGMT, MAINTNANCE, VALUATION, CUSTOMS, INSURANCE' }),
       T('source', 'Source', { default: 'Trade licence', list: true }), T('authority', 'Follow-up authority'), TA('notes', 'Notes / conditions'),
     ],
   },

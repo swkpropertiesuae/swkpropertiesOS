@@ -9,7 +9,7 @@ import { EMAILS } from './emails.mjs'
 const OUT = path.join(ROOT, 'src/server/studio/library.json')
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 const CO_TOKENS = [
-  [/DigitalBurj Shipping LLC/g, '{{company.name}}'],
+  [/SWK OS Shipping LLC/g, '{{company.name}}'],
   [/Bur Dubai, Dubai, (?:United Arab Emirates|UAE)/g, '{{company.address}}'],
   [/\+971 50 422 1950/g, '{{company.phone}}'],
   [/sales@swkpropertiesuae\.com/g, '{{company.email}}'],

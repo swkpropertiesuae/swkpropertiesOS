@@ -16,7 +16,7 @@ Host `logo.png` on your website (or attach it inline) and change the `src` in ea
 | 10 | EM-10-payment-reminder (.html / .txt) | A few days before or just after the due date. | Friendly reminder – invoice [Invoice no.] due [DD MMM YYYY] |
 | 11 | EM-11-overdue-notice (.html / .txt) | More than 14 days overdue. | Overdue invoice [Invoice no.] – please arrange payment |
 | 12 | EM-12-payment-received (.html / .txt) | After funds clear. | Payment received – thank you |
-| 13 | EM-13-welcome-new-customer (.html / .txt) | After the account is opened. | Welcome to DigitalBurj Shipping |
+| 13 | EM-13-welcome-new-customer (.html / .txt) | After the account is opened. | Welcome to SWK Properties |
 | 14 | EM-14-complaint-acknowledgement (.html / .txt) | Within one working day of a complaint. | We have received your concern – ref. [Ticket no.] |
 | 15 | EM-15-customs-clearance-update (.html / .txt) | During clearance (query, duty, release). | Customs update – [Job ref.] |
 | 16 | EM-16-rate-request-to-carrier (.html / .txt) | To carriers and overseas agents. | Rate and space request – [Origin] to [Destination] – [date] |

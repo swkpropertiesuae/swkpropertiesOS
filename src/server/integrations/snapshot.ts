@@ -30,7 +30,7 @@ export function businessSnapshot(): Snapshot {
     docs_expiring_30d: n(`SELECT COUNT(*) FROM attachments WHERE expiry_date IS NOT NULL AND expiry_date <= ? AND deleted_at IS NULL`, addDays(today, 30)),
   }
   const text = [
-    `DigitalBurj brief – ${today}`,
+    `SWK OS brief – ${today}`,
     `Jobs: ${d.open_jobs} open, ${d.jobs_opened_month} opened this month`,
     `Revenue this month: AED ${fmt(d.revenue_month_aed)} | Unbilled work: AED ${fmt(d.unbilled_revenue_aed)}`,
     `Receivable: AED ${fmt(d.ar_outstanding_aed)} (overdue AED ${fmt(d.ar_overdue_aed)} on ${d.overdue_invoices} invoices)`,

@@ -19,5 +19,5 @@ for (let i = 0; i < headings.length; i++) {
   assert.ok(['Partial', 'Missing', 'External validation'].includes(section.status))
   for (const path of section.sources) assert.ok(existsSync(new URL(path, root)), `Missing evidence: ${path}`)
 }
-for (const label of ['# Final operating lifecycle', 'DIGITALBURJ CONTROL', ...data.areas]) assert.ok(text.includes(label), `Missing canonical content: ${label}`)
+for (const label of ['# Final operating lifecycle', 'SWK OS CONTROL', ...data.areas]) assert.ok(text.includes(label), `Missing canonical content: ${label}`)
 console.log('Scope integrity passed: 147 complete original sections, lifecycle, product areas and evidence paths.')

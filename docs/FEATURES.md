@@ -3,7 +3,7 @@
 Reference products reviewed for scope: Fresa Gold/Vega (screenshots supplied), Zoho (CRM/Books/Inventory/Projects/Desk),
 Odoo (CRM/Sales/Accounting/Inventory/HR/Helpdesk), CargoWise-style forwarding workflows.
 
-| Area | DigitalBurj OS |
+| Area | SWK OS |
 |---|---|
 | Master Job (Fresa) | Department, Job/B-L/Operational status, INCO terms, Generate EDI, KPI, Bulk PI, Track-Trace, tabs Accounting / SB-BOE / Customs / Shipments / Inventory, right rail Comments, Follow Up, Attachments, References, Tags, Links, Likes, Complaints, Video Call, History |
 | Job search | Type / Filter / Value search with result grid; global Ctrl+K search |

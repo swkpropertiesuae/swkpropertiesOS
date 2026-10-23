@@ -25,7 +25,7 @@ export default [
     TOT([['Estimated total', '[0.00]']]),
     P('Amounts are estimates based on information supplied and current carrier rates. Actual charges will be invoiced after the service is performed. [If a deposit is required: Please pay [amount] before booking is released.]'), bankF,
   ] },
-  { id: 'ELV-026', cat, title: 'Commercial Invoice for Goods', subtitle: 'For the seller (shipper) of the goods to complete and issue. DigitalBurj Shipping does not issue this document on the seller’s behalf unless authorised in writing.', blocks: [
+  { id: 'ELV-026', cat, title: 'Commercial Invoice for Goods', subtitle: 'For the seller (shipper) of the goods to complete and issue. SWK OS Shipping does not issue this document on the seller’s behalf unless authorised in writing.', blocks: [
     F([['Invoice no.', '[Seller’s number]'], ['Date', '[DD MMM YYYY]'], ['Seller / exporter', '[Name, address, licence no.]'], ['Buyer / consignee', '[Name, address]'], ['Notify party', '[If different]'], ['Country of origin', '[Country]'], ['Port of loading', '[Port]'], ['Port of discharge', '[Port]'], ['Incoterm and place', '[e.g. FOB Jebel Ali]'], ['Payment terms', '[Terms]'], ['Currency', '[Currency]'], ['Vessel / flight', '[Name]']]),
     H('Goods'), T([['#', 0.04], ['Description of goods', 0.3], ['HS code', 0.11], ['Origin', 0.09], ['Qty', 0.08, 'r'], ['Unit', 0.07], ['Unit price', 0.14, 'r'], ['Amount', 0.17, 'r']], 5),
     TOT([['Goods value', '[0.00]'], ['Freight', '[0.00]'], ['Insurance', '[0.00]'], ['Invoice total', '[0.00]']]),
@@ -73,7 +73,7 @@ export default [
     F([['PO no.', '[ELV-PO-YYYY-NNN]'], ['Date', '[DD MMM YYYY]'], ['Supplier', '[Name]'], ['Supplier TRN', '[TRN]'], ['Delivery / service date', '[DD MMM YYYY]'], ['Delivery location', '[Address]'], ['Payment terms', '[Days]'], ['Requested by', '[Name]']]),
     H('Order lines'), T([['#', 0.05], ['Description', 0.37], ['Qty', 0.08, 'r'], ['Unit', 0.08], ['Unit price', 0.14, 'r'], ['VAT', 0.1, 'r'], ['Total', 0.18, 'r']], 5),
     TOT([['Subtotal', '[0.00]'], ['VAT', '[0.00]'], ['Order total', '[0.00]']]),
-    P('Quote the PO number on the supplier’s invoice. We pay invoices that match this order and the delivered goods or services. Changes require a written amendment signed by DigitalBurj Shipping.'),
+    P('Quote the PO number on the supplier’s invoice. We pay invoices that match this order and the delivered goods or services. Changes require a written amendment signed by SWK OS Shipping.'),
     SIG(['Requested by', 'Approved by']),
   ] },
   { id: 'ELV-034', cat, title: 'Supplier Account Opening Form', blocks: [

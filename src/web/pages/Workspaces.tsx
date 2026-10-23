@@ -51,9 +51,9 @@ export function WorkspaceUtilities() {
     <button className="feature-card" onClick={openSearch}><Search /><strong>{tr('Search')}</strong><ArrowUpRight /></button>
     <Link className="feature-card" to="/tools"><Calculator /><strong>Freight tools</strong><ArrowUpRight /></Link>
     <Link className="feature-card" to="/e/announcements"><BookOpen /><strong>{tr('Blog')}</strong><ArrowUpRight /></Link>
-    <a className="feature-card" href="https://www.swkpropertiesuae.com" target="_blank" rel="noopener noreferrer"><ExternalLink /><strong>DigitalBurj website</strong><ArrowUpRight /></a>
+    <a className="feature-card" href="https://www.swkpropertiesuae.com" target="_blank" rel="noopener noreferrer"><ExternalLink /><strong>SWK Properties website</strong><ArrowUpRight /></a>
     <button className="feature-card" onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}><Languages /><strong>{lang === 'ar' ? 'English' : 'العربية'}</strong><ArrowUpRight /></button>
     <button className="feature-card" onClick={() => void logout()}><Power /><strong>Sign out</strong><ArrowUpRight /></button>
-  </div><p className="text-xs text-muted mt-6">DigitalBurj OS v1.0</p></div>
+  </div><p className="text-xs text-muted mt-6">SWK OS v1.0</p></div>
 }
 

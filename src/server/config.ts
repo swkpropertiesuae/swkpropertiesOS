@@ -17,10 +17,10 @@ export const config = {
   dataDir: path.resolve(env.DATA_DIR ?? 'data'),
   /** When set, the app runs on PostgreSQL (e.g. Supabase) instead of the local SQLite file. */
   databaseUrl: env.DATABASE_URL ?? '',
-  pgSchema: (env.PG_SCHEMA ?? 'digitalburj').replace(/[^a-z0-9_]/gi, '').toLowerCase() || 'digitalburj',
+  pgSchema: (env.PG_SCHEMA ?? 'swk').replace(/[^a-z0-9_]/gi, '').toLowerCase() || 'swk',
   baseUrl: env.PUBLIC_URL ?? '',
   timezone: env.APP_TIMEZONE ?? 'Asia/Dubai',
-  /** Load the DigitalBurj starter data (customer, jobs, invoices) into an empty production database at first start. */
+  /** Load the SWK OS starter data (customer, jobs, invoices) into an empty production database at first start. */
   starterData: bool(env.STARTER_DATA, true),
   /** Set to a new token (for example a date) to clear all business data once, after taking a backup, on the next start. */
   resetToken: (env.RESET_BUSINESS_DATA_ON_START ?? '').trim(),
@@ -29,14 +29,14 @@ export const config = {
   sessionHours: Number(env.SESSION_HOURS ?? 12),
   trustProxy: bool(env.TRUST_PROXY, false),
   maxUploadMb: Number(env.MAX_UPLOAD_MB ?? 25),
-  demo: { enabled: bool(env.DEMO_ENABLED, false), email: (env.DEMO_EMAIL ?? 'demo@swkpropertiesuae.com').toLowerCase(), password: env.DEMO_PASSWORD ?? 'Demo@DigitalBurj2026' },
+  demo: { enabled: bool(env.DEMO_ENABLED, false), email: (env.DEMO_EMAIL ?? 'demo@swkpropertiesuae.com').toLowerCase(), password: env.DEMO_PASSWORD ?? 'Demo@SWK2026' },
   accounts: {
     adminEmail: (env.ADMIN_EMAIL ?? 'admin@swkpropertiesuae.com').toLowerCase(),
     adminName: env.ADMIN_NAME ?? 'System Administrator',
-    adminPassword: env.ADMIN_PASSWORD ?? 'DigitalBurj@Admin2026',
+    adminPassword: env.ADMIN_PASSWORD ?? 'SWK@Admin2026',
     managerEmail: (env.MANAGER_EMAIL ?? 'manager@swkpropertiesuae.com').toLowerCase(),
     managerName: env.MANAGER_NAME ?? 'Operations Manager',
-    managerPassword: env.MANAGER_PASSWORD ?? 'DigitalBurj@Manager2026',
+    managerPassword: env.MANAGER_PASSWORD ?? 'SWK@Manager2026',
   },
   smtp: {
     host: env.SMTP_HOST ?? '',
@@ -53,7 +53,7 @@ export const dirs = {
   data: config.dataDir,
   uploads: path.join(config.dataDir, 'uploads'),
   backups: path.join(config.dataDir, 'backups'),
-  db: path.join(config.dataDir, 'digitalburj.db'),
+  db: path.join(config.dataDir, 'swk.db'),
 }
 
 export function ensureDirs() {

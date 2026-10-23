@@ -1,4 +1,4 @@
-# Sending company email from DigitalBurj OS
+# Sending company email from SWK OS
 
 Open **Email** from the header or dashboard. Use **Write email** to choose a connected company address, enter recipients, a subject and a message, then send. **Sent & queued** shows your outgoing messages and lets you retry a failed message. “Sent” means the provider accepted it; check the provider for delivery or bounce details. Replies arrive in the existing company mailboxes in Gmail. This release does not synchronise the Gmail inbox or Sent folder.
 

@@ -5,6 +5,6 @@
   "category": "finance",
   "key_features": ["tax-codes", "pricing", "tax-invoices", "credit-notes", "period-reporting", "reconciliation", "exports", "audit-evidence", "e-invoicing", "localization-modules", "status-tracking", "retries"],
   "brand": "SWKPROPOS",
-  "os": "DigitalBurj Business OS",
+  "os": "SWK OS",
   "elvora_design": true
 }

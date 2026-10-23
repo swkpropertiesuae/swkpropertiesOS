@@ -5,6 +5,6 @@
   "category": "approvals",
   "key_features": ["approval-chains", "purchases", "discounts", "refunds", "payments", "leave-limits", "credit-limits", "conditional-thresholds", "routing", "escalation", "delegation", "approval-history", "cross-module-engine"],
   "brand": "SWKPROPOS",
-  "os": "DigitalBurj Business OS",
+  "os": "SWK OS",
   "elvora_design": true
 }
