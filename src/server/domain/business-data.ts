@@ -9,7 +9,7 @@ import { bad, nowIso, todayStr, addDays } from '../util'
 import { postInvoice, setNextInvoiceNumber } from './finance'
 
 export const BUSINESS_ENTITIES: { group: string; keys: string[] }[] = [
-  { group: 'Customers, CRM and sales', keys: ['parties', 'contacts', 'campaigns', 'leads', 'opportunities', 'activities', 'whatsapp_messages', 'rate_cards', 'quotations', 'contracts', 'carrier_rfqs', 'rfq_offers'] },
+  { group: 'Customers, CRM and sales', keys: ['parties', 'contacts', 'campaigns', 'leads', 'opportunities', 'activities', 'whatsapp_messages', 'quotations', 'contracts'] },
   { group: 'Properties, deals and mandates', keys: ['properties', 'units', 'communities', 'developers', 'mandates', 'viewings', 'offers', 'jobs', 'sales_contracts', 'escrow_accounts', 'escrow_transactions', 'leases', 'rent_schedules', 'rent_receipts', 'service_charges', 'maintenance', 'inspections', 'handovers', 'snagging_items', 'property_visits'] },
   { group: 'Invoices, bills and banking', keys: ['invoices', 'bills', 'receipts', 'payments', 'bank_transactions', 'expenses', 'purchase_orders', 'owner_statements', 'agent_commissions'] },
   { group: 'People and HR', keys: ['employees', 'agents', 'leave_requests', 'attendance', 'payslips'] },

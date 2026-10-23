@@ -82,13 +82,13 @@ function demoChat(messages: ChatMsg[], tools?: ToolDef[]): ChatResult {
   const get = (n: string) => { const m = results.find(r => r.name === n); try { return JSON.parse(m?.content ?? 'null') } catch { return null } }
   const snap = get('business_snapshot'), od = get('overdue_invoices') ?? [], st = get('stalled_jobs') ?? {}, tk = get('open_tickets') ?? [], ld = get('list_leads') ?? []
   const lines = [`Here is where things stand (live data from this demo workspace).`]
-  if (snap) lines.push(`• ${snap.open_jobs} open jobs, revenue this month AED ${Math.round(snap.revenue_month_aed).toLocaleString('en-US')}, unbilled work AED ${Math.round(snap.unbilled_revenue_aed).toLocaleString('en-US')}.`, `• Receivables AED ${Math.round(snap.ar_outstanding_aed).toLocaleString('en-US')}, of which AED ${Math.round(snap.ar_overdue_aed).toLocaleString('en-US')} is overdue. Cash and bank AED ${Math.round(snap.cash_aed).toLocaleString('en-US')}.`)
+  if (snap) lines.push(`• ${snap.open_jobs} open deals, revenue this month AED ${Math.round(snap.revenue_month_aed).toLocaleString('en-US')}, commission to bill AED ${Math.round(snap.unbilled_revenue_aed).toLocaleString('en-US')}.`, `• Receivables AED ${Math.round(snap.ar_outstanding_aed).toLocaleString('en-US')}, of which AED ${Math.round(snap.ar_overdue_aed).toLocaleString('en-US')} is overdue. Cash and bank AED ${Math.round(snap.cash_aed).toLocaleString('en-US')}.`)
   if (od.length) lines.push(`• Chase first: ${od.slice(0, 3).map((o: any) => `${o.customer} (${o.invoice_no}, ${o.days_overdue} days, ${o.balance.toLocaleString('en-US')})`).join('; ')}.`)
-  const late = (st.eta_passed ?? []).length + (st.free_time_ending ?? []).length + (st.no_update_5d ?? []).length
-  if (late) lines.push(`• ${late} shipment alerts: ${[...(st.eta_passed ?? []).map((j: any) => j.job_no + ' ETA passed'), ...(st.free_time_ending ?? []).map((j: any) => j.container_no + ' free time ending')].slice(0, 3).join(', ')}.`)
+  const late = (st.no_update_5d ?? []).length
+  if (late) lines.push(`• ${late} stalled deals need attention: ${[(st.no_update_5d ?? []).map((j: any) => j.job_no)].flat().slice(0, 3).join(', ')}.`)
   if (tk.length) lines.push(`• ${tk.length} open tickets, oldest: “${tk[tk.length - 1].subject}”.`)
   if (ld.length) lines.push(`• ${ld.length} recent leads; newest is ${ld[0].company}.`)
-  lines.push(`Suggested next actions: call the largest overdue customer today, chase carriers on late shipments, and follow up the newest lead.`, `(Demo mode: this assistant is scripted. In your production workspace Jarvis uses the AI model you connect under Integrations.)`)
+  lines.push(`Suggested next actions: call the largest overdue customer today, book the pending viewings, and follow up the newest lead.`, `(Demo mode: this assistant is scripted. In your production workspace Jarvis uses the AI model you connect under Integrations.)`)
   void ask
   return { content: lines.join('\n'), tool_calls: [], tokens: 0, model: 'demo-assistant' }
 }

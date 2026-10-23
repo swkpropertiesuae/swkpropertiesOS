@@ -104,8 +104,8 @@ export function Attachments({ entity, id, refresh }: any) {
 
 function Refs({ entity, id, refresh }: any) {
   const qc = useQueryClient(); const q = useList<any[]>(['refs', entity, String(id)], `/api/panel/${entity}/${id}/refs`)
-  const [type, setType] = useState('Customer PO'); const [val, setVal] = useState(''); const [note, setNote] = useState(''); const toast = useToast()
-  const types = ['Customer PO', 'Carrier booking', 'Carrier reference', 'Shipper reference', 'Consignee reference', 'LC number', 'Insurance policy', 'Permit / licence', 'Agent reference', 'Other']
+  const [type, setType] = useState('Mandate no.'); const [val, setVal] = useState(''); const [note, setNote] = useState(''); const toast = useToast()
+  const types = ['Mandate no.', 'Title deed', 'Ejari no.', 'RERA permit / Trakheesi', 'Listing ref', 'Cheque no.', 'Contract no.', 'Passport / Emirates ID', 'Mortgage ref', 'Other']
   const add = async () => { try { await post(`/api/panel/${entity}/${id}/refs`, { ref_type: type, ref_value: val, note: note || undefined }); setVal(''); setNote(''); void qc.invalidateQueries({ queryKey: ['refs', entity, String(id)] }); refresh() } catch (e: any) { toast.error(e.message) } }
   return (<div>
     <div className="grid gap-2"><select className="select" value={type} onChange={e => setType(e.target.value)}>{types.map(t => <option key={t}>{t}</option>)}</select><input className="input" placeholder="Reference number" value={val} onChange={e => setVal(e.target.value)} /><input className="input" placeholder="Note (optional)" value={note} onChange={e => setNote(e.target.value)} /><button className="btn green sm self-end" disabled={!val.trim()} onClick={() => void add()}><Plus /> Add reference</button></div>
@@ -118,12 +118,12 @@ function Tags({ entity, id, refresh }: any) {
   const [t, setT] = useState('')
   const add = async (tag: string) => { if (!tag.trim()) return; await post(`/api/panel/${entity}/${id}/tags`, { tag }); setT(''); void qc.invalidateQueries({ queryKey: ['tags', entity, String(id)] }); void qc.invalidateQueries({ queryKey: ['alltags'] }); refresh() }
   return (<div>
-    <div className="flex gap-2"><input className="input" list="taglist" placeholder="Add a tag (e.g. urgent, dg-cargo, vip)" value={t} onChange={e => setT(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void add(t) }} /><datalist id="taglist">{all.data?.map(x => <option key={x.tag} value={x.tag} />)}</datalist><button className="btn green sm" onClick={() => void add(t)} disabled={!t.trim()}><Plus /></button></div>
+    <div className="flex gap-2"><input className="input" list="taglist" placeholder="Add a tag (e.g. urgent, exclusive, vip)" value={t} onChange={e => setT(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void add(t) }} /><datalist id="taglist">{all.data?.map(x => <option key={x.tag} value={x.tag} />)}</datalist><button className="btn green sm" onClick={() => void add(t)} disabled={!t.trim()}><Plus /></button></div>
     <div className="flex flex-wrap gap-2 mt-4">{!q.data ? <Loading /> : q.data.length === 0 ? <p className="text-sm text-muted w-full text-center py-6">No tags.</p> : q.data.map(tag => <span key={tag} className="badge teal">{tag}<button className="ml-1 bg-transparent border-0 cursor-pointer text-inherit p-0" aria-label={`Remove ${tag}`} onClick={async () => { await del(`/api/panel/${entity}/${id}/tags/${encodeURIComponent(tag)}`); void qc.invalidateQueries({ queryKey: ['tags', entity, String(id)] }); refresh() }}>×</button></span>)}</div>
   </div>)
 }
 
-const LINKABLE = ['jobs', 'shipments', 'quotations', 'invoices', 'bills', 'parties', 'contacts', 'bookings', 'tickets', 'claims', 'opportunities', 'leads', 'transport_orders', 'customs_declarations', 'grns', 'dispatches', 'contracts', 'projects']
+const LINKABLE = ['jobs', 'quotations', 'invoices', 'bills', 'parties', 'contacts', 'tickets', 'claims', 'opportunities', 'leads', 'properties', 'mandates', 'leases', 'viewings', 'offers', 'contracts', 'projects']
 function Links({ entity, id, refresh }: any) {
   const { def } = useMeta(); const qc = useQueryClient(); const q = useList<any[]>(['links', entity, String(id)], `/api/panel/${entity}/${id}/links`); const toast = useToast()
   const [to, setTo] = useState('jobs'); const [tid, setTid] = useState<number | null>(null)

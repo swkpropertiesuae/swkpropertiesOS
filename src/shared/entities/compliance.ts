@@ -23,7 +23,7 @@ export const compliance: EntityDef[] = [
   },
   {
     key: 'licence_activities', label: 'Licensed activity', plural: 'Licensed activities', module: 'compliance', icon: 'ListChecks', title: ['activity_en'], statusField: 'status',
-    description: 'Activities printed on the trade licence. Jobs, quotations, transport and warehouse documents are checked against this list. If you obtain a licence amendment or permit, add the activity here.',
+    description: 'Activities printed on the trade licence. Deals, mandates, publication and service work are checked against this list. If you obtain a licence amendment or permit, add the activity here.',
     fields: [
       T('activity_en', 'Activity (English)', { required: true, list: true, search: true, section: 'Activity', span: 2 }), T('activity_ar', 'Activity (Arabic)', { list: true }),
       S('status', 'Status', ['Active', 'Suspended', 'Cancelled'], { default: 'Active', list: true }),

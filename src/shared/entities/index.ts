@@ -20,7 +20,6 @@ import { job_events } from './job_events'
 
 export { MODULE_DEFS } from './platform'
 export * from './ops'
-export { INCOTERMS, PACKAGE_TYPES } from './masters'
 
 export const ENTITY_LIST: EntityDef[] = [
   ...platform,

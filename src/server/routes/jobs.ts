@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify'
+import { randomBytes } from 'crypto'
 import { z } from 'zod'
 import { q, tx } from '../db'
 import { assertCan, createRecord, deleteRecord, getDef, getRecord, listRecords, patchRecord, SYSTEM_CTX, updateRecord, audit } from '../engine'
@@ -77,6 +78,40 @@ export default async function (app: FastifyInstance) {
 
   app.post('/api/jobs/:id/duplicate', async (req) => { need(req, 'jobs', 'create'); const { id } = loadJob(req); return tx(() => duplicateJob(id, req.ctx)) })
   app.get('/api/jobs/:id/kpi', async (req) => { const { id } = loadJob(req); return jobKpi(id) })
+
+  // Public client status link: portal users may share their own deals; staff share any deal they can see.
+  app.post('/api/jobs/:id/tracking-token', async (req) => {
+    const id = idOf((req.params as any).id)
+    if (req.user!.party_id) {
+      const owner = q.val<number>(`SELECT client_id FROM jobs WHERE id = ? AND deleted_at IS NULL`, id)
+      if (owner !== req.user!.party_id) throw bad('You can only share your own deals')
+    } else assertCan(req.ctx, 'sales', 'view')
+    const token = randomBytes(16).toString('hex')
+    q.run(`INSERT INTO job_tracking_tokens (job_id, token, created_at) VALUES (?, ?, ?) ON CONFLICT(job_id) DO UPDATE SET token = excluded.token, created_at = excluded.created_at`, id, token, nowLocal())
+    return { token, url: `${req.protocol}://${req.headers.host}/t/${token}` }
+  })
+
+  // Client-facing deal status (no financials) for /t/<token> links and document QR codes.
+  const STAGES = ['Inquiry', 'Viewing', 'Offer', 'Negotiation', 'Contract', 'DLD Process', 'Handover', 'Closed']
+  app.get('/api/public/deal/:token', async (req) => {
+    const token = String((req.params as any).token)
+    if (!token || token.length > 80) throw bad('Tracking link not found')
+    const jobId = q.val<number>(`SELECT job_id FROM job_tracking_tokens WHERE token = ?`, token)
+    if (!jobId) throw notFound('Tracking link not found')
+    const j: any = q.get(`SELECT id, job_no, deal_name, deal_type, job_status, operational_status, target_close, deal_date, client_id, property_id FROM jobs WHERE id = ? AND deleted_at IS NULL`, jobId)
+    if (!j) throw notFound('This deal is no longer available')
+    const client = j.client_id ? q.val<string>(`SELECT name FROM parties WHERE id = ?`, j.client_id) : null
+    const prop: any = j.property_id ? q.get(`SELECT title, community_id FROM properties WHERE id = ?`, j.property_id) : null
+    const community = prop?.community_id ? q.val<string>(`SELECT name FROM communities WHERE id = ?`, prop.community_id) : null
+    const events = q.all(`SELECT event_at, event_type, description FROM job_events WHERE job_id = ? AND deleted_at IS NULL AND visible_to_customer = 1 ORDER BY event_at DESC, id DESC LIMIT 20`, j.id)
+    return {
+      job_no: j.job_no, deal_name: j.deal_name, deal_type: j.deal_type, job_status: j.job_status,
+      operational_status: j.operational_status, target_close: j.target_close, deal_date: j.deal_date,
+      stage_index: Math.max(0, STAGES.indexOf(j.operational_status ?? j.job_status)), stages: STAGES,
+      client, property: prop?.title ?? '', community: community ?? '',
+      company: getSetting<string>('company_name') || 'SWK Properties L.L.C.', events,
+    }
+  })
 
   // Bulk mail for deal updates
   app.post('/api/jobs/bulk-mail', async (req) => {

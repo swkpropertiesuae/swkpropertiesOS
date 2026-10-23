@@ -29,7 +29,7 @@ export function Dashboard() {
     </div>
   )
 
-  const tiles: { label: string; value: any; hint?: any; tone?: any; surface?: string; to?: string; show: boolean }[] = [
+  const tiles: { label: string; value: any; hint?: any; tone?: any; surface?: string; to?: string; show: boolean; desk?: boolean }[] = [
     { label: 'Open deals', surface: 'ocean', value: k.open_jobs, hint: `${k.jobs_month ?? 0} opened this month`, to: '/e/jobs?filters=' + encodeURIComponent(JSON.stringify([{ field: 'job_status', op: 'in', value: ['Lead', 'Active Mandate', 'Offer Submitted', 'Offer Accepted', 'Contract Signed', 'DLD Submitted', 'DLD Approved', 'On Hold'] }])), show: k.open_jobs !== undefined },
     { label: 'In pipeline', surface: 'transit', value: k.in_transit, to: '/e/jobs?filters=' + encodeURIComponent(JSON.stringify([{ field: 'operational_status', op: 'in', value: ['Viewing', 'Offer', 'Negotiation', 'Contract', 'DLD Process', 'Handover'] }])), show: k.in_transit !== undefined },
     { label: `Revenue this month (${base})`, surface: 'revenue', value: fmtMoney(k.revenue_month, 0), hint: `Deal profit ${fmtMoney(k.profit_month, 0)}`, show: k.revenue_month !== undefined },
@@ -41,13 +41,30 @@ export function Dashboard() {
     { label: 'New leads', value: k.leads_new, hint: `Pipeline ${fmtMoney(k.pipeline, 0)}`, to: '/e/leads', show: k.leads_new !== undefined },
     { label: 'Open tickets', value: k.tickets_open, to: '/e/tickets', show: k.tickets_open !== undefined },
     { label: 'My open tasks', value: k.my_tasks, to: '/e/tasks', show: k.my_tasks !== undefined },
+    // §11 CEO desk strip — always rendered above the rest
+    { label: 'Leads today', desk: true, value: k.leads_today, hint: k.leads_qualified !== undefined ? `${k.leads_qualified} qualified leads` : undefined, to: '/e/leads', show: k.leads_today !== undefined },
+    { label: 'Viewings next 7 days', desk: true, value: k.viewings_week, hint: k.viewings_missed !== undefined ? `${k.viewings_missed} no-shows in 30 days` : undefined, to: '/e/viewings', show: k.viewings_week !== undefined },
+    { label: 'Offers pending', desk: true, value: k.offers_pending, to: '/e/offers', show: k.offers_pending !== undefined },
+    { label: `Pipeline value (${base})`, desk: true, surface: 'revenue', value: fmtMoney(k.pipeline_value, 0), hint: k.open_jobs !== undefined ? `${k.open_jobs} open deals` : undefined, to: '/e/jobs', show: k.pipeline_value !== undefined },
+    { label: 'Available properties', desk: true, value: k.properties_available, hint: k.properties_reserved !== undefined ? `${k.properties_reserved} reserved or under offer` : undefined, to: '/e/properties?filters=' + encodeURIComponent(JSON.stringify([{ field: 'status', op: 'eq', value: 'Available' }])), show: k.properties_available !== undefined },
+    { label: 'Renewals due (90 days)', desk: true, value: k.renewals_due, hint: k.vacant_units !== undefined ? `${k.vacant_units} vacant units` : undefined, to: '/e/leases', show: k.renewals_due !== undefined },
+    { label: `Rent arrears (${base})`, desk: true, value: fmtMoney(k.arrears_aed, 0), hint: k.arrears_count !== undefined ? `${k.arrears_count} schedules overdue` : undefined, to: '/e/rent_schedules?filters=' + encodeURIComponent(JSON.stringify([{ field: 'status', op: 'eq', value: 'Overdue' }])), show: k.arrears_aed !== undefined },
+    { label: `Commissions received (${base})`, desk: true, value: fmtMoney(k.received_month, 0), hint: k.commission_expected !== undefined ? `AED ${fmtMoney(k.commission_expected, 0)} still to invoice` : undefined, to: '/e/receipts', show: k.received_month !== undefined },
+    // supporting mandate + compliance figures in "More business figures"
+    { label: 'Open maintenance', value: k.maintenance_open, hint: k.maintenance_exceptions !== undefined ? `${k.maintenance_exceptions} urgent or emergency` : undefined, to: '/e/maintenance', show: k.maintenance_open !== undefined },
+    { label: 'Mandates expiring (14 days)', value: k.mandates_expiring, hint: k.mandates_active !== undefined ? `${k.mandates_active} active mandates` : undefined, to: '/e/mandates', show: k.mandates_expiring !== undefined },
+    { label: 'Stale mandates (21+ days)', value: k.stale_listings, to: '/e/mandates', show: k.stale_listings !== undefined },
+    { label: 'Compliance issues', value: k.compliance_issues, to: '/reports?r=document_expiries', show: k.compliance_issues !== undefined },
   ].filter(t => t.show)
 
   const ch = d.charts ?? {}, ls = d.lists ?? {}
+  const deskTiles = tiles.filter(t => t.desk), stdTiles = tiles.filter(t => !t.desk)
+  const kpiClick = (t: (typeof tiles)[number]) => t.to && (!t.to.startsWith('/reports') || (can('reports', 'view') && can('finance', 'view'))) ? () => nav(t.to!) : undefined
   return (
     <div className="fade-in dashboard-page">
       <Welcome name={me?.name} />
-      <section aria-label="Business at a glance"><div className="dashboard-metrics">{tiles.slice(0, 4).map(t => <Kpi key={t.label} className={t.surface ? `metric-${t.surface}` : undefined} label={t.label} value={t.value ?? 0} hint={t.hint} onClick={t.to && (!t.to.startsWith('/reports') || (can('reports', 'view') && can('finance', 'view'))) ? () => nav(t.to!) : undefined} />)}</div></section>
+      {deskTiles.length > 0 && <section className="dashboard-desk" aria-label="Real estate desk today"><h2 className="dashboard-section-title">Real estate desk today</h2><div className="dashboard-metrics">{deskTiles.map(t => <Kpi key={t.label} className={t.surface ? `metric-${t.surface}` : undefined} label={t.label} value={t.value ?? 0} hint={t.hint} onClick={kpiClick(t)} />)}</div></section>}
+      <section aria-label="Business at a glance"><div className="dashboard-metrics">{stdTiles.slice(0, 4).map(t => <Kpi key={t.label} className={t.surface ? `metric-${t.surface}` : undefined} label={t.label} value={t.value ?? 0} hint={t.hint} onClick={kpiClick(t)} />)}</div></section>
       {d.alerts?.length > 0 && <details className="dashboard-disclosure dashboard-attention" open><summary>Needs attention <span>{d.alerts.length}</span></summary><div className="dashboard-alerts">{d.alerts.map((a: any, i: number) => (
         <Link key={i} to={a.link} data-level={a.level} className="dashboard-alert flex items-center gap-3 px-4 py-2.5 text-[13.5px]">
           {a.level === 'danger' ? <AlertTriangle size={17} /> : a.level === 'warn' ? <TriangleAlert size={17} /> : <Info size={17} />}<span className="flex-1" dir="auto">{a.text}</span><ArrowRight size={15} /></Link>))}</div></details>}
@@ -68,6 +85,48 @@ export function Dashboard() {
       <DashboardOverview data={d} base={base} />
 
       <div className="grid gap-4 xl:grid-cols-12">
+        {ch.pipeline_funnel && (
+          <Panel className="xl:col-span-7" title="Deal pipeline funnel" color={C.emerald} tools={<span className="text-xs opacity-80 mr-1">deals · value ({base})</span>}>
+            <div className="p-3" style={{ height: 300 }}>
+              {ch.pipeline_funnel.every((s: any) => !s.count) ? <Empty title="No deals in the pipeline yet" hint="Open a deal file and it will travel through these stages." /> : (
+                <ResponsiveContainer><ComposedChart data={ch.pipeline_funnel} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2dfd5" vertical={false} />
+                  <XAxis dataKey="stage" tick={{ fontSize: 12.5 }} interval={0} angle={-16} textAnchor="end" height={54} />
+                  <YAxis yAxisId="count" tick={{ fontSize: 13 }} width={40} allowDecimals={false} />
+                  <YAxis yAxisId="value" orientation="right" tickFormatter={fmtCompact} tick={{ fontSize: 13 }} width={58} />
+                  <Tooltip formatter={(v: any, name: any) => (name === 'Deals' ? v : money(v))} />
+                  <Legend />
+                  <Bar yAxisId="count" dataKey="count" name="Deals" fill={C.emerald} radius={[6, 6, 0, 0]} maxBarSize={54} />
+                  <Bar yAxisId="value" dataKey="value" name="Value" fill={C.champagne} radius={[6, 6, 0, 0]} maxBarSize={54} />
+                </ComposedChart></ResponsiveContainer>)}
+            </div>
+          </Panel>)}
+        {ch.properties_status && (
+          <Panel className="xl:col-span-5" title="Properties by status" color={C.teal}>
+            <div className="p-3" style={{ height: 300 }}>
+              {ch.properties_status.length === 0 ? <Empty title="No properties yet" hint="Add mandates and properties to see the portfolio mix." /> : <ResponsiveContainer><PieChart><Pie data={ch.properties_status} dataKey="value" nameKey="name" innerRadius={62} outerRadius={94} cornerRadius={6} paddingAngle={4}>{ch.properties_status.map((_: any, i: number) => <Cell key={i} fill={PIE[i % PIE.length]} />)}</Pie><Tooltip /><Legend /></PieChart></ResponsiveContainer>}
+            </div>
+          </Panel>)}
+        {ls.upcoming_viewings && (
+          <Panel className="xl:col-span-7" title={<span className="flex items-center gap-2"><CalendarDays size={16} /> Upcoming viewings – next 7 days</span>} color={C.violet} tools={can('mandates', 'create') && <button onClick={() => nav('/e/viewings?new=1')} aria-label="New viewing"><Plus size={17} /></button>} bodyClass="table-wrap max-h-[330px]">
+            {ls.upcoming_viewings.length === 0 ? <Empty title="No viewings booked" hint="Book a viewing against a mandate or a lead and it appears here." /> : <table className="grid"><thead><tr><th>When</th><th>Property</th><th>Client</th><th>Agent</th><th>Status</th></tr></thead><tbody>{ls.upcoming_viewings.map((v: any) => <tr key={v.id} className="clickable" onClick={() => nav(`/e/viewings/${v.id}`)}><td className="whitespace-nowrap text-xs">{fmtDateTime(v.scheduled_at)}</td><td className="max-w-[220px] truncate">{v.property_title}</td><td>{v.contact}</td><td>{v.agent}</td><td><Badge value={v.status} />{v.follow_up_required ? <span className="text-xs text-muted"> · follow-up</span> : null}</td></tr>)}</tbody></table>}
+          </Panel>)}
+        {ch.viewings_outcome && ch.viewings_outcome.length > 0 && (
+          <Panel className="xl:col-span-5" title="Viewing outcomes – last 30 days" color={C.graphite}>
+            <div className="p-3" style={{ height: 300 }}><ResponsiveContainer><PieChart><Pie data={ch.viewings_outcome} dataKey="value" nameKey="name" innerRadius={62} outerRadius={94} cornerRadius={6} paddingAngle={4}>{ch.viewings_outcome.map((_: any, i: number) => <Cell key={i} fill={PIE[i % PIE.length]} />)}</Pie><Tooltip /><Legend /></PieChart></ResponsiveContainer></div>
+          </Panel>)}
+        {ls.offers_pipeline && (
+          <Panel className="xl:col-span-6" title="Offers awaiting a decision" color={C.copper} bodyClass="table-wrap max-h-[300px]">
+            {ls.offers_pipeline.length === 0 ? <Empty title="No pending offers" hint="Offers submitted or under negotiation appear here." /> : <table className="grid"><thead><tr><th>Date</th><th>Property</th><th>Buyer</th><th className="num">Price ({base})</th><th>Status</th></tr></thead><tbody>{ls.offers_pipeline.map((o: any) => <tr key={o.id} className="clickable" onClick={() => nav(`/e/offers/${o.id}`)}><td className="whitespace-nowrap text-xs">{fmtDate(o.offer_date)}</td><td className="max-w-[200px] truncate">{o.property_title}</td><td>{o.buyer}</td><td className="num">{money(o.offer_price)}</td><td><Badge value={o.status} /></td></tr>)}</tbody></table>}
+          </Panel>)}
+        {ls.renewals && (
+          <Panel className="xl:col-span-6" title="Lease renewals – next 90 days" color={C.aviation} bodyClass="table-wrap max-h-[300px]">
+            {ls.renewals.length === 0 ? <Empty title="Nothing expiring soon" hint="Leases ending in the next 90 days appear here to start renewals." /> : <table className="grid"><thead><tr><th>Ends</th><th>Unit</th><th>Tenant</th><th className="num">Annual rent ({base})</th><th>Status</th></tr></thead><tbody>{ls.renewals.map((l: any) => <tr key={l.id} className="clickable" onClick={() => nav(`/e/leases/${l.id}`)}><td className="whitespace-nowrap text-xs">{fmtDate(l.end_date)}</td><td className="max-w-[200px] truncate">{l.unit_title}</td><td>{l.tenant}</td><td className="num">{money(l.annual_rent)}</td><td><Badge value={l.status} /></td></tr>)}</tbody></table>}
+          </Panel>)}
+        {ls.lead_queue && (
+          <Panel className="xl:col-span-6" title="Lead queue – newest first" color={C.emerald} tools={can('crm', 'create') && <button onClick={() => nav('/e/leads?new=1')} aria-label="New lead"><Plus size={17} /></button>} bodyClass="table-wrap max-h-[300px]">
+            {ls.lead_queue.length === 0 ? <Empty title="No open leads" hint="New enquiries queue here until they convert or close." /> : <table className="grid"><thead><tr><th>Lead</th><th>Source</th><th className="num">Est. value ({base})</th><th>Status</th></tr></thead><tbody>{ls.lead_queue.map((l: any) => <tr key={l.id} className="clickable" onClick={() => nav(`/e/leads/${l.id}`)}><td><div className="font-semibold max-w-[220px] truncate">{l.company || l.contact_name}</div>{l.contact_name && l.company ? <div className="text-xs text-muted">{l.contact_name}{l.phone ? ` · ${l.phone}` : ''}</div> : null}</td><td>{l.source}</td><td className="num">{l.est_value ? money(l.est_value) : '—'}</td><td><Badge value={l.status} /></td></tr>)}</tbody></table>}
+          </Panel>)}
         {ch.sales_branch && (
           <Panel className="xl:col-span-7 dashboard-sales-panel" title="Sales by branch" color={C.ocean} tools={<span className="text-xs opacity-80 mr-1">invoiced this month · {base}</span>}>
             <div className="p-3" style={{ height: 290 }}>
@@ -101,7 +160,7 @@ export function Dashboard() {
             <table className="grid"><tbody>{ls.my_tasks.map((t: any) => <tr key={t.id} className="clickable" onClick={() => nav(t.link_entity ? (t.link_entity === 'jobs' ? `/jobs/${t.link_id}` : `/e/${t.link_entity}/${t.link_id}`) : `/e/tasks/${t.id}`)}><td className="font-semibold">{t.title}</td><td className="text-muted text-xs">{t.link_label}</td><td className="whitespace-nowrap">{fmtDate(t.due_date)}</td><td><Badge value={t.priority} /></td></tr>)}</tbody></table>
           </Panel>)}
       </div>
-      {tiles.length > 4 && <section className="mt-8" aria-label="More business figures"><h2 className="dashboard-section-title">More business figures</h2><div className="dashboard-metrics">{tiles.slice(4).map(t => <Kpi key={t.label} className={t.surface ? `metric-${t.surface}` : undefined} label={t.label} value={t.value ?? 0} hint={t.hint} onClick={t.to && (!t.to.startsWith('/reports') || (can('reports', 'view') && can('finance', 'view'))) ? () => nav(t.to!) : undefined} />)}</div></section>}
+      {stdTiles.length > 4 && <section className="mt-8" aria-label="More business figures"><h2 className="dashboard-section-title">More business figures</h2><div className="dashboard-metrics">{stdTiles.slice(4).map(t => <Kpi key={t.label} className={t.surface ? `metric-${t.surface}` : undefined} label={t.label} value={t.value ?? 0} hint={t.hint} onClick={kpiClick(t)} />)}</div></section>}
       </details>
     </div>
   )
@@ -172,10 +231,11 @@ function OperationsDesk({ data }: { data: any }) {
   const lists = data.lists ?? {}, k = data.kpis ?? {}
   const events = [
     ...(lists.target_closes ?? []).map((j: any) => ({ ...j, direction: 'Target close', at: j.target_close, Icon: CalendarDays })),
+    ...(lists.upcoming_viewings ?? []).map((v: any) => ({ ...v, property: v.property_title, job_no: v.viewing_no, direction: 'Viewing', at: v.scheduled_at, Icon: CalendarDays, deal_type: 'Viewing' })),
   ].sort((a, b) => String(a.at ?? '').localeCompare(String(b.at ?? ''))).slice(0, 5)
   return <section className="operations-desk" aria-label="Deal desk">
-    <div className="desk-heading"><div><h2>Next on the deal desk</h2><p>Target closes planned over the next ten days.</p></div><Link className="btn outline" to="/calendar"><CalendarDays size={17} />Open schedule</Link></div>
-    {can('jobs', 'view') && <div className="movement-rail" aria-label="Upcoming deal milestones">{events.length ? events.map((j, i) => <Link className="movement-ticket" key={`${j.direction}-${j.id}-${i}`} to={`/jobs/${j.id}`}><span className="movement-kind"><j.Icon size={19} />{j.direction}<span>{fmtDate(j.at)}</span></span><strong>{j.property || 'Property pending'}<ArrowRight size={18} />{j.deal_type || 'Deal'}</strong><span className="movement-client">{j.client || 'Customer'} · {j.job_no}</span><span className="movement-action">Review deal <ChevronRight size={16} /></span></Link>) : <div className="movement-empty"><Home size={28} /><div><strong>Your next target closes will appear here</strong><p>Add a target close date to a deal to plan the week ahead.</p></div>{can('jobs', 'create') && <Link className="btn dark" to="/e/jobs?new=1">Open a deal <ArrowRight size={16} /></Link>}</div>}</div>}
-    <div className="desk-summary">{k.open_jobs !== undefined && <span><Home size={17} /><b>{k.open_jobs}</b> open deals</span>}{k.in_transit !== undefined && <span><Workflow size={17} /><b>{k.in_transit}</b> in pipeline</span>}{k.my_tasks !== undefined && <span><CalendarDays size={17} /><b>{k.my_tasks}</b> follow-ups to do</span>}<span className="desk-owner">SWK Properties L.L.C.</span></div>
+    <div className="desk-heading"><div><h2>Next on the deal desk</h2><p>Target closes and viewings planned over the next ten days.</p></div><Link className="btn outline" to="/calendar"><CalendarDays size={17} />Open schedule</Link></div>
+    {can('jobs', 'view') && <div className="movement-rail" aria-label="Upcoming deal milestones">{events.length ? events.map((j, i) => <Link className="movement-ticket" key={`${j.direction}-${j.id}-${i}`} to={j.direction === 'Viewing' ? `/e/viewings/${j.id}` : `/jobs/${j.id}`}><span className="movement-kind"><j.Icon size={19} />{j.direction}<span>{fmtDate(j.at)}</span></span><strong>{j.property || 'Property pending'}<ArrowRight size={18} />{j.deal_type || 'Deal'}</strong><span className="movement-client">{j.contact || j.client || 'Customer'}{j.job_no ? `· ${j.job_no}` : ''}</span><span className="movement-action">{j.direction === 'Viewing' ? 'Open viewing' : 'Review deal'} <ChevronRight size={16} /></span></Link>) : <div className="movement-empty"><Home size={28} /><div><strong>Your next target closes will appear here</strong><p>Add a target close date to a deal to plan the week ahead.</p></div>{can('jobs', 'create') && <Link className="btn dark" to="/e/jobs?new=1">Open a deal <ArrowRight size={16} /></Link>}</div>}</div>}
+    <div className="desk-summary">{k.open_jobs !== undefined && <span><Home size={17} /><b>{k.open_jobs}</b> open deals</span>}{k.in_transit !== undefined && <span><Workflow size={17} /><b>{k.in_transit}</b> in pipeline</span>}{k.viewings_week !== undefined && <span><CalendarDays size={17} /><b>{k.viewings_week}</b> viewings this week</span>}{k.my_tasks !== undefined && <span><CalendarDays size={17} /><b>{k.my_tasks}</b> follow-ups to do</span>}<span className="desk-owner">SWK Properties L.L.C.</span></div>
   </section>
 }

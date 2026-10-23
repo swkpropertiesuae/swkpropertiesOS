@@ -116,7 +116,7 @@ export default async function (app: FastifyInstance) {
     if (b.action !== 'draft' && !htmlToText(b.html)) throw bad('There is no text to work on yet')
     const c = company()
     const system = [
-      `You write business documents for ${c.company_name}, a freight forwarding and logistics company in Dubai, UAE. Contact: ${[c.company_address, c.company_phone, c.company_email].filter(Boolean).join(' · ')}.`,
+      `You write business documents for ${c.company_name}, a real estate brokerage and property management company in Dubai, UAE. Contact: ${[c.company_address, c.company_phone, c.company_email].filter(Boolean).join(' · ')}.`,
       `Verified company particulars: ${JSON.stringify(Object.fromEntries(Object.entries(c).filter(([k]) => ['company_name_ar', 'company_address_ar', 'company_trade_license', 'dcci_no', 'commercial_register_no', 'company_legal_form', 'licence_issue_date', 'licence_expiry_date', 'ct_application_reference', 'ct_application_date', 'ct_application_status'].includes(k))))}. Application references are not tax registration numbers. Never use details from a third-party utility bill as company identity.`,
       'Return ONLY an HTML fragment. No <html>, <head> or <body>, no Markdown, no code fences, no commentary before or after.',
       'Use only these tags: p, br, h1, h2, h3, strong, em, u, ul, ol, li, table, thead, tbody, tr, th, td, blockquote, hr. Use a table with class="fields" (th = label, td = value) for forms and key facts. Start with an <h1> title unless you are working on a fragment.',

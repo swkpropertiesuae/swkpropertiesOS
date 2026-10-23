@@ -20,7 +20,7 @@ export function IntegrationsPage() {
   const ready = (k: string) => k === 'mail' ? st.mail !== 'none' : k === 'storage' ? st.r2 : k === 'supabase' ? st.supabase : k === 'whatsapp' ? st.whatsapp : k === 'ai' ? st.ai : null
   return (
     <div className="fade-in">
-      <PageHeader icon={<Plug size={20} />} title="Integrations" subtitle="Connect e-mail, file storage, WhatsApp, AI, e-invoicing, carriers and banks. Secrets are encrypted at rest in your database and never shown again." />
+      <PageHeader icon={<Plug size={20} />} title="Integrations" subtitle="Connect e-mail, file storage, WhatsApp, AI, e-invoicing, portals and banks. Secrets are encrypted at rest in your database and never shown again." />
       <div className="grid gap-3 max-w-4xl">
         {q.data.sections.map(s => (
           <SectionCard key={s.key} s={s} open={open === s.key} onToggle={() => setOpen(open === s.key ? null : s.key)} ready={ready(s.key)} presets={q.data.presets} pdf={s.key === 'storage' ? st.pdf : undefined} onSaved={() => void q.refetch()} />

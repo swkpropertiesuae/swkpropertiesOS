@@ -150,6 +150,24 @@ export default async function (app: FastifyInstance) {
     const def = guard(getDef(p.entity))
     return getRecord(def, idOf(p.id), req.ctx)
   })
+  // Party blocks for print documents (invoices, quotations, …): { [party_id]: { name, address… } }
+  app.get('/api/print/:entity/:id/parties', async (req) => {
+    const p = req.params as any
+    const def = guard(getDef(p.entity))
+    assertCan(req.ctx, def.module, 'view')
+    const cols = def.fields.filter(f => f.type === 'ref' && f.ref === 'parties').map(f => f.name)
+    if (!cols.length) return {}
+    const row = q.get(`SELECT ${cols.join(',')} FROM ${qi(def.key)} WHERE id = ? AND deleted_at IS NULL`, idOf(p.id))
+    if (!row) throw notFound('Not found')
+    const ids = [...new Set(cols.map(c => row[c]).filter(Boolean))] as number[]
+    if (!ids.length) return {}
+    const rows = q.all(`SELECT id, code, name, legal_name, contact_person, address1, address2, city, state, po_box, phone, email, website, trn, country_id FROM parties WHERE deleted_at IS NULL AND id IN (${ids.map(() => '?').join(',')})`, ...ids)
+    const countryIds = [...new Set(rows.map(r => r.country_id).filter(Boolean))] as number[]
+    const countryNames = countryIds.length ? Object.fromEntries(q.all(`SELECT id, name FROM countries WHERE id IN (${countryIds.map(() => '?').join(',')})`, ...countryIds).map((c: any) => [c.id, c.name])) : {}
+    const out: Record<string, any> = {}
+    for (const r of rows) out[r.id] = { ...r, _labels: { country_id: countryNames[r.country_id] ?? null } }
+    return out
+  })
   app.post('/api/e/:entity', async (req, reply) => {
     const def = guard(getDef((req.params as any).entity))
     const rec = createRecord(def, body(req), req.ctx)

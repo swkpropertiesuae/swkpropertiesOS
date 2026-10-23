@@ -1,8 +1,6 @@
 import EmailPage from './pages/EmailPage'
 import {ExtractionPage} from './pages/ExtractionPage'
-import {DepositPage} from './pages/DepositPage'
-import {CustodyPage} from './pages/CustodyPage'
-import {RfqComparisonPage,CompetencyPage} from './pages/EnterprisePages'
+import {CompetencyPage} from './pages/EnterprisePages'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { Suspense, lazy, type ReactNode } from 'react'
 import { useMeta } from './lib/meta'
@@ -11,16 +9,13 @@ import { Login } from './pages/Login'
 import { Dashboard } from './pages/Dashboard'
 import { Workspaces, WorkspaceUtilities } from './pages/Workspaces'
 import { EntityListPage, EntityRecordPage } from './pages/EntityPages'
-import { JobSearch, TrackingPage } from './pages/SearchPages'
 import { CalendarPage } from './pages/CalendarPage'
 import { ReportsPage, KpiPage } from './pages/ReportPages'
-import { StockPage } from './pages/WarehousePages'
 import { ToolsPage } from './pages/ToolsPage'
 import { DocumentsPage } from './pages/DocumentsPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { RolesPage, SettingsPage, AuditPage, BackupPage } from './pages/AdminPages'
 import { CompliancePage } from './pages/CompliancePage'
-import { JobControlPage } from './pages/JobControlPage'
 import { WorkQueuePage,HandoverPage } from './pages/WorkPages'
 import { ScopePage } from './pages/ScopePage'
 import { PublicTrack } from './pages/PublicTrack'
@@ -57,9 +52,7 @@ export default function App() {
           <Route path="/workspace-tools" element={<WorkspaceUtilities />} />
           <Route path="/e/:entity" element={<EntityListPage />} />
           <Route path="/e/:entity/:id" element={<EntityRecordPage />} />
-          <Route path="/search" element={<Guard module="jobs"><JobSearch /></Guard>} />
           <Route path="/extractions/:id" element={<Guard module="documents"><ExtractionPage /></Guard>} />
-          <Route path="/rfqs/:id/compare" element={<Guard module="sales"><RfqComparisonPage /></Guard>} />
           <Route path="/competency" element={<Guard module="hr"><CompetencyPage /></Guard>} />
           <Route path="/work/queues" element={<Guard module="projects"><WorkQueuePage /></Guard>} />
           <Route path="/work/handovers" element={<Guard module="projects"><HandoverPage /></Guard>} />

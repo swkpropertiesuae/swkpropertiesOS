@@ -29,24 +29,11 @@ export default async function (app: FastifyInstance) {
   app.post('/api/opportunities/:id/quote', async (req) => {
     need(req, 'sales', 'create')
     const o = getRecord(getDef('opportunities'), idOf((req.params as any).id), req.ctx, { children: false })
-    const quote = createRecord(getDef('quotations'), { customer_id: o.party_id, contact_id: o.contact_id, salesperson_id: o.owner_id ?? req.user!.id, mode: o.mode ?? 'Ocean FCL', opportunity_id: o.id, quote_date: todayStr(), notes: `Opportunity ${o.opp_no}: ${o.title}. ${o.origin ?? ''} → ${o.destination ?? ''}` }, req.ctx)
+    const M2SVC: Record<string, string> = { 'Property Management': 'Property management', 'Apartment Lease': 'Lease commission', 'Villa Lease': 'Lease commission', 'Commercial Lease': 'Lease commission', 'Off-Plan Sale': 'Off-Plan purchase' }
+    const service = M2SVC[o.mode] ?? (String(o.mode ?? '').includes('Sale') ? 'Sale commission' : 'Valuation')
+    const quote = createRecord(getDef('quotations'), { customer_id: o.party_id, contact_id: o.contact_id, salesperson_id: o.owner_id ?? req.user!.id, mode: service, opportunity_id: o.id, quote_date: todayStr(), notes: `Opportunity ${o.opp_no}: ${o.title}${o.destination ? ` · Target area: ${o.destination}` : ''}` }, req.ctx)
     if (o.stage === 'Prospecting' || o.stage === 'Qualification') patchRecord(getDef('opportunities'), o.id, { stage: 'Quotation' }, req.ctx)
     return quote
-  })
-
-  app.get('/api/rates/search', async (req) => {
-    need(req, 'sales', 'view')
-    const s = req.query as any
-    const cl = [`c.deleted_at IS NULL`, `l.deleted_at IS NULL`, `c.status = 'Active'`, `(c.valid_to IS NULL OR c.valid_to >= ?)`]; const a: any[] = [todayStr()]
-    if (s.kind) { cl.push('c.kind LIKE ?'); a.push(String(s.kind) + '%') }
-    if (s.mode) { cl.push('c.mode = ?'); a.push(String(s.mode)) }
-    if (s.origin_id) { cl.push('l.origin_id = ?'); a.push(Number(s.origin_id)) }
-    if (s.destination_id) { cl.push('l.destination_id = ?'); a.push(Number(s.destination_id)) }
-    if (s.customer_id) { cl.push('(c.customer_id IS NULL OR c.customer_id = ?)'); a.push(Number(s.customer_id)) }
-    const rows = q.all(`SELECT l.id, l.charge_code_id, cc.name AS charge, l.basis, l.rate, l.min_charge, l.transit_days, l.free_days, c.id AS card_id, c.name AS card, c.currency, c.kind, c.valid_to, p.name AS vendor, o.code AS origin, d.code AS destination
-      FROM rate_card_lines l JOIN rate_cards c ON c.id = l.rate_card_id LEFT JOIN charge_codes cc ON cc.id = l.charge_code_id LEFT JOIN parties p ON p.id = c.vendor_id LEFT JOIN locations o ON o.id = l.origin_id LEFT JOIN locations d ON d.id = l.destination_id
-      WHERE ${cl.join(' AND ')} ORDER BY l.rate LIMIT 100`, ...a)
-    return rows.map(r => ({ ...r, rate: (r.rate ?? 0) / 100, min_charge: (r.min_charge ?? 0) / 100 }))
   })
 
   // generic approvals (bills, payments, quotations, purchase orders)

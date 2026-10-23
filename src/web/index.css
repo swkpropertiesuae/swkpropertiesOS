@@ -576,3 +576,8 @@ table.grid td.num, table.grid th.num { white-space: nowrap; }
 :root[data-theme='dark'] .btn.outline:hover { background: var(--hover); }
 :root[data-theme='dark'] .badge.green { background: rgba(242,58,29,.18); color: #ffb093; border-color: rgba(242,58,29,.38); }
 :root[data-theme='dark'] .workspace-flow svg { color: #ff7a45; }
+
+/* DigitalBurj brand blend: fixed shell watermark + inverted brand on dark surfaces */
+.app-watermark { position: fixed; inset-inline-end: 18px; bottom: 38px; width: clamp(130px, 13vw, 210px); opacity: .055; pointer-events: none; user-select: none; z-index: 45; mix-blend-mode: multiply; }
+.brand-invert { filter: brightness(0) invert(1); }
+@media print { .app-watermark { display: none !important; } }

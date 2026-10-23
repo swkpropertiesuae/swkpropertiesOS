@@ -20,7 +20,7 @@ export const SETTING_DEFAULTS: Record<string, any> = {
   bill_approval_limit: 25000,
   payment_approval_limit: 25000,
   lock_date: '',
-  quote_terms: 'Rates are indicative and subject to space and equipment availability at the time of booking. Carrier surcharges, THC, BAF and other charges are as applicable on the date of shipment. Cargo is handled under the Company\'s standard trading conditions. Demurrage, detention, storage and any statutory charges are for the account of the cargo owner. This quotation does not include cargo insurance unless stated.',
+  quote_terms: 'Fees are as agreed on the signed mandate and are subject to VAT at the applicable rate. Government fees (DLD transfer, Ejari, trustee office) are collected on behalf of the relevant authority and are shown separately. This quotation does not include third-party services, mortgage costs or legal advice unless stated.',
   invoice_terms: 'Payment is due by the due date shown. Please quote the invoice number on remittance. Queries must be raised within 7 days of the invoice date. Late payment may attract a handling charge and suspension of credit.',
   invoice_footer: '',
   invoice_no_pattern: '{prefix}{YY}{seq:5}',

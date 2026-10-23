@@ -77,9 +77,9 @@ function trackSummary(query: string, partyId?: number): string {
   if (!key) return 'Send: track <deal no.>'
   const j = q.get(`SELECT j.* FROM jobs j WHERE j.deleted_at IS NULL AND (j.job_no = ? OR UPPER(j.deal_name) LIKE '%' || UPPER(?) || '%') ${partyId ? 'AND j.client_id = ' + Number(partyId) : ''} ORDER BY j.deal_date DESC LIMIT 1`, key.toUpperCase(), key)
   if (!j) return `No deal found for "${key}"${partyId ? ' on your account' : ''}.`
-  const ev = q.all(`SELECT event_at, event_type, location FROM job_events WHERE job_id = ? AND deleted_at IS NULL AND visible_to_customer = 1 ORDER BY event_at DESC, id DESC LIMIT 3`, j.id)
-  const property = j.property_id ? q.val<string>(`SELECT name FROM properties WHERE id = ?`, j.property_id) : ''
-  return [`Deal ${j.job_no} – ${j.job_status}`, `${j.deal_name ?? ''}${property ? ' · ' + property : ''}${j.target_close ? `  Target close ${String(j.target_close).slice(0, 10)}` : ''}`, ...ev.map(e => `• ${String(e.event_at).replace('T', ' ')} ${e.event_type}${e.location ? ' – ' + e.location : ''}`)].join('\n')
+  const ev = q.all(`SELECT event_at, event_type FROM job_events WHERE job_id = ? AND deleted_at IS NULL AND visible_to_customer = 1 ORDER BY event_at DESC, id DESC LIMIT 3`, j.id)
+  const property = j.property_id ? q.val<string>(`SELECT title FROM properties WHERE id = ?`, j.property_id) : ''
+  return [`Deal ${j.job_no} – ${j.job_status}`, `${j.deal_name ?? ''}${property ? ' · ' + property : ''}${j.target_close ? `  Target close ${String(j.target_close).slice(0, 10)}` : ''}`, ...ev.map(e => `• ${String(e.event_at).replace('T', ' ')} ${e.event_type}`)].join('\n')
 }
 function overdueSummary(partyId?: number): string {
   const rows = q.all(`SELECT i.invoice_no, i.due_date, i.balance, i.currency, pr.name FROM invoices i JOIN parties pr ON pr.id = i.party_id WHERE i.status IN ('Posted','Partially paid') AND i.doc_type IN ('Tax Invoice','Debit Note') AND i.balance > 0 ${partyId ? 'AND i.party_id = ' + Number(partyId) : 'AND i.due_date < ?'} AND i.deleted_at IS NULL ORDER BY i.due_date LIMIT 12`, ...(partyId ? [] : [todayStr()]))
@@ -129,7 +129,7 @@ async function onMessage(m: any, profile: string) {
   const reply = (t: string) => sendWhatsApp(from, t, { origin: staff ? 'staff command' : 'bot', party_id: known?.party_id ?? null, name: profile })
 
   if (staff && getSetting('wa_staff_bot')) {
-    if (/^(help|\?|menu)$/.test(cmd)) return void (await reply('Commands:\n• report – business brief\n• overdue – overdue invoices\n• leads – new leads\n• track <job/container>\n• task <text> – create a task\nOr just ask a question.'))
+    if (/^(help|\?|menu)$/.test(cmd)) return void (await reply('Commands:\n• report – business brief\n• overdue – overdue invoices\n• leads – new leads\n• deal <reference>\n• task <text> – create a task\nOr just ask a question.'))
     if (/^(report|brief|today|status)$/.test(cmd)) return void (await reply(businessSnapshot().text))
     if (/^(overdue|ar|outstanding|receivable)/.test(cmd)) return void (await reply(overdueSummary()))
     if (/^leads?$/.test(cmd)) return void (await reply(leadsSummary()))

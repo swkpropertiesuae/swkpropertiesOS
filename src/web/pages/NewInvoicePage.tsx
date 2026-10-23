@@ -25,16 +25,15 @@ export function NewInvoicePage() {
   const copy = useQuery({ queryKey: ['invoice-copy', sp.get('copy')], enabled: !!sp.get('copy'), queryFn: () => get<any>(`/api/e/invoices/${sp.get('copy')}`) })
   const settings = meta?.settings ?? {}
   const zr = vats.data?.rows.find(v => v.code === 'ZR')?.id ?? null, sr = vats.data?.rows.find(v => v.code === 'SR')?.id ?? null
-  const [h, setH] = useState<any>({ doc_type: 'Tax Invoice', invoice_date: todayIso(), supply_date: '', due_date: '', currency: 'AED', ex_rate: '1', party_id: sp.get('party') ? Number(sp.get('party')) : null, job_id: sp.get('job') ? Number(sp.get('job')) : null, reference: '', custom_no: '', trade: '', round_total: 'No rounding', bank_account_id: null, notes: '', terms: settings.invoice_terms ?? '', ship_bl_no: '', ship_vessel: '', ship_receipt: '', ship_pol: '', ship_pod: '', ship_destination: '', ship_containers: '', ship_weight: '', ship_cargo: '', ship_hs_code: '' })
-  const [lines, setLines] = useState<Line[]>([]), [busy, setBusy] = useState(false), [showShip, setShowShip] = useState(false), [loaded, setLoaded] = useState(false)
+  const [h, setH] = useState<any>({ doc_type: 'Tax Invoice', invoice_date: todayIso(), supply_date: '', due_date: '', currency: 'AED', ex_rate: '1', party_id: sp.get('party') ? Number(sp.get('party')) : null, job_id: sp.get('job') ? Number(sp.get('job')) : null, reference: '', custom_no: '', round_total: 'No rounding', bank_account_id: null, notes: '', terms: settings.invoice_terms ?? '' })
+  const [lines, setLines] = useState<Line[]>([]), [busy, setBusy] = useState(false), [loaded, setLoaded] = useState(false)
   const setHead = (patch: any) => setH((x: any) => ({ ...x, ...patch }))
   useEffect(() => { if (vats.data && !loaded && !sp.get('copy')) { setLines([blank(zr ?? sr), blank(zr ?? sr)]); setLoaded(true) } }, [vats.data, loaded, zr, sr, sp])
   // supplementary / repeat invoice: start from an existing one
   useEffect(() => {
     const c = copy.data; if (!c || loaded) return
-    setH((x: any) => ({ ...x, doc_type: c.doc_type === 'Credit Note' ? 'Tax Invoice' : c.doc_type, party_id: c.party_id, job_id: c.job_id, currency: c.currency, ex_rate: String(c.ex_rate ?? 1), trade: c.trade ?? '', round_total: c.round_total ?? 'No rounding', reference: c.reference ?? '', bank_account_id: c.bank_account_id, notes: c.notes ?? '', terms: c.terms ?? x.terms,
-      ship_bl_no: c.ship_bl_no ?? '', ship_vessel: c.ship_vessel ?? '', ship_receipt: c.ship_receipt ?? '', ship_pol: c.ship_pol ?? '', ship_pod: c.ship_pod ?? '', ship_destination: c.ship_destination ?? '', ship_containers: c.ship_containers ?? '', ship_weight: c.ship_weight ?? '', ship_cargo: c.ship_cargo ?? '', ship_hs_code: c.ship_hs_code ?? '', _labels: c._labels }))
-    setShowShip(true)
+    setH((x: any) => ({ ...x, doc_type: c.doc_type === 'Credit Note' ? 'Tax Invoice' : c.doc_type, party_id: c.party_id, job_id: c.job_id, currency: c.currency, ex_rate: String(c.ex_rate ?? 1), round_total: c.round_total ?? 'No rounding', reference: c.reference ?? '', bank_account_id: c.bank_account_id, notes: c.notes ?? '', terms: c.terms ?? x.terms,
+      _labels: c._labels }))
     setLines((c.children?.lines ?? []).map((l: any) => ({ key: seq++, charge_code_id: l.charge_code_id, charge_label: l._labels?.charge_code_id, description: l.description ?? '', qty: String(l.qty ?? 1), rate: String(l.rate ?? ''), line_ccy: l.line_ccy ?? '', line_roe: l.line_roe ? String(l.line_roe) : '', vat_code_id: l.vat_code_id })))
     setLoaded(true)
   }, [copy.data, loaded])
@@ -81,8 +80,7 @@ export function NewInvoicePage() {
     if (after === 'post' && !(await dlg.confirm({ title: 'Post this invoice?', message: 'It gets its final number and is recorded in the accounts. A posted invoice can only be voided or credited.', ok: 'Post invoice' }))) return
     setBusy(true)
     try {
-      const body: any = { ...h, ex_rate: Number(h.ex_rate) || 1, supply_date: h.supply_date || null, due_date: h.due_date || null, custom_no: h.custom_no.trim() || null, trade: h.trade || null, notes: h.notes || null, terms: h.terms || null, reference: h.reference || null }
-      for (const k of Object.keys(body)) if (k.startsWith('ship_') && !body[k]) body[k] = null
+      const body: any = { ...h, ex_rate: Number(h.ex_rate) || 1, supply_date: h.supply_date || null, due_date: h.due_date || null, custom_no: h.custom_no.trim() || null, notes: h.notes || null, terms: h.terms || null, reference: h.reference || null }
       delete body._labels
       body.children = { lines: lines.filter(l => l.description.trim() || Number(l.rate)).map(l => ({ charge_code_id: l.charge_code_id, description: l.description.trim(), qty: Number(l.qty), rate: Number(l.rate), line_ccy: l.line_ccy && l.line_ccy !== h.currency ? l.line_ccy : null, line_roe: l.line_ccy && l.line_ccy !== h.currency ? Number(l.line_roe) : null, vat_code_id: l.vat_code_id })) }
       const inv = await post<any>('/api/e/invoices', body)
@@ -98,7 +96,7 @@ export function NewInvoicePage() {
   const F = ({ k, label, type = 'text', ph, span }: { k: string; label: string; type?: string; ph?: string; span?: boolean }) => <div className={span ? 'md:col-span-2' : ''}><label className="label" htmlFor={`ni-${k}`}>{label}</label><input id={`ni-${k}`} className="input" type={type} value={h[k] ?? ''} placeholder={ph} onChange={e => setHead({ [k]: e.target.value })} /></div>
   return (
     <div className="fade-in">
-      <PageHeader back={<Link className="btn grey" to="/e/invoices"><ArrowLeft /> Invoices</Link>} icon={<ReceiptText size={20} />} title={sp.get('copy') ? 'New invoice from an existing one' : 'New invoice'} subtitle="No job is needed. Choose the customer, add the charges, and save as a draft or post it. Shipment details are optional and print on the invoice." />
+      <PageHeader back={<Link className="btn grey" to="/e/invoices"><ArrowLeft /> Invoices</Link>} icon={<ReceiptText size={20} />} title={sp.get('copy') ? 'New invoice from an existing one' : 'New invoice'} subtitle="Choose the client, add the service charges, and save as a draft or post it. Commission, management and marketing fees are all raised here." />
       <div className="grid gap-4">
         <section className="card p-4 md:p-5">
           <h2 className="m-0 mb-3 text-[16px] font-bold">Customer and invoice details</h2>
@@ -109,15 +107,10 @@ export function NewInvoicePage() {
             <F k="invoice_date" label="Invoice date" type="date" /><F k="supply_date" label="Date of supply (if different)" type="date" /><F k="due_date" label="Due date (blank = from payment terms)" type="date" />
             <div><label className="label" htmlFor="ni-cur">Invoice currency</label><select id="ni-cur" className="select" value={h.currency} onChange={e => setHead({ currency: e.target.value })}>{CUR.map(c => <option key={c}>{c}</option>)}</select>{foreignDoc && <div className="help">Pay-in currency. Lines are priced in the same currency.</div>}</div>
             {foreignDoc && <F k="ex_rate" label={`Exchange rate: 1 ${h.currency} = … ${settings.base_currency ?? 'AED'}`} type="number" />}
-            <F k="reference" label="Customer reference / PO" />
-            <div><label className="label" htmlFor="ni-no">Own invoice number (optional)</label><input id="ni-no" className="input" value={h.custom_no} maxLength={40} onChange={e => setHead({ custom_no: e.target.value })} placeholder="e.g. DXB/IMP/ES103" /><div className="help">Blank = next number in your series when posted.</div></div>
-            <div><label className="label" htmlFor="ni-trade">Trade</label><select id="ni-trade" className="select" value={h.trade} onChange={e => setHead({ trade: e.target.value })}><option value="">Not specified</option><option>Import</option><option>Export</option><option>Cross trade</option><option>Domestic</option></select></div>
-            <div><label className="label">Job (optional)</label><RefSelect entity="jobs" value={h.job_id} label={h._labels?.job_id} onChange={(v, l) => setHead({ job_id: v, _labels: { ...h._labels, job_id: l } })} placeholder="No job" />{h.job_id && <div className="help">Blank shipment details are filled from the job when you save.</div>}</div>
+            <F k="reference" label="Customer reference" />
+            <div><label className="label" htmlFor="ni-no">Own invoice number (optional)</label><input id="ni-no" className="input" value={h.custom_no} maxLength={40} onChange={e => setHead({ custom_no: e.target.value })} placeholder="e.g. INV-A-1042" /><div className="help">Blank = next number in your series when posted.</div></div>
+            <div><label className="label">Deal (optional)</label><RefSelect entity="jobs" value={h.job_id} label={h._labels?.job_id} onChange={(v, l) => setHead({ job_id: v, _labels: { ...h._labels, job_id: l } })} placeholder="No deal" />{h.job_id && <div className="help">Links this invoice to the deal for commission reconciliation.</div>}</div>
           </div>
-        </section>
-        <section className="card p-4 md:p-5">
-          <button type="button" className="btn ghost sm mb-2" aria-expanded={showShip} onClick={() => setShowShip(!showShip)}>{showShip ? 'Hide' : 'Add'} shipment / B/L details (printed on the invoice)</button>
-          {showShip && <div className="grid gap-3 md:grid-cols-3"><F k="ship_bl_no" label="Bill of lading / AWB" /><F k="ship_vessel" label="Vessel / flight" /><F k="ship_weight" label="Gross weight" ph="31,629.75 KGS" /><F k="ship_receipt" label="Place of receipt" /><F k="ship_pol" label="Port of loading" /><F k="ship_pod" label="Port of discharge" /><F k="ship_destination" label="Final destination" /><F k="ship_hs_code" label="HS code" /><F k="ship_containers" label="Containers" span ph="CAAU4171016 / 40' | BMOU9822371 / 40'" /><F k="ship_cargo" label="Cargo" span ph="2 x 40' HQ | 2,520 cartons assorted candy" /></div>}
         </section>
         <section className="card p-4 md:p-5">
           <div className="flex items-center gap-2 mb-3 flex-wrap"><h2 className="m-0 text-[16px] flex-1 font-bold">Charges</h2><button className="btn outline sm" onClick={() => setLines(ls => [...ls, blank(zr ?? sr)])}><Plus /> Add charge</button></div>

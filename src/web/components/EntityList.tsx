@@ -211,7 +211,7 @@ function ImportModal({ def, onClose, onDone }: { def: MetaEntity; onClose: () =>
   }
   return (
     <Modal open onClose={onClose} title={`Import ${def.plural} from CSV`} width={640} footer={<><a className="btn outline" href={`/api/e/${def.key}/template.csv`}><Download /> Template</a><div className="flex-1" /><button className="btn outline" onClick={onClose}>Close</button><button className="btn outline" disabled={!text || busy} onClick={() => void run(true)}>Validate only</button><button className="btn green" disabled={!text || busy} onClick={() => void run(false)}>Import</button></>}>
-      <p className="text-sm text-muted mt-0">Use the template for column names. Reference columns (customer, port, carrier…) accept the code or exact name. Up to 5,000 rows.</p>
+      <p className="text-sm text-muted mt-0">Use the template for column names. Reference columns (customer, property, agent…) accept the code or exact name. Up to 5,000 rows.</p>
       <input type="file" accept=".csv,text/csv" className="input" onChange={async e => { const f = e.target.files?.[0]; if (f) { setName(f.name); setText(await f.text()); setRes(null) } }} />
       {name && <div className="text-xs text-muted mt-1">{name} · {text.split('\n').length - 1} rows</div>}
       {res && <div className="mt-3 text-sm"><div className={res.failed ? 'text-[#8f1325] font-bold' : 'text-fold font-bold'}>{res.dryRun ? 'Validation: ' : 'Imported: '}{res.created} OK, {res.failed} failed</div>

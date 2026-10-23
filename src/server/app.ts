@@ -61,7 +61,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     const publicRequest = PUBLIC.some(r => r.test(url))
     // Public links select their workspace by the link, never by an unrelated browser cookie.
     // API keys always belong to production; a demo cookie must not change their database.
-    const demoRequest = url.startsWith('/api/public/track/demo-') || (!publicRequest && !bearer && !!raw?.startsWith(DEMO_PREFIX))
+    const demoRequest = url.startsWith('/api/public/deal/demo-') || (!publicRequest && !bearer && !!raw?.startsWith(DEMO_PREFIX))
     const demoDb = demoRequest ? getDemoDb() : null
     if (demoRequest && !demoDb) return done(new HttpError(503, 'The demo workspace is unavailable'))
     enterDb(demoDb ?? undefined, () => {

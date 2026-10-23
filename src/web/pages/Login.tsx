@@ -5,7 +5,7 @@ import { get, post } from '../lib/api'
 import { ProductBrand } from '../components/ProductBrand'
 import { useMeta } from '../lib/meta'
 
-const MODULES = ['Company & admin', 'CRM & sales pipeline', 'Accounting & finance', 'Tax & e-invoicing', 'Procurement & inventory', 'HR & payroll', 'Projects & documents']
+const MODULES = ['Company & admin', 'Deals & brokerage', 'Properties & leasing', 'Tenant & leasing desk', 'Property management', 'Accounting & finance', 'Tax & e-invoicing', 'Documents & compliance']
 
 export function Login() {
   const { reload } = useMeta(); const nav = useNavigate()
@@ -32,16 +32,16 @@ export function Login() {
   return (
     <div className="login-world min-h-full grid lg:grid-cols-[1.05fr_1fr]">
       <div className="login-brand hidden lg:flex flex-col justify-between text-white p-12 relative overflow-hidden" style={{ background: 'linear-gradient(160deg,#1a2620 0%,#0f1714 55%,#0d1310 100%)' }}>
-        <img src="/brand/swk-logo.png" alt="" aria-hidden className="absolute -right-24 -bottom-20 w-[420px] opacity-[.08] pointer-events-none" />
+        <img src="/brand/digitalburj-mark.webp" alt="" aria-hidden className="absolute -right-16 -bottom-14 w-[440px] opacity-[.13] pointer-events-none brand-invert" />
         <img src="/brand/swk-logo.png" alt="SWK Properties" className="relative w-[240px]" />
         <div className="relative max-w-[480px]">
           <h1 className="text-white text-[36px] font-extrabold leading-[1.12] m-0">One system for<br />every part of the business.</h1>
-          <p className="text-[16px] text-white/80 mt-4 leading-relaxed">Run CRM, sales, accounting, tax, procurement, inventory, HR, payroll, projects and documents — one connected workspace built for SWK Properties.</p>
+          <p className="text-[16px] text-white/80 mt-4 leading-relaxed">Run brokerage, leasing and property management — deals, mandates, viewings, leases and rent schedules, maintenance, accounting, tax and e-invoicing — one connected workspace built for SWK Properties.</p>
           <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 mt-8 text-[13.5px]">{MODULES.map(x => <div key={x} className="flex items-center gap-2.5"><span className="w-1.5 h-1.5 rounded-full bg-[#ff9a75] flex-none" />{x}</div>)}</div>
         </div>
         <a className="brand-partner-wrap relative w-fit no-underline" href="https://digitalburj.com/business-os" target="_blank" rel="noopener noreferrer">
           <span className="mr-2.5 text-[11.5px] font-semibold text-white/70">Brand partner</span>
-          <img src="/brand/digitalburj-wordmark.webp" alt="DigitalBurj Business OS" width="408" height="78" className="inline-block h-[30px] w-auto rounded-md bg-white px-3 py-2" />
+          <img src="/brand/digitalburj-wordmark.webp" alt="DigitalBurj Business OS" width="408" height="78" className="brand-invert inline-block h-[26px] w-auto" />
         </a>
         <div className="relative text-xs text-white/55">© {new Date().getFullYear()} SWK Properties L.L.C. · Dubai, United Arab Emirates</div>
       </div>

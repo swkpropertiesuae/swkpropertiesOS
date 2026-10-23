@@ -45,8 +45,8 @@ export function CompliancePage() {
               </Link>))}</div>
           </>}
           {tab === 'scope' && <>
-            <p className="text-[13.5px] mt-0">The trade licence lists four activities. Jobs, quotations, transport orders and warehouse receipts are checked against them. Services marked <b>Not licensed</b> are available in the OS but not covered by the licence – obtain the activity or permit first, or subcontract to a licensed party. Manage the list under <Link to="/e/licence_activities">Licensed activities</Link>.</p>
-            <div className="card table-wrap"><table className="grid"><thead><tr><th>Service</th><th>Licence</th><th className="num">Jobs</th><th>What it needs</th></tr></thead><tbody>{d.scope.map((s: any) => <tr key={s.code}><td>{s.label}</td><td><Badge tone={s.covered ? 'green' : 'red'} value={s.covered ? 'Licensed' : 'Not licensed'} /></td><td className="num">{s.jobs}</td><td className="text-[13px]">{s.note}</td></tr>)}</tbody></table></div>
+            <p className="text-[13.5px] mt-0">The trade licence lists four activities. Deals, mandates, quotations and published listings are checked against them. Services marked <b>Not licensed</b> are available in the OS but not covered by the licence – obtain the activity or permit (e.g. Trakheesi) first, or subcontract to a licensed party. Manage the list under <Link to="/e/licence_activities">Licensed activities</Link>.</p>
+            <div className="card table-wrap"><table className="grid"><thead><tr><th>Service</th><th>Licence</th><th className="num">Deals</th><th>What it needs</th></tr></thead><tbody>{d.scope.map((s: any) => <tr key={s.code}><td>{s.label}</td><td><Badge tone={s.covered ? 'green' : 'red'} value={s.covered ? 'Licensed' : 'Not licensed'} /></td><td className="num">{s.jobs}</td><td className="text-[13px]">{s.note}</td></tr>)}</tbody></table></div>
           </>}
           {tab === 'deadlines' && <>
             <h3 className="mt-0">Upcoming statutory deadlines</h3>

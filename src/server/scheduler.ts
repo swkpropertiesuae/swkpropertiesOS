@@ -46,7 +46,6 @@ export function daily() {
   const today = todayStr()
   q.run(`UPDATE quotations SET status = 'Expired' WHERE status = 'Sent' AND valid_until < ? AND deleted_at IS NULL`, today)
   q.run(`UPDATE contracts SET status = 'Expired' WHERE status = 'Active' AND end_date < ? AND deleted_at IS NULL`, today)
-  q.run(`UPDATE rate_cards SET status = 'Expired' WHERE status = 'Active' AND valid_to < ? AND deleted_at IS NULL`, today)
   for (const t of q.all(`SELECT id, title, assignee_id, due_date FROM tasks WHERE status <> 'Done' AND deleted_at IS NULL AND assignee_id IS NOT NULL AND due_date <= ?`, today))
     notify(t.assignee_id, t.due_date < today ? `Overdue: ${t.title}` : `Due today: ${t.title}`, `Due ${t.due_date}`, `/e/tasks/${t.id}`, 'task', `task-${t.id}-${today}`)
   const due = q.val<number>(`SELECT COUNT(*) FROM invoices WHERE status IN ('Posted','Partially paid') AND doc_type IN ('Tax Invoice','Debit Note') AND balance > 0 AND due_date < ? AND deleted_at IS NULL`, today) ?? 0

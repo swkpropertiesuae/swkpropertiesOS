@@ -68,10 +68,8 @@ export async function seedReference(opts: { users?: boolean; demo?: boolean } = 
     for (const [code, name, symbol] of D.CURRENCIES) mk('currencies', { code, name, symbol, rate: code === 'AED' ? 1 : code === 'USD' ? 3.6725 : null, active: true })
     mark('currencies')
   }
-  if (!done('uoms')) { for (const [code, name] of D.UOMS) mk('uoms', { code, name }); mark('uoms') }
   if (!done('vat')) { for (const [code, name, rate, category] of D.VAT_CODES) mk('vat_codes', { code, name, rate, category }); mark('vat') }
   if (!done('terms')) { for (const [name, days] of D.PAYMENT_TERMS) mk('payment_terms', { name, days }); mark('terms') }
-  if (!done('service_types')) { for (const name of D.SERVICE_TYPES) mk('service_types', { name }); mark('service_types') }
   if (!done('accounts')) {
     for (const [code, name, type, subtype, role] of D.ACCOUNTS) mk('accounts', { code, name, type, subtype, role: role ?? '', active: true })
     mark('accounts')
@@ -82,25 +80,10 @@ export async function seedReference(opts: { users?: boolean; demo?: boolean } = 
     mark('accounts_rounding')
   }
   if (!done('charges')) {
-    for (const [code, name, applies_to, group, uom, vat, inc, cost] of D.CHARGE_CODES) {
-      mk('charge_codes', { code, name, applies_to, group, uom_id: idOf('uoms', 'code', uom), vat_code_id: idOf('vat_codes', 'code', vat), income_account_id: idOf('accounts', 'code', inc), cost_account_id: idOf('accounts', 'code', cost), active: true })
+    for (const [code, name, applies_to, group, vat, inc, cost] of D.CHARGE_CODES) {
+      mk('charge_codes', { code, name, applies_to, group, vat_code_id: idOf('vat_codes', 'code', vat), income_account_id: idOf('accounts', 'code', inc), cost_account_id: idOf('accounts', 'code', cost), active: true })
     }
     mark('charges')
-  }
-  if (!done('carriers')) {
-    for (const [name, type, code, awb_prefix, website, tracking_url] of D.CARRIERS) mk('carriers', { name, type, code: code || null, awb_prefix: awb_prefix || null, website, tracking_url: tracking_url || null, active: true })
-    mark('carriers')
-  }
-  if (!done('container_types')) {
-    for (const [code, name, iso, teu, tare, payload, cbm] of D.CONTAINER_TYPES) mk('container_types', { code, name, iso_code: iso || null, teu, tare_kg: tare || null, max_payload_kg: payload || null, cbm: cbm || null })
-    mark('container_types')
-  }
-  if (!done('locations')) {
-    for (const [code, name, cc, type, iata] of D.LOCATIONS) {
-      const country = idOf('countries', 'code', cc)
-      if (country) mk('locations', { code, name, country_id: country, type, iata: iata ?? null, active: true })
-    }
-    mark('locations')
   }
   if (!done('banks')) {
     mk('bank_accounts', { name: 'Main operating account (AED)', type: 'Bank', currency: 'AED', gl_account_id: idOf('accounts', 'code', '1100'), active: true })

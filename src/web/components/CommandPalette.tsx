@@ -24,7 +24,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
   return (
     <div className="overlay" style={{ paddingTop: '10vh' }} onMouseDown={e => { if (e.target === e.currentTarget) onClose() }} role="dialog" aria-modal="true" aria-label="Search">
       <div className="modal" style={{ maxWidth: 640 }}>
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-line"><Search size={18} className="text-muted" /><input autoFocus className="flex-1 bg-transparent border-0 outline-none text-[16px] text-ink" placeholder="Search jobs, containers, customers, invoices… or jump to a page" value={q} onChange={e => setQ(e.target.value)}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-line"><Search size={18} className="text-muted" /><input autoFocus className="flex-1 bg-transparent border-0 outline-none text-[16px] text-ink" placeholder="Search deals, properties, clients, invoices… or jump to a page" value={q} onChange={e => setQ(e.target.value)}
           onKeyDown={e => { if (e.key === 'ArrowDown') { e.preventDefault(); setHi(h => Math.min(h + 1, items.length - 1)) } else if (e.key === 'ArrowUp') { e.preventDefault(); setHi(h => Math.max(0, h - 1)) } else if (e.key === 'Enter' && items[hi]) go(items[hi].link) }} /><kbd className="text-xs border border-line rounded px-1.5 text-muted">Esc</kbd></div>
         <div className="max-h-[56vh] overflow-auto py-1">
           {items.length === 0 && <div className="p-8 text-center text-muted text-sm">No results for “{q}”.</div>}

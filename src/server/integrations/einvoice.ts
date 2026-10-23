@@ -66,7 +66,7 @@ ${lines.map((l, i) => `  <cac:${credit ? 'CreditNoteLine' : 'InvoiceLine'}>
     <cbc:ID>${i + 1}</cbc:ID>
     <cbc:${credit ? 'CreditedQuantity' : 'InvoicedQuantity'} unitCode="C62">${l.qty ?? 1}</cbc:${credit ? 'CreditedQuantity' : 'InvoicedQuantity'}>
     <cbc:LineExtensionAmount currencyID="${x(cur)}">${amt(l.amount ?? 0)}</cbc:LineExtensionAmount>
-    <cac:Item><cbc:Name>${x(l.description || 'Freight service')}</cbc:Name><cac:ClassifiedTaxCategory><cbc:ID>${TAXCAT[l.category ?? 'Standard rated'] ?? 'S'}</cbc:ID><cbc:Percent>${l.vat_pct ?? 0}</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:ClassifiedTaxCategory></cac:Item>
+    <cac:Item><cbc:Name>${x(l.description || 'Real-estate service')}</cbc:Name><cac:ClassifiedTaxCategory><cbc:ID>${TAXCAT[l.category ?? 'Standard rated'] ?? 'S'}</cbc:ID><cbc:Percent>${l.vat_pct ?? 0}</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:ClassifiedTaxCategory></cac:Item>
     <cac:Price><cbc:PriceAmount currencyID="${x(cur)}">${amt(l.rate ?? 0)}</cbc:PriceAmount></cac:Price>
   </cac:${credit ? 'CreditNoteLine' : 'InvoiceLine'}>`).join('\n')}
 </${credit ? 'CreditNote' : 'Invoice'}>

@@ -51,7 +51,7 @@ export function convertLead(leadId: number, ctx: Ctx): { party: Rec; opportunity
   if (party) partyRec = getRecord(getDef('parties'), party.id, SYSTEM_CTX, { children: false })
   else partyRec = createRecord(getDef('parties'), { name: lead.company, is_customer: true, phone: lead.phone, email: lead.email, status: 'Active', salesperson_id: lead.owner_id ?? ctx.user?.id, source: lead.source, contact_person: lead.contact_name }, ctx)
   if (lead.contact_name) createRecord(getDef('contacts'), { name: lead.contact_name, party_id: partyRec.id, email: lead.email, phone: lead.phone, is_primary: true }, ctx)
-  const opp = createRecord(getDef('opportunities'), { title: `${lead.company} – ${lead.interest ?? 'freight'}`, party_id: partyRec.id, value: lead.est_value ?? 0, owner_id: lead.owner_id ?? ctx.user?.id, origin: lead.origin, destination: lead.destination, mode: lead.interest, stage: 'Qualification', notes: lead.notes }, ctx)
+  const opp = createRecord(getDef('opportunities'), { title: `${lead.company} – ${lead.interest ?? 'Real estate'}`, party_id: partyRec.id, value: lead.est_value ?? 0, owner_id: lead.owner_id ?? ctx.user?.id, origin: lead.origin, destination: lead.destination, mode: lead.interest, stage: 'Qualification', notes: lead.notes }, ctx)
   patchRecord(getDef('leads'), leadId, { status: 'Converted', converted_party_id: partyRec.id }, ctx)
   return { party: partyRec, opportunity: opp }
 }

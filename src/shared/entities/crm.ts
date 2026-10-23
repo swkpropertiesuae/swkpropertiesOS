@@ -1,8 +1,7 @@
 import type { EntityDef } from '../types'
 import { T, TA, I, N, M, P, B, E, PH, S, R, D, DT, U } from '../dsl'
-import { INCOTERMS } from './masters'
 
-export const LEAD_SOURCES = ['Website', 'Referral', 'Cold call', 'Exhibition / event', 'Email campaign', 'WhatsApp', 'LinkedIn', 'Agent network', 'Existing customer', 'Other']
+export const LEAD_SOURCES = ['Website', 'Referral', 'Cold call', 'Exhibition / event', 'Email campaign', 'WhatsApp', 'LinkedIn', 'Agent network', 'Existing customer', 'Portal enquiry', 'Other']
 export const MODES = ['Apartment Sale', 'Villa Sale', 'Off-Plan Sale', 'Apartment Lease', 'Villa Lease', 'Commercial Sale', 'Commercial Lease', 'Property Management', 'Land Sale', 'Bulk Deal']
 
 export const crm: EntityDef[] = [
@@ -57,7 +56,7 @@ export const crm: EntityDef[] = [
       T('contact_name', 'Contact person', { list: true, search: true }), E('email', 'E-mail', { list: true }), PH('phone', 'Phone / WhatsApp', { list: true }),
       S('status', 'Status', ['New', 'Contacted', 'Qualified', 'Unqualified', 'Converted'], { default: 'New', list: true }),
       S('source', 'Source', LEAD_SOURCES, { list: true }), S('marketing_consent', 'Marketing consent (PDPL)', ['Unknown', 'Opted in', 'Opted out'], { default: 'Unknown' }), R('campaign_id', 'Campaign', 'campaigns'), R('owner_id', 'Owner', 'users', { list: true }),
-      S('interest', 'Interested in', MODES), T('origin', 'Origin'), T('destination', 'Destination'), M('est_value', 'Estimated value'),
+      S('interest', 'Interested in', MODES), T('origin', 'Current area (where you own / live)'), T('destination', 'Target area (community / building)'), M('est_value', 'Estimated value (AED)'),
       R('converted_party_id', 'Converted to customer', 'parties', { readonly: true }), TA('notes', 'Notes'),
     ],
     defaultSort: { field: 'id', dir: 'desc' },
@@ -70,7 +69,7 @@ export const crm: EntityDef[] = [
       R('party_id', 'Customer', 'parties', { required: true, list: true }), R('contact_id', 'Contact', 'contacts'),
       S('stage', 'Stage', ['Prospecting', 'Qualification', 'Quotation', 'Negotiation', 'Won', 'Lost'], { default: 'Prospecting', list: true }),
       M('value', 'Expected revenue', { list: true }), P('probability', 'Probability %', { default: 20, list: true }), D('expected_close', 'Expected close', { list: true }),
-      R('owner_id', 'Owner', 'users', { list: true }), S('mode', 'Service', MODES), T('origin', 'Origin'), T('destination', 'Destination'),
+      R('owner_id', 'Owner', 'users', { list: true }), S('mode', 'Service', MODES), T('origin', 'Selling / current area'), T('destination', 'Target area'),
       S('frequency', 'Volume', ['One-off', 'Monthly', 'Quarterly', 'Annual contract']), T('lost_reason', 'Lost reason'), TA('notes', 'Notes'),
     ],
     defaultSort: { field: 'id', dir: 'desc' },
@@ -90,41 +89,20 @@ export const crm: EntityDef[] = [
     ],
     defaultSort: { field: 'start_at', dir: 'desc' },
   },
-  // ---- Sales & pricing
-  {
-    key: 'rate_cards', label: 'Rate card', plural: 'Rate cards (buy / sell)', module: 'sales', icon: 'Tags', title: ['name'], panel: true, statusField: 'status',
-    children: [{ key: 'lines', label: 'Rates', entity: 'rate_card_lines', fk: 'rate_card_id' }],
-    fields: [
-      T('name', 'Rate card name', { required: true, list: true, search: true, span: 2, section: 'Rate card' }), S('kind', 'Kind', ['Buy (cost)', 'Sell (price list)'], { required: true, list: true }),
-      S('mode', 'Mode', MODES, { list: true }), R('vendor_id', 'Carrier / vendor / agent', 'parties', { refFilter: { is_vendor: 1 }, list: true }), R('customer_id', 'Customer (if specific)', 'parties', { refFilter: { is_customer: 1 } }),
-      S('currency', 'Currency', ['AED', 'USD', 'EUR', 'GBP', 'SAR', 'INR', 'CNY'], { default: 'USD', list: true }), D('valid_from', 'Valid from', { list: true }), D('valid_to', 'Valid to', { list: true }),
-      S('status', 'Status', ['Draft', 'Active', 'Expired'], { default: 'Active', list: true }), TA('notes', 'Notes'),
-    ],
-  },
-  {
-    key: 'rate_card_lines', label: 'Rate line', plural: 'Rate lines', module: 'sales', icon: 'Tag', title: ['id'], child: true,
-    fields: [
-      R('rate_card_id', 'Rate card', 'rate_cards', { hidden: true }), R('origin_id', 'Origin', 'locations', { list: true }), R('destination_id', 'Destination', 'locations', { list: true }),
-      R('charge_code_id', 'Charge', 'charge_codes', { list: true }), T('basis', 'Basis', { list: true, placeholder: '20GP, 40HC, kg, CBM…' }), M('rate', 'Rate', { list: true }), M('min_charge', 'Minimum'),
-      I('transit_days', 'Transit days'), I('free_days', 'Free days'), T('remarks', 'Remarks'),
-    ],
-  },
+  // ---- Service quotations (real-estate professional services)
   {
     key: 'quotations', label: 'Quotation', plural: 'Quotations', module: 'sales', icon: 'FileSignature', title: ['quote_no'], panel: true, statusField: 'status', print: 'quotation',
     numbering: { field: 'quote_no', pattern: 'QT{YY}{MM}{seq:4}' }, customFields: true,
-    children: [{ key: 'lines', label: 'Charges', entity: 'quotation_lines', fk: 'quote_id', columns: ['charge_code_id', 'description', 'basis', 'qty', 'rate', 'cost_rate', 'vat_code_id', 'amount'] }],
+    children: [{ key: 'lines', label: 'Charges', entity: 'quotation_lines', fk: 'quote_id', columns: ['description', 'basis', 'qty', 'rate', 'cost_rate', 'vat_code_id', 'amount'] }],
     fields: [
       T('quote_no', 'Quote no.', { readonly: true, list: true, search: true, section: 'Quotation' }), D('quote_date', 'Date', { required: true, default: 'today', list: true }), D('valid_until', 'Valid until', { list: true }),
       R('customer_id', 'Customer', 'parties', { required: true, refFilter: { is_customer: 1 }, list: true }), R('contact_id', 'Contact', 'contacts'), R('salesperson_id', 'Salesperson', 'users', { default: 'me', list: true }),
-      S('mode', 'Service', ['Ocean FCL', 'Ocean LCL', 'Air', 'Road', 'Multimodal', 'Customs clearance', 'Warehousing', 'Project cargo'], { required: true, list: true }),
-      S('trade', 'Trade', ['Export', 'Import', 'Cross trade', 'Domestic']), S('inco_terms', 'Incoterms', INCOTERMS), S('service_type', 'Service type', ['Port to Port', 'Door to Door', 'Door to Port', 'Port to Door']),
-      R('pol_id', 'Port of loading', 'locations', { section: 'Route & cargo' }), R('pod_id', 'Port of discharge', 'locations'), T('place_of_receipt', 'Place of receipt'), T('place_of_delivery', 'Place of delivery'),
-      T('commodity', 'Commodity'), I('packages', 'Packages'), N('gross_weight', 'Gross weight (kg)'), N('volume_cbm', 'Volume (CBM)'), T('equipment', 'Equipment', { placeholder: '1 x 40HC' }), B('is_hazardous', 'Dangerous goods'),
+      S('mode', 'Service', ['Sale commission', 'Lease commission', 'Off-Plan purchase', 'Property management', 'Valuation', 'Marketing package'], { required: true, list: true }),
       S('currency', 'Currency', ['AED', 'USD', 'EUR', 'GBP', 'SAR', 'INR'], { default: 'AED', section: 'Commercials' }), N('ex_rate', 'Exchange rate to AED', { default: 1 }), R('payment_term_id', 'Payment term', 'payment_terms'),
       S('status', 'Status', ['Draft', 'Pending approval', 'Approved', 'Sent', 'Accepted', 'Rejected', 'Expired', 'Converted to job'], { default: 'Draft', list: true }),
       M('subtotal', 'Sell total', { computed: true, list: true }), M('vat_total', 'VAT', { computed: true }), M('total', 'Total', { computed: true, list: true }),
       M('total_cost', 'Estimated cost', { computed: true }), M('margin', 'Margin', { computed: true, list: true }), P('margin_pct', 'Margin %', { computed: true }),
-      R('opportunity_id', 'Opportunity', 'opportunities'), R('job_id', 'Converted job', 'jobs', { readonly: true }), I('revision', 'Revision', { default: 1, readonly: true }),
+      R('opportunity_id', 'Opportunity', 'opportunities'), R('job_id', 'Converted deal', 'jobs', { readonly: true }), I('revision', 'Revision', { default: 1, readonly: true }),
       S('approval_status', 'Approval', ['Not required', 'Pending', 'Approved', 'Rejected'], { default: 'Not required', readonly: true }), T('rejection_reason', 'Rejection reason'),
       TA('terms', 'Terms & conditions', { section: 'Notes' }), TA('notes', 'Internal notes'),
     ],
@@ -133,7 +111,7 @@ export const crm: EntityDef[] = [
   {
     key: 'quotation_lines', label: 'Quotation line', plural: 'Quotation lines', module: 'sales', icon: 'List', title: ['description'], child: true,
     fields: [
-      R('quote_id', 'Quotation', 'quotations', { hidden: true }), R('charge_code_id', 'Charge', 'charge_codes'), T('description', 'Description'), T('basis', 'Basis'),
+      R('quote_id', 'Quotation', 'quotations', { hidden: true }), R('charge_code_id', 'Service item', 'charge_codes'), T('description', 'Description'), T('basis', 'Basis', { placeholder: 'Fixed fee, per transaction…' }),
       N('qty', 'Qty', { default: 1 }), M('rate', 'Sell rate'), M('cost_rate', 'Cost rate'), R('vat_code_id', 'Tax', 'vat_codes'), P('vat_pct', 'VAT %', { hidden: true }),
       M('amount', 'Amount', { computed: true }), M('vat_amount', 'VAT', { computed: true, hidden: true }), M('cost_amount', 'Cost', { computed: true, hidden: true }), T('remarks', 'Remarks', { hidden: true }),
     ],

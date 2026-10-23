@@ -14,25 +14,8 @@ const run = async (h: ActionHelpers, fn: () => Promise<any>, ok: string) => { tr
 const fin = (h: ActionHelpers) => h.can('finance', 'edit')
 
 export const ACTIONS: Record<string, ActionDef[]> = {
-  vendor_services: [
-    { key: 'confirm', label: 'Confirm and add job charges', tone: 'green', show: (r,h) => r.status === 'Draft' && h.can('jobs','edit') && h.can('finance','create'), run: async h => { if (await h.dlg.confirm({ title: 'Confirm vendor service?', message: 'Adds the buying cost and selling revenue to the job. Check quantities, rates and tax codes first. This does not post a bill, invoice or payment.' })) await run(h, () => post(`/api/vendor-services/${h.rec.id}/confirm`), 'Vendor cost and customer revenue added to the job') } },
-    { key: 'reset', label: 'Reset unbilled service to draft', tone: 'outline', show: (r,h) => r.status === 'Confirmed' && h.can('jobs','edit') && h.can('finance','edit'), run: async h => { if (await h.dlg.confirm({ title: 'Reset to draft?', message: 'Removes this service’s job charges so you can correct the agreement. Blocked once any invoice or bill references the charges.' })) await run(h, () => post(`/api/vendor-services/${h.rec.id}/reset`), 'Service returned to draft') } },
-    { key: 'job', label: 'Open job accounting', tone: 'outline', show: () => true, run: h => h.nav(`/jobs/${h.rec.job_id}?tab=accounting`) },
-  ],
-  attachments:[{key:'download',label:'Open source file',tone:'outline',show:()=>true,run:h=>{window.open(`/api/files/${h.rec.id}/download`,'_blank','noopener')}},{key:'extract',label:'Extract text and match job',tone:'outline',show:(r,h)=>h.can('documents','edit')&&h.can('jobs','view'),run:async h=>{try{const r=await post<any>(`/api/files/${h.rec.id}/extract`);h.nav(`/extractions/${r.id}`)}catch(e:any){h.toast.error(e.message)}}}],
+  attachments:[{key:'download',label:'Open source file',tone:'outline',show:()=>true,run:h=>{window.open(`/api/files/${h.rec.id}/download`,'_blank','noopener')}},{key:'extract',label:'Extract text and match deal',tone:'outline',show:(r,h)=>h.can('documents','edit')&&h.can('jobs','view'),run:async h=>{try{const r=await post<any>(`/api/files/${h.rec.id}/extract`);h.nav(`/extractions/${r.id}`)}catch(e:any){h.toast.error(e.message)}}}],
   document_extractions:[{key:'review',label:'Review extraction',tone:'outline',show:()=>true,run:h=>h.nav(`/extractions/${h.rec.id}`)}],
-  container_deposits:[{key:'transactions',label:'Manage deposit transactions',tone:'outline',show:()=>true,run:h=>h.nav(`/container-deposits/${h.rec.id}`)}],
-  freight_documents:[
-    {key:'approve',label:'Approve reviewed revision',tone:'green',show:(r,h)=>r.status==='Draft'&&h.can('documents','approve')&&r.draft_author_id!==h.userId&&r.updated_by!==h.userId,run:h=>run(h,()=>post(`/api/freight-documents/${h.rec.id}/approve`),'Revision approved; originals registered')},
-    {key:'amend',label:'Start amendment',tone:'outline',show:(r,h)=>r.status==='Approved'&&h.can('documents','edit'),run:async h=>{const reason=await h.dlg.prompt({title:'Amend freight document',label:'Amendment reason (at least 10 characters)',required:true,multiline:true});if(reason)await run(h,()=>post(`/api/freight-documents/${h.rec.id}/amend`,{reason}),'Draft amendment opened; approved history retained')}},
-    {key:'release',label:'Authorise document release',tone:'green',show:(r,h)=>r.status==='Approved'&&h.can('documents','approve')&&r.draft_author_id!==h.userId,run:async h=>{const evidence=await h.dlg.prompt({title:'Authorise document release',label:'Release authority and evidence (at least 10 characters)',message:'Customs, settled job revenue and original custody must pass server checks. This records authorisation; it does not transmit carrier release instructions.',required:true,multiline:true});if(evidence)await run(h,()=>post(`/api/freight-documents/${h.rec.id}/release`,{evidence}),'Release authorisation recorded')}},
-  ],
-  document_originals:[{key:'custody',label:'Manage custody',tone:'outline',show:()=>true,run:h=>h.nav(`/originals/${h.rec.id}`)}],
-  document_custody_events:[{key:'acknowledge',label:'Acknowledge receipt',tone:'green',show:(r,h)=>r.status==='Pending'&&h.can('documents','edit')&&(r.recipient_id?r.recipient_id===h.userId:r.actor_id!==h.userId&&h.can('documents','approve')),run:async h=>{const evidence=await h.dlg.prompt({title:'Acknowledge original receipt',label:'Receipt evidence (at least 10 characters)',required:true,multiline:true});if(evidence)await run(h,()=>post(`/api/custody-events/${h.rec.id}/acknowledge`,{evidence}),'Custody acknowledgement recorded')}}],
-  carrier_rfqs:[
-    {key:'compare',label:'Compare responses',tone:'outline',show:()=>true,run:h=>h.nav(`/rfqs/${h.rec.id}/compare`)},
-    {key:'issue',label:'Issue RFQ to providers',tone:'green',show:(r,h)=>r.status==='Draft'&&h.can('sales','edit'),run:async h=>{if(await h.dlg.confirm({title:'Issue RFQ?',message:'Locks this request and queues one email per invited provider. Delivery depends on configured mail service.'}))await run(h,()=>post(`/api/rfqs/${h.rec.id}/issue`),'RFQ issued; provider email queued')}},
-  ],
   knowledge_articles:[
     {key:'publish',label:'Publish reviewed revision',tone:'green',show:(r,h)=>r.status==='Draft'&&h.can('projects','approve')&&r.owner_id!==h.userId&&r.updated_by!==h.userId,run:h=>run(h,()=>post(`/api/knowledge/${h.rec.id}/publish`),'Reviewed version published')},
     {key:'revise',label:'Start new revision',tone:'outline',show:(r,h)=>r.status==='Published'&&h.can('projects','edit'),run:async h=>{const reason=await h.dlg.prompt({title:'Start a new revision',label:'Reason (at least 10 characters)',required:true,multiline:true});if(reason)await run(h,()=>post(`/api/knowledge/${h.rec.id}/revise`,{reason}),'Draft revision opened; published history retained')}},
@@ -52,7 +35,7 @@ export const ACTIONS: Record<string, ActionDef[]> = {
     { key: 'receipt', label: 'Record receipt', tone: 'violet', show: (r, h) => ['Posted', 'Partially paid'].includes(r.status) && r.balance > 0 && ['Tax Invoice', 'Debit Note'].includes(r.doc_type) && h.can('finance', 'create'), run: h => h.dialog('pay', { kind: 'receipt', doc: h.rec }) },
     { key: 'cn', label: 'Issue credit note', tone: 'outline', show: (r, h) => ['Posted', 'Partially paid', 'Paid'].includes(r.status) && r.doc_type === 'Tax Invoice' && h.can('finance', 'create'), run: async h => {
       if (!(await h.dlg.confirm({ title: 'Create credit note?', message: 'A draft credit note for the full invoice is created. Edit the lines for a partial credit, then post it.', ok: 'Create draft' }))) return
-      try { const r = h.rec; const full = await get<any>(`/api/e/invoices/${r.id}`); const cn = await post<any>('/api/e/invoices', { doc_type: 'Credit Note', party_id: r.party_id, job_id: r.job_id, branch_id: r.branch_id, currency: r.currency, ex_rate: r.ex_rate, original_invoice_id: r.id, invoice_date: new Date().toLocaleDateString('sv-SE'), notes: `Credit note against ${r.invoice_no}`, round_total: r.round_total, trade: r.trade, children: { lines: full.children.lines.map((l: any) => ({ charge_code_id: l.charge_code_id, description: l.description, unit: l.unit, qty: l.qty, rate: l.rate, line_ccy: l.line_ccy, line_roe: l.line_roe, vat_code_id: l.vat_code_id })) } }); h.nav(`/e/invoices/${cn.id}`) } catch (e: any) { h.toast.error(e.message) } } },
+      try { const r = h.rec; const full = await get<any>(`/api/e/invoices/${r.id}`); const cn = await post<any>('/api/e/invoices', { doc_type: 'Credit Note', party_id: r.party_id, job_id: r.job_id, branch_id: r.branch_id, currency: r.currency, ex_rate: r.ex_rate, original_invoice_id: r.id, invoice_date: new Date().toLocaleDateString('sv-SE'), notes: `Credit note against ${r.invoice_no}`, round_total: r.round_total, children: { lines: full.children.lines.map((l: any) => ({ charge_code_id: l.charge_code_id, description: l.description, unit: l.unit, qty: l.qty, rate: l.rate, line_ccy: l.line_ccy, line_roe: l.line_roe, vat_code_id: l.vat_code_id })) } }); h.nav(`/e/invoices/${cn.id}`) } catch (e: any) { h.toast.error(e.message) } } },
     { key: 'conv', label: 'Convert to tax invoice', tone: 'violet', show: (r, h) => r.doc_type === 'Proforma Invoice' && r.status !== 'Void' && h.can('finance', 'create'), run: async h => { try { const n = await post<any>(`/api/invoices/${h.rec.id}/convert-proforma`); h.toast.ok('Draft tax invoice created'); h.nav(`/e/invoices/${n.id}`) } catch (e: any) { h.toast.error(e.message) } } },
     { key: 'einv', label: 'E-invoice XML (PINT AE)', tone: 'outline', more: true, show: (r, h) => r.status !== 'Draft' && r.status !== 'Void' && r.doc_type !== 'Proforma Invoice' && h.can('finance', 'export'), run: h => { window.location.href = `/api/invoices/${h.rec.id}/einvoice.xml` } },
     { key: 'einvsub', label: 'Submit e-invoice to provider', tone: 'outline', more: true, show: (r, h) => r.status !== 'Draft' && r.status !== 'Void' && r.doc_type !== 'Proforma Invoice' && h.can('finance', 'edit'), run: async h => { if (await h.dlg.confirm({ title: 'Submit e-invoice?', message: `Sends ${h.rec.invoice_no} as UBL (PINT AE) to your accredited service provider.`, ok: 'Submit' })) await run(h, () => post(`/api/invoices/${h.rec.id}/einvoice/submit`), 'E-invoice submitted') } },
@@ -95,16 +78,12 @@ export const ACTIONS: Record<string, ActionDef[]> = {
     { key: 'lost', label: 'Mark lost', tone: 'red', more: true, show: (r, h) => ['Sent', 'Approved', 'Draft'].includes(r.status) && h.can('sales', 'edit'), run: async h => { const reason = await h.dlg.prompt({ title: 'Quotation lost / rejected', label: 'Reason (optional)', ok: 'Mark lost' }); if (reason !== null) await run(h, () => post(`/api/quotes/${h.rec.id}/reject`, { reason }), 'Marked as rejected') } },
     { key: 'rev', label: 'New revision', tone: 'outline', more: true, show: (_r, h) => h.can('sales', 'create'), run: async h => { try { const n = await post<any>(`/api/quotes/${h.rec.id}/revise`); h.nav(`/e/quotations/${n.id}`) } catch (e: any) { h.toast.error(e.message) } } },
   ],
+  jobs: [
+    { key: 'share', label: 'Share client status link', tone: 'teal', show: (r, h) => !!h.can('sales', 'view'), run: async h => { try { const res = await post<any>(`/api/jobs/${h.rec.id}/tracking-token`); const url = res.url || `${location.origin}/t/${res.token}`; try { await navigator.clipboard.writeText(url); h.toast.ok('Client status link copied — paste it in e-mail or WhatsApp') } catch { h.toast.ok(url) } } catch (e: any) { h.toast.error(e.message) } } },
+    { key: 'report', label: 'Print deal file report', tone: 'outline', show: (r, h) => !!h.can('sales', 'view'), run: h => { window.open(`/print/jobs/${h.rec.id}`, '_blank', 'noopener') } },
+  ],
   leads: [{ key: 'convert', label: 'Convert to customer', tone: 'green', show: (r, h) => r.status !== 'Converted' && h.can('crm', 'create'), run: async h => { try { const r = await post<any>(`/api/leads/${h.rec.id}/convert`); h.toast.ok('Converted to customer and opportunity'); h.nav(`/e/parties/${r.party.id}`) } catch (e: any) { h.toast.error(e.message) } } }],
   opportunities: [{ key: 'quote', label: 'Create quotation', tone: 'green', show: (r, h) => !['Won', 'Lost'].includes(r.stage) && h.can('sales', 'create'), run: async h => { try { const qt = await post<any>(`/api/opportunities/${h.rec.id}/quote`); h.nav(`/e/quotations/${qt.id}`) } catch (e: any) { h.toast.error(e.message) } } }],
-  grns: [
-    { key: 'post', label: 'Post receipt', tone: 'green', show: (r, h) => r.status === 'Draft' && h.can('warehouse', 'edit'), run: async h => { if (await h.dlg.confirm({ title: 'Post goods receipt?', message: 'Stock is added to the owner\'s balance in the selected bins.', ok: 'Post' })) await run(h, () => post(`/api/warehouse/grns/${h.rec.id}/post`), 'Stock received') } },
-    { key: 'cancel', label: 'Cancel', tone: 'red', more: true, show: (r, h) => r.status !== 'Cancelled' && h.can('warehouse', 'edit'), run: async h => { if (await h.dlg.confirm({ title: 'Cancel this receipt?', message: 'Any posted stock is reversed (only possible if it has not been moved or dispatched).', danger: true, ok: 'Cancel receipt' })) await run(h, () => post(`/api/warehouse/grns/${h.rec.id}/cancel`), 'Cancelled') } },
-  ],
-  dispatches: [
-    { key: 'post', label: 'Post dispatch', tone: 'green', show: (r, h) => r.status === 'Draft' && h.can('warehouse', 'edit'), run: async h => { if (await h.dlg.confirm({ title: 'Post dispatch?', message: 'Stock is issued first-expiry-first-out unless a lot / bin is specified.', ok: 'Post' })) await run(h, () => post(`/api/warehouse/dispatches/${h.rec.id}/post`), 'Stock dispatched') } },
-    { key: 'cancel', label: 'Cancel', tone: 'red', more: true, show: (r, h) => r.status !== 'Cancelled' && h.can('warehouse', 'edit'), run: async h => { if (await h.dlg.confirm({ title: 'Cancel this dispatch?', message: 'Issued stock is returned to the bins.', danger: true, ok: 'Cancel dispatch' })) await run(h, () => post(`/api/warehouse/dispatches/${h.rec.id}/cancel`), 'Cancelled') } },
-  ],
   leave_requests: [
     { key: 'approve', label: 'Approve', tone: 'green', show: (r, h) => r.status === 'Pending' && h.can('hr', 'approve'), run: h => run(h, () => post(`/api/hr/leave/${h.rec.id}/approve`), 'Approved') },
     { key: 'reject', label: 'Reject', tone: 'red', show: (r, h) => r.status === 'Pending' && h.can('hr', 'approve'), run: h => run(h, () => post(`/api/hr/leave/${h.rec.id}/reject`), 'Rejected') },
@@ -123,11 +102,6 @@ export const ACTIONS: Record<string, ActionDef[]> = {
     { key: 'paid', label: 'Mark paid', tone: 'green', show: (r, h) => r.status === 'Approved' && h.can('hr', 'edit'), run: h => run(h, () => put(`/api/e/payslips/${h.rec.id}`, { status: 'Paid', version: h.rec.version }), 'Marked as paid') },
   ],
   bank_transactions: [{ key: 'rec', label: 'Reconcile…', tone: 'green', show: r => r.status === 'Unreconciled', run: h => h.dialog('reconcile', { txn: h.rec }) }, { key: 'undo', label: 'Un-reconcile', tone: 'outline', show: r => r.status === 'Reconciled', run: h => run(h, () => post('/api/finance/bank/reconcile', { txn_id: h.rec.id, undo: true }), 'Reopened') }],
-  transport_orders: [{ key: 'pod', label: 'Capture POD', tone: 'green', show: (r, h) => !['POD received', 'Cancelled'].includes(r.status) && h.can('transport', 'edit'), run: h => h.dialog('pod', { order: h.rec }) }],
-  customs_declarations: [
-    { key: 'gw', label: 'Submit to customs gateway', tone: 'violet', show: (r, h) => ['Draft', 'Query raised'].includes(r.status) && h.can('customs', 'edit'), run: async h => { if (await h.dlg.confirm({ title: 'Submit declaration?', message: 'Sends this declaration to the configured customs gateway / broker API.', ok: 'Submit' })) await run(h, async () => { const r = await post<any>(`/api/customs/${h.rec.id}/submit`); h.toast.ok(r.message) }, 'Submitted') } },
-    { key: 'json', label: 'Export JSON for broker', tone: 'outline', more: true, show: () => true, run: h => { window.open(`/api/e/customs_declarations/${h.rec.id}`, '_blank') } },
-  ],
   users: [
     { key: 'unlock', label: 'Unlock account', tone: 'outline', more: true, show: (_r, h) => h.can('admin', 'edit'), run: h => run(h, () => post(`/api/admin/users/${h.rec.id}/unlock`), 'Unlocked') },
     { key: 'signout', label: 'Sign out everywhere', tone: 'outline', more: true, show: (_r, h) => h.can('admin', 'edit'), run: h => run(h, () => post(`/api/admin/users/${h.rec.id}/sign-out`), 'Sessions ended') },
@@ -140,26 +114,20 @@ export const ACTIONS: Record<string, ActionDef[]> = {
   ],
 }
 
-export const PRINTABLE = new Set(['freight_documents', 'invoices', 'quotations', 'delivery_orders', 'receipts', 'payments', 'grns', 'dispatches', 'transport_orders', 'shipments', 'customs_declarations', 'payslips', 'purchase_orders', 'insurance_certs', 'parties', 'studio_documents'])
+export const PRINTABLE = new Set(['invoices', 'quotations', 'receipts', 'payments', 'payslips', 'purchase_orders', 'parties', 'studio_documents'])
 export const RELATED: Record<string, { key: string; label: string; entity: string; field: string }[]> = {
   parties: [
-    { key: 'services', label: 'Services supplied', entity: 'vendor_services', field: 'vendor_id' },
-    { key: 'contacts', label: 'Contacts', entity: 'contacts', field: 'party_id' }, { key: 'jobs', label: 'Jobs', entity: 'jobs', field: 'client_id' }, { key: 'quotes', label: 'Quotations', entity: 'quotations', field: 'customer_id' },
+    { key: 'contacts', label: 'Contacts', entity: 'contacts', field: 'party_id' }, { key: 'jobs', label: 'Deals', entity: 'jobs', field: 'client_id' }, { key: 'quotes', label: 'Quotations', entity: 'quotations', field: 'customer_id' },
     { key: 'invoices', label: 'Invoices', entity: 'invoices', field: 'party_id' }, { key: 'receipts', label: 'Receipts', entity: 'receipts', field: 'party_id' }, { key: 'bills', label: 'Vendor bills', entity: 'bills', field: 'vendor_id' },
     { key: 'opps', label: 'Opportunities', entity: 'opportunities', field: 'party_id' }, { key: 'acts', label: 'Calls & activities', entity: 'activities', field: 'party_id' }, { key: 'tickets', label: 'Tickets', entity: 'tickets', field: 'customer_id' },
-    { key: 'contracts', label: 'Contracts', entity: 'contracts', field: 'party_id' }, { key: 'items', label: 'Stock items', entity: 'items', field: 'customer_id' },
+    { key: 'contracts', label: 'Contracts', entity: 'contracts', field: 'party_id' }, { key: 'mandates', label: 'Mandates', entity: 'mandates', field: 'owner_id' },
   ],
-  vehicles: [{ key: 'trips', label: 'Trips', entity: 'transport_orders', field: 'vehicle_id' }, { key: 'fuel', label: 'Fuel', entity: 'fuel_logs', field: 'vehicle_id' }, { key: 'svc', label: 'Maintenance', entity: 'vehicle_services', field: 'vehicle_id' }],
-  transport_orders: [{ key: 'vendor-services', label: 'Vendor services', entity: 'vendor_services', field: 'transport_order_id' }],
-  purchase_orders: [{ key: 'vendor-services', label: 'Vendor services', entity: 'vendor_services', field: 'purchase_order_id' }],
-  drivers: [{ key: 'trips', label: 'Trips', entity: 'transport_orders', field: 'driver_id' }],
   employees: [{ key: 'leave', label: 'Leave', entity: 'leave_requests', field: 'employee_id' }, { key: 'att', label: 'Attendance', entity: 'attendance', field: 'employee_id' }, { key: 'pay', label: 'Payslips', entity: 'payslips', field: 'employee_id' }, { key: 'exp', label: 'Expense claims', entity: 'expenses', field: 'employee_id' }],
-  warehouses: [{ key: 'bins', label: 'Bins', entity: 'wh_locations', field: 'warehouse_id' }, { key: 'grns', label: 'Receipts', entity: 'grns', field: 'warehouse_id' }, { key: 'dsp', label: 'Dispatches', entity: 'dispatches', field: 'warehouse_id' }],
-  items: [{ key: 'ledger', label: 'Stock ledger', entity: 'stock_moves', field: 'item_id' }],
-  carriers: [{ key: 'jobs', label: 'Jobs', entity: 'jobs', field: 'carrier_id' }, { key: 'bookings', label: 'Bookings', entity: 'bookings', field: 'carrier_id' }],
-  branches: [{ key: 'jobs', label: 'Jobs', entity: 'jobs', field: 'branch_id' }],
+  branches: [{ key: 'jobs', label: 'Deals', entity: 'jobs', field: 'branch_id' }],
   campaigns: [{ key: 'leads', label: 'Leads', entity: 'leads', field: 'campaign_id' }],
   opportunities: [{ key: 'quotes', label: 'Quotations', entity: 'quotations', field: 'opportunity_id' }],
+  properties: [{ key: 'mandates', label: 'Mandates', entity: 'mandates', field: 'property_id' }, { key: 'viewings', label: 'Viewings', entity: 'viewings', field: 'property_id' }, { key: 'offers', label: 'Offers', entity: 'offers', field: 'property_id' }],
+  leases: [{ key: 'rent', label: 'Rent schedule', entity: 'rent_schedules', field: 'lease_id' }, { key: 'maint', label: 'Maintenance', entity: 'maintenance', field: 'lease_id' }],
   projects: [{ key: 'tasks', label: 'Tasks', entity: 'tasks', field: 'project_id' }],
 }
 

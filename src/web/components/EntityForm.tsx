@@ -50,7 +50,7 @@ export function EntityForm({ def, record, presets, onSaved, onCancel, lockedOnEd
   const [errors, setErrors] = useState<Record<string, boolean>>({})
   const [banner, setBanner] = useState('')
   const [saving, setSaving] = useState(false)
-  const [picker, setPicker] = useState<null | 'rates' | 'docs'>(null)
+  const [picker, setPicker] = useState<null | 'docs'>(null)
 
   const fields = useMemo(() => def.fields.filter(f => {
     if (f.hidden || f.secret) return false
@@ -126,7 +126,6 @@ export function EntityForm({ def, record, presets, onSaved, onCancel, lockedOnEd
           <div className="flex items-center justify-between mb-2">
             <div className="font-display font-extrabold text-[13px] uppercase tracking-wider text-fold">{c.label}</div>
             <div className="flex gap-2">
-              {def.key === 'quotations' && c.key === 'lines' && <button type="button" className="btn outline sm" onClick={() => setPicker('rates')}><TagsIcon /> Add from rate cards</button>}
               {(def.key === 'receipts' || def.key === 'payments') && <button type="button" className="btn outline sm" disabled={!(vals.party_id || vals.vendor_id)} onClick={() => setPicker('docs')}><ListPlus /> Pick open {def.key === 'receipts' ? 'invoices' : 'bills'}</button>}
             </div>
           </div>
@@ -139,26 +138,8 @@ export function EntityForm({ def, record, presets, onSaved, onCancel, lockedOnEd
         <button type="button" className="btn red" onClick={onCancel}><X /> Cancel</button>
         <span className="text-xs text-muted ml-auto hidden md:block">Fields marked <span className="text-signal font-bold">*</span> are required</span>
       </div>
-      {picker === 'rates' && <RatePicker vals={vals} onClose={() => setPicker(null)} onPick={rows => { setKids(k => ({ ...k, lines: [...(k.lines ?? []), ...rows.map(r => previewRow('quotation_lines', r, vat, vals))] })); setPicker(null) }} />}
       {picker === 'docs' && <OpenDocsPicker kind={def.key === 'receipts' ? 'receipt' : 'payment'} partyId={vals.party_id ?? vals.vendor_id} currency={vals.currency} existing={kids.allocations ?? []} onClose={() => setPicker(null)} onPick={rows => { setKids(k => ({ ...k, allocations: rows })); const sum = rows.reduce((s, r) => s + Number(r.amount || 0), 0); if (!vals.amount || vals.amount < sum) set('amount', Math.round(sum * 100) / 100); setPicker(null) }} />}
     </form>
-  )
-}
-
-function RatePicker({ vals, onClose, onPick }: { vals: Row; onClose: () => void; onPick: (rows: Row[]) => void }) {
-  const [rows, setRows] = useState<Row[] | null>(null)
-  const [sel, setSel] = useState<Set<number>>(new Set())
-  const [kind, setKind] = useState('Sell')
-  useEffect(() => { setRows(null); get<Row[]>('/api/rates/search', { kind, mode: vals.mode, origin_id: vals.pol_id, destination_id: vals.pod_id, customer_id: vals.customer_id }).then(setRows).catch(() => setRows([])) }, [kind])
-  return (
-    <Modal open onClose={onClose} title="Add from rate cards" width={900} footer={<><span className="text-sm text-muted">{sel.size} selected</span><div className="flex-1" /><button className="btn outline" onClick={onClose}>Close</button>
-      <button className="btn green" disabled={!sel.size} onClick={() => onPick((rows ?? []).filter(r => sel.has(r.id)).map(r => ({ charge_code_id: r.charge_code_id, description: [r.charge, r.basis].filter(Boolean).join(' – '), basis: r.basis, qty: 1, rate: kind === 'Sell' ? r.rate : 0, cost_rate: kind === 'Buy' ? r.rate : 0, _labels: { charge_code_id: r.charge } })))}>Add to quotation</button></>}>
-      <div className="flex gap-2 mb-3">{['Sell', 'Buy'].map(k => <button key={k} className={cls('btn sm', kind === k ? 'green' : 'outline')} onClick={() => setKind(k)}>{k === 'Sell' ? 'Sell rates (price lists)' : 'Buy rates (cost)'}</button>)}<span className="text-xs text-muted self-center">Filtered by service, origin and destination of this quotation. Rates are not converted between currencies.</span></div>
-      {!rows ? <Loading /> : rows.length === 0 ? <div className="text-center text-muted py-8">No active rate-card lines match this lane. Maintain them under CRM &amp; Sales → Rate Cards.</div> : (
-        <div className="table-wrap border border-line rounded-xl max-h-[50vh]"><table className="grid"><thead><tr><th /><th>Rate card</th><th>Charge</th><th>Lane</th><th>Basis</th><th className="num">Rate</th><th>Cur</th><th>Valid to</th></tr></thead><tbody>
-          {rows.map(r => <tr key={r.id}><td><input type="checkbox" checked={sel.has(r.id)} onChange={e => setSel(s => { const n = new Set(s); e.target.checked ? n.add(r.id) : n.delete(r.id); return n })} /></td><td>{r.card}<div className="text-xs text-muted">{r.vendor}</div></td><td>{r.charge}</td><td>{r.origin} → {r.destination}</td><td>{r.basis}</td><td className="num">{fmtMoney(r.rate)}</td><td>{r.currency}</td><td>{r.valid_to}</td></tr>)}
-        </tbody></table></div>)}
-    </Modal>
   )
 }
 

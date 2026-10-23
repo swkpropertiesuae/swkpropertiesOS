@@ -77,6 +77,52 @@ export default async function (app: FastifyInstance) {
       data.lists.recent_calls = q.all(`SELECT a.id, a.subject, a.start_at, a.direction, a.outcome, a.contact_name, a.phone, pr.name company, u.name owner FROM activities a LEFT JOIN parties pr ON pr.id = a.party_id LEFT JOIN users u ON u.id = a.owner_id WHERE a.type = 'Call' AND a.deleted_at IS NULL ORDER BY a.start_at DESC LIMIT 12`)
     }
     if (can_('sales')) k.quotes_open = n(`SELECT COUNT(*) FROM quotations WHERE status IN ('Draft','Pending approval','Approved','Sent') AND deleted_at IS NULL`)
+
+    // -------- §11 CEO desk: leads, viewings, offers, pipeline --------
+    if (can_('crm')) {
+      k.leads_today = n(`SELECT COUNT(*) FROM leads WHERE date(created_at) = ? AND deleted_at IS NULL`, today)
+      k.leads_qualified = n(`SELECT COUNT(*) FROM leads WHERE status = 'Qualified' AND deleted_at IS NULL`)
+      data.lists.lead_queue = q.all(`SELECT id, company, contact_name, source, status, est_value, phone FROM leads WHERE deleted_at IS NULL AND status NOT IN ('Converted', 'Lost') ORDER BY id DESC LIMIT 8`)
+    }
+    if (can_('mandates')) {
+      k.viewings_week = n(`SELECT COUNT(*) FROM viewings WHERE status IN ('Scheduled','Confirmed') AND date(scheduled_at) BETWEEN ? AND ? AND deleted_at IS NULL`, today, addDays(today, 7))
+      k.viewings_missed = n(`SELECT COUNT(*) FROM viewings WHERE status = 'No-Show' AND date(scheduled_at) BETWEEN ? AND ? AND deleted_at IS NULL`, addDays(today, -30), today)
+      k.viewings_completed = n(`SELECT COUNT(*) FROM viewings WHERE status = 'Completed' AND date(scheduled_at) >= ? AND deleted_at IS NULL`, mStart)
+      k.offers_pending = n(`SELECT COUNT(*) FROM offers WHERE status IN ('Submitted','Under Review','Negotiating','Countered') AND deleted_at IS NULL`)
+      data.lists.upcoming_viewings = q.all(`SELECT v.id, v.viewing_no, v.scheduled_at, v.status, COALESCE(v.property_title, p.title) property_title, v.follow_up_required, lm.company contact, ag.name agent FROM viewings v LEFT JOIN leads lm ON lm.id = v.lead_id LEFT JOIN agents ag ON ag.id = v.agent_id LEFT JOIN properties p ON p.id = v.property_id WHERE v.deleted_at IS NULL AND v.status IN ('Scheduled','Confirmed') AND date(v.scheduled_at) BETWEEN ? AND ? ORDER BY v.scheduled_at LIMIT 8`, today, addDays(today, 7))
+      data.lists.offers_pipeline = q.all(`SELECT o.id, o.offer_no, COALESCE(o.property_title, p.title) property_title, o.offer_type, o.status, o.offer_price, o.offer_date, pr.name buyer, ag.name agent FROM offers o LEFT JOIN parties pr ON pr.id = o.buyer_id LEFT JOIN agents ag ON ag.id = o.listing_agent_id LEFT JOIN properties p ON p.id = o.property_id WHERE o.deleted_at IS NULL AND o.status IN ('Submitted','Under Review','Negotiating','Countered') ORDER BY o.offer_date LIMIT 8`)
+      data.charts.viewings_outcome = q.all(`SELECT status name, COUNT(*) value FROM viewings WHERE deleted_at IS NULL AND date(scheduled_at) BETWEEN ? AND ? GROUP BY status`, addDays(today, -30), addDays(today, 7))
+      k.mandates_active = n(`SELECT COUNT(*) FROM mandates WHERE status = 'Active' AND deleted_at IS NULL`)
+      k.mandates_expiring = n(`SELECT COUNT(*) FROM mandates WHERE status = 'Active' AND end_date BETWEEN ? AND ? AND deleted_at IS NULL`, today, addDays(today, 14))
+      k.stale_listings = n(`SELECT COUNT(*) FROM mandates WHERE status = 'Active' AND deleted_at IS NULL AND (CASE WHEN last_activity IS NULL THEN start_date ELSE last_activity END) < ?`, addDays(today, -21))
+    }
+    if (can_('properties')) {
+      k.properties_available = n(`SELECT COUNT(*) FROM properties WHERE status = 'Available' AND deleted_at IS NULL`)
+      k.properties_reserved = n(`SELECT COUNT(*) FROM properties WHERE status IN ('Reserved','Under Offer') AND deleted_at IS NULL`)
+      data.charts.properties_status = q.all(`SELECT status name, COUNT(*) value FROM properties WHERE deleted_at IS NULL GROUP BY status`)
+    }
+    if (can_('sales')) {
+      // Deal pipeline funnel by operational stage, in blueprint order
+      const stageRows = q.all(`SELECT operational_status stage, COUNT(*) count, COALESCE(SUM(deal_value),0) value FROM jobs WHERE deleted_at IS NULL AND job_status NOT IN ('Cancelled') AND operational_status IS NOT NULL AND operational_status <> '' GROUP BY operational_status`)
+      data.charts.pipeline_funnel = ['Inquiry', 'Viewing', 'Offer', 'Negotiation', 'Contract', 'DLD Process', 'Handover', 'Closed'].map(s => {
+        const r: any = stageRows.find(x => (x.stage ?? '') === s) ?? {}
+        return { stage: s, count: r.count ?? 0, value: m(r.value ?? 0) }
+      })
+      k.pipeline_value = m(data.charts.pipeline_funnel.filter((s: any) => s.stage !== 'Closed').reduce((n: number, s: any) => n + s.value, 0))
+    }
+    if (can_('leases')) {
+      k.renewals_due = n(`SELECT COUNT(*) FROM leases WHERE deleted_at IS NULL AND status IN ('Active','Ejari Registered','Notice Served','Expiring') AND end_date BETWEEN ? AND ?`, today, addDays(today, 90))
+      k.vacant_units = n(`SELECT COUNT(*) FROM units u WHERE u.deleted_at IS NULL AND u.active = 1 AND NOT EXISTS (SELECT 1 FROM leases l WHERE l.unit_id = u.id AND l.deleted_at IS NULL AND l.status IN ('Active','Ejari Registered'))`)
+      k.arrears_aed = m(n(`SELECT COALESCE(SUM(total_amount - COALESCE(paid_amount,0)),0) FROM rent_schedules WHERE deleted_at IS NULL AND status = 'Overdue'`))
+      k.arrears_count = n(`SELECT COUNT(*) FROM rent_schedules WHERE deleted_at IS NULL AND status = 'Overdue'`)
+      k.maintenance_open = n(`SELECT COUNT(*) FROM maintenance WHERE deleted_at IS NULL AND status NOT IN ('Completed','Cancelled')`)
+      k.maintenance_exceptions = n(`SELECT COUNT(*) FROM maintenance WHERE deleted_at IS NULL AND status NOT IN ('Completed','Cancelled') AND priority IN ('Urgent','Emergency')`)
+      data.lists.renewals = q.all(`SELECT l.id, l.lease_no, l.unit_title, pr.name tenant, l.annual_rent, l.end_date, l.status FROM leases l LEFT JOIN parties pr ON pr.id = l.tenant_id WHERE l.deleted_at IS NULL AND l.status IN ('Active','Ejari Registered','Notice Served','Expiring') AND l.end_date BETWEEN ? AND ? ORDER BY l.end_date LIMIT 8`, today, addDays(today, 90))
+    }
+    if (can_('finance')) {
+      k.received_month = m(n(`SELECT COALESCE(SUM(amount * ex_rate),0) FROM receipts WHERE status = 'Posted' AND receipt_date BETWEEN ? AND ? AND deleted_at IS NULL`, mStart, today))
+      k.commission_expected = m(n(`SELECT COALESCE(SUM(c.base_amount),0) FROM job_charges c JOIN jobs j ON j.id = c.job_id WHERE c.kind='Revenue' AND c.status='Unbilled' AND c.deleted_at IS NULL AND j.deleted_at IS NULL AND j.job_status NOT IN ('Completed','Cancelled')`))
+    }
     if (can_('support')) k.tickets_open = n(`SELECT COUNT(*) FROM tickets WHERE status NOT IN ('Resolved','Closed') AND deleted_at IS NULL`)
     if (can_('projects')) {
       k.my_tasks = n(`SELECT COUNT(*) FROM tasks WHERE assignee_id = ? AND status <> 'Done' AND deleted_at IS NULL`, user.id)
@@ -93,8 +139,15 @@ export default async function (app: FastifyInstance) {
       const oc = n(`SELECT COUNT(*) FROM jobs WHERE job_status <> 'Cancelled' AND deleted_at IS NULL AND target_close IS NOT NULL AND actual_close IS NULL AND target_close < ?`, today); if (oc && can_('reports')) a.push({ level: 'danger', text: `${oc} deals are past their target close date and not yet completed`, link: '/e/jobs' })
     }
     if (can_('sales')) { const x = n(`SELECT COUNT(*) FROM quotations WHERE status = 'Sent' AND valid_until BETWEEN ? AND ? AND deleted_at IS NULL`, today, addDays(today, 3)); if (x) a.push({ level: 'info', text: `${x} sent quotations expire within 3 days`, link: '/e/quotations' }); const pa = n(`SELECT COUNT(*) FROM quotations WHERE approval_status = 'Pending' AND deleted_at IS NULL`); if (pa) a.push({ level: 'warn', text: `${pa} quotations awaiting margin approval`, link: '/e/quotations' }) }
-    if (can_('reports')) { const dx = runReport('document_expiries', { days: 30 }).rows.length; if (dx) a.push({ level: 'warn', text: `${dx} documents expire within 30 days`, link: '/reports?r=document_expiries' }) }
+    if (can_('reports')) { k.compliance_issues = runReport('document_expiries', { days: 30 }).rows.length; if (k.compliance_issues) a.push({ level: 'warn', text: `${k.compliance_issues} documents and permits expire within 30 days`, link: '/reports?r=document_expiries' }) }
     if (can_('support')) { const t = n(`SELECT COUNT(*) FROM tickets WHERE status NOT IN ('Resolved','Closed') AND due_at < ? AND deleted_at IS NULL`, nowIso().slice(0, 16)); if (t) a.push({ level: 'danger', text: `${t} tickets are past their SLA`, link: '/e/tickets' }) }
+    if (Number(k.mandates_expiring ?? 0) > 0) a.push({ level: 'warn', text: `${k.mandates_expiring} mandates expire within 14 days – renew or release the listing`, link: '/e/mandates' })
+    if (Number(k.stale_listings ?? 0) > 0) a.push({ level: 'info', text: `${k.stale_listings} active mandates have had no activity for 21+ days`, link: '/e/mandates' })
+    if (Number(k.viewings_missed ?? 0) > 0) a.push({ level: 'info', text: `${k.viewings_missed} viewings ended as no-shows in the last 30 days`, link: '/e/viewings' })
+    if (Number(k.arrears_aed ?? 0) > 0) a.push({ level: 'danger', text: `Rent arrears: AED ${k.arrears_aed.toLocaleString()} across ${k.arrears_count} schedule${k.arrears_count === 1 ? '' : 's'}`, link: '/e/rent_schedules' })
+    if (Number(k.maintenance_exceptions ?? 0) > 0) a.push({ level: 'danger', text: `${k.maintenance_exceptions} urgent / emergency maintenance request${k.maintenance_exceptions === 1 ? '' : 's'} still open`, link: '/e/maintenance' })
+    if (Number(k.renewals_due ?? 0) > 0) a.push({ level: 'info', text: `${k.renewals_due} leases end within 90 days – open the renewal conversation`, link: '/e/leases' })
+    if (Number(k.offers_pending ?? 0) > 0) a.push({ level: 'info', text: `${k.offers_pending} offer${k.offers_pending === 1 ? '' : 's'} waiting for a decision`, link: '/e/offers' })
     return data
   })
 
@@ -114,7 +167,8 @@ export default async function (app: FastifyInstance) {
       { entity: 'quotations', cols: ['quote_no'], module: 'sales', group: 'Quotations' },
       { entity: 'invoices', cols: ['invoice_no', 'reference'], module: 'finance', group: 'Invoices' },
       { entity: 'bills', cols: ['bill_no', 'vendor_invoice_no'], module: 'finance', group: 'Vendor bills' },
-      { entity: 'items', cols: ['sku', 'name', 'barcode'], module: 'warehouse', group: 'Items' },
+      { entity: 'properties', cols: ['title', 'property_no'], module: 'properties', group: 'Properties' },
+      { entity: 'mandates', cols: ['mandate_no'], module: 'sales', group: 'Mandates' },
       { entity: 'tickets', cols: ['ticket_no', 'subject'], module: 'support', group: 'Tickets' },
       { entity: 'employees', cols: ['name', 'emp_no'], module: 'hr', group: 'Employees' },
       { entity: 'announcements', cols: ['title'], module: 'documents', group: 'Blog' },
