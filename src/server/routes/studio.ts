@@ -29,15 +29,15 @@ function fillValues(partyId?: number, jobId?: number): Record<string, string> {
     }
   }
   if (jobId) {
-    const j = q.get(`SELECT j.*, (SELECT name FROM locations WHERE id = j.pol_id) pol, (SELECT name FROM locations WHERE id = j.pod_id) pod, (SELECT name FROM carriers WHERE id = j.carrier_id) carrier FROM jobs j WHERE j.id = ? AND j.deleted_at IS NULL`, jobId)
+    const j = q.get(`SELECT j.*, (SELECT name FROM properties WHERE id = j.property_id) property, (SELECT name FROM units WHERE id = j.unit_id) unit, (SELECT name FROM parties WHERE id = j.client_id) client FROM jobs j WHERE j.id = ? AND j.deleted_at IS NULL`, jobId)
     if (j) {
-      const boxes = q.all<{ container_no: string }>(`SELECT container_no FROM job_containers WHERE job_id = ? AND deleted_at IS NULL ORDER BY id`, jobId).map(b => b.container_no).filter(Boolean).join(', ')
-      set(['Job ref.', 'Job reference', 'Job no.', 'Job', 'Shipment ref.', 'Job / shipment ref.', 'Job / shipment'], j.job_no)
-      set(['B/L / AWB no.', 'B/L no.', 'Bill of lading no.', 'B/L', 'AWB no.', 'B/L / AWB', 'Bill of lading'], j.hbl_no || j.mbl_no)
-      set(['Vessel / flight', 'Vessel', 'Vessel / voyage', 'Name and voyage'], [j.vessel_name, j.voyage_no].filter(Boolean).join(' / ')); set(['Booking no.', 'Booking ref.'], j.booking_no)
-      set(['Origin'], j.pol || j.place_of_receipt); set(['Destination'], j.pod || j.place_of_delivery); set(['Carrier'], j.carrier)
-      set(['Container(s)', 'Containers', 'Container numbers', 'Container no.'], boxes); set(['Commodity', 'Cargo', 'Goods', 'Commodity, packages, weight, volume'], j.commodity)
-      set(['ETD'], j.etd?.slice(0, 10)); set(['ETA'], j.eta?.slice(0, 10))
+      set(['Job ref.', 'Job reference', 'Job no.', 'Job', 'Deal ref.', 'Job / deal ref.'], j.job_no)
+      set(['Property', 'Property name', 'Address of property'], j.property || j.unit)
+      set(['Client', 'Customer'], j.client)
+      set(['Deal type', 'Type of deal'], j.deal_type); set(['Deal name', 'Deal'], j.deal_name)
+      set(['Deal value', 'Contract value'], j.deal_value != null ? Number(j.deal_value).toLocaleString('en-US', { maximumFractionDigits: 2 }) : '')
+      set(['Commission (AED)', 'Agency commission'], j.commission_amount != null ? Number(j.commission_amount).toLocaleString('en-US', { maximumFractionDigits: 2 }) : '')
+      set(['Target close', 'Target close date'], j.target_close?.slice(0, 10)); set(['Actual close', 'Closed on'], j.actual_close?.slice(0, 10)); set(['Stage'], j.operational_status)
     }
   }
   return v

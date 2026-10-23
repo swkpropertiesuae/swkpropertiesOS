@@ -6,7 +6,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 export const SETTING_DEFAULTS: Record<string, any> = {
-  company_name: 'ELVORA SHIPPING L.L.C',
+  company_name: 'SWK Properties L.L.C',
   company_address: 'Bur Dubai, Dubai, UAE',
   company_phone: '+971 50 422 1950',
   company_email: 'sales@swkpropertiesuae.com',

@@ -104,11 +104,6 @@ export const quoteHooks: Hooks = {
   },
 }
 
-const DEPT: Record<string, [string, string]> = {
-  'Ocean FCL': ['FCL EXPORT', 'FCL IMPORT'], 'Ocean LCL': ['LCL EXPORT', 'LCL IMPORT'], Air: ['AIR EXPORT', 'AIR IMPORT'], Road: ['ROAD EXPORT', 'ROAD IMPORT'],
-  'Customs clearance': ['CUSTOMS CLEARANCE', 'CUSTOMS CLEARANCE'], Warehousing: ['WAREHOUSING', 'WAREHOUSING'], 'Project cargo': ['PROJECT CARGO', 'PROJECT CARGO'], Multimodal: ['CROSS TRADE', 'CROSS TRADE'],
-}
-
 export function convertQuoteToJob(quoteId: number, ctx: Ctx): Rec {
   const quote = getRecord(getDef('quotations'), quoteId, SYSTEM_CTX)
   if (quote.job_id) throw bad('This quotation has already been converted')
@@ -116,8 +111,7 @@ export function convertQuoteToJob(quoteId: number, ctx: Ctx): Rec {
   if (['Pending', 'Rejected'].includes(quote.approval_status)) throw bad('The quotation needs margin approval before conversion')
   const branchId = ctx.user?.branch_id ?? q.val<number>(`SELECT id FROM branches WHERE is_head_office = 1 AND deleted_at IS NULL LIMIT 1`) ?? q.val<number>(`SELECT id FROM branches WHERE deleted_at IS NULL ORDER BY id LIMIT 1`)
   if (!branchId) throw bad('Create a branch first')
-  const imp = quote.trade === 'Import'
-  const dept = (DEPT[quote.mode] ?? ['FCL EXPORT', 'FCL IMPORT'])[imp ? 1 : 0]
+  const qtCustomer = q.get<{ name: string }>(`SELECT name FROM parties WHERE id = ?`, quote.customer_id)
   const lines = quote.children.lines as Rec[]
   const charges: Rec[] = []
   for (const l of lines) {
@@ -125,9 +119,10 @@ export function convertQuoteToJob(quoteId: number, ctx: Ctx): Rec {
     if (l.cost_rate > 0) charges.push({ kind: 'Cost', charge_code_id: l.charge_code_id, description: l.description, basis: l.basis, qty: l.qty, rate: l.cost_rate, currency: quote.currency, ex_rate: quote.ex_rate, vat_code_id: l.vat_code_id })
   }
   const job = createRecord(getDef('jobs'), {
-    client_id: quote.customer_id, branch_id: branchId, department: dept, trade: quote.trade === 'Import' ? 'Import' : quote.trade === 'Cross trade' ? 'Cross trade' : 'Export', job_date: todayStr(), pol_id: quote.pol_id, pod_id: quote.pod_id, por_id: quote.pol_id, pof_id: quote.pod_id,
-    place_of_receipt: quote.place_of_receipt, place_of_delivery: quote.place_of_delivery, inco_terms: quote.inco_terms, service_type: quote.service_type, commodity: quote.commodity, packages: quote.packages, gross_weight: quote.gross_weight, volume_cbm: quote.volume_cbm,
-    is_hazardous: quote.is_hazardous ? 'Yes' : 'No', salesperson_id: quote.salesperson_id, quote_id: quoteId, operator_id: ctx.user?.id, remarks: `Created from quotation ${quote.quote_no}`, children: { charges },
+    client_id: quote.customer_id, branch_id: branchId, deal_name: `Quote ${quote.quote_no} – ${(qtCustomer?.name ?? '').trim() || quote.mode}`, deal_type: 'Sale', job_status: 'Lead', operational_status: 'Inquiry',
+    deal_date: todayStr(), deal_value: quote.total, commission_amount: 0,
+    notes: `Created from quotation ${quote.quote_no}. Service: ${quote.mode}${quote.commodity ? ` · ${quote.commodity}` : ''}.`,
+    children: { charges },
   }, ctx)
   patchRecord(getDef('quotations'), quoteId, { status: 'Converted to job', job_id: job.id }, ctx)
   addJobEvent(job.id, 'Note', { description: `Created from quotation ${quote.quote_no}`, user_id: ctx.user?.id })

@@ -24,8 +24,12 @@ export default async function (app: FastifyInstance) {
       const pid = user.party_id
       return {
         portal: true,
-        kpis: { open_jobs: n(`SELECT COUNT(*) FROM jobs WHERE client_id = ? AND job_status IN ('OPENED','IN PROGRESS','ON HOLD') AND deleted_at IS NULL`, pid), delivered: n(`SELECT COUNT(*) FROM jobs WHERE client_id = ? AND job_status IN ('DELIVERED','CLOSED') AND deleted_at IS NULL`, pid), outstanding: m(n(`SELECT COALESCE(SUM(balance * ex_rate),0) FROM invoices WHERE party_id = ? AND status IN ('Posted','Partially paid') AND doc_type IN ('Tax Invoice','Debit Note') AND deleted_at IS NULL`, pid)) },
-        recent_jobs: q.all(`SELECT j.id, j.job_no, j.job_status, j.operational_status, pol.code pol, pod.code pod, j.etd, j.eta FROM jobs j LEFT JOIN locations pol ON pol.id = j.pol_id LEFT JOIN locations pod ON pod.id = j.pod_id WHERE j.client_id = ? AND j.deleted_at IS NULL ORDER BY j.id DESC LIMIT 10`, pid),
+        kpis: {
+          open_jobs: n(`SELECT COUNT(*) FROM jobs WHERE client_id = ? AND job_status NOT IN ('Completed','Cancelled') AND deleted_at IS NULL`, pid),
+          delivered: n(`SELECT COUNT(*) FROM jobs WHERE client_id = ? AND job_status = 'Completed' AND deleted_at IS NULL`, pid),
+          outstanding: m(n(`SELECT COALESCE(SUM(balance * ex_rate),0) FROM invoices WHERE party_id = ? AND status IN ('Posted','Partially paid') AND doc_type IN ('Tax Invoice','Debit Note') AND deleted_at IS NULL`, pid)),
+        },
+        recent_jobs: q.all(`SELECT j.id, j.job_no, j.deal_name, j.deal_type, j.job_status, j.operational_status, j.deal_date, p.title property FROM jobs j LEFT JOIN properties p ON p.id = j.property_id WHERE j.client_id = ? AND j.deleted_at IS NULL ORDER BY j.id DESC LIMIT 10`, pid),
       }
     }
 
@@ -34,23 +38,21 @@ export default async function (app: FastifyInstance) {
     const k = data.kpis
 
     if (can_('sales')) {
-      k.open_jobs = n(`SELECT COUNT(*) FROM jobs WHERE job_status IN ('OPENED','IN PROGRESS','ON HOLD') AND deleted_at IS NULL`)
-      k.in_transit = n(`SELECT COUNT(*) FROM jobs WHERE operational_status IN ('DEPARTED','IN TRANSIT') AND job_status NOT IN ('CLOSED','CANCELLED') AND deleted_at IS NULL`)
-      k.jobs_month = n(`SELECT COUNT(*) FROM jobs WHERE job_date BETWEEN ? AND ? AND deleted_at IS NULL AND job_status <> 'CANCELLED'`, mStart, today)
+      k.open_jobs = n(`SELECT COUNT(*) FROM jobs WHERE job_status NOT IN ('Completed','Cancelled') AND deleted_at IS NULL`)
+      k.in_transit = n(`SELECT COUNT(*) FROM jobs WHERE operational_status IN ('Viewing','Offer','Negotiation','Contract','DLD Process','Handover') AND job_status NOT IN ('Completed','Cancelled') AND deleted_at IS NULL`)
+      k.jobs_month = n(`SELECT COUNT(*) FROM jobs WHERE deal_date BETWEEN ? AND ? AND deleted_at IS NULL AND job_status <> 'Cancelled'`, mStart, today)
       if (can_('finance')) {
-        k.profit_month = m(n(`SELECT COALESCE(SUM(profit),0) FROM jobs WHERE job_date BETWEEN ? AND ? AND deleted_at IS NULL AND job_status <> 'CANCELLED'`, mStart, today))
-        k.unbilled = m(n(`SELECT COALESCE(SUM(c.base_amount),0) FROM job_charges c JOIN jobs j ON j.id = c.job_id WHERE c.kind='Revenue' AND c.status='Unbilled' AND c.deleted_at IS NULL AND j.deleted_at IS NULL AND j.job_status <> 'CANCELLED'`))
+        k.profit_month = m(n(`SELECT COALESCE(SUM(profit),0) FROM jobs WHERE deal_date BETWEEN ? AND ? AND deleted_at IS NULL AND job_status <> 'Cancelled'`, mStart, today))
+        k.unbilled = m(n(`SELECT COALESCE(SUM(c.base_amount),0) FROM job_charges c JOIN jobs j ON j.id = c.job_id WHERE c.kind='Revenue' AND c.status='Unbilled' AND c.deleted_at IS NULL AND j.deleted_at IS NULL AND j.job_status <> 'Cancelled'`))
       }
-      data.lists.recent_jobs = q.all(`SELECT j.id, j.job_no, j.job_status, j.operational_status, pr.name client, pol.code pol, pod.code pod, j.etd, j.job_date FROM jobs j LEFT JOIN parties pr ON pr.id = j.client_id LEFT JOIN locations pol ON pol.id = j.pol_id LEFT JOIN locations pod ON pod.id = j.pod_id WHERE j.deleted_at IS NULL ORDER BY j.id DESC LIMIT 12`)
-      data.lists.recent_shipments = q.all(`SELECT s.id, s.shipment_no, s.status, s.hbl_no, sh.name shipper, cn.name consignee, j.job_no, s.commodity FROM shipments s JOIN jobs j ON j.id = s.job_id LEFT JOIN parties sh ON sh.id = s.shipper_id LEFT JOIN parties cn ON cn.id = s.consignee_id WHERE s.deleted_at IS NULL ORDER BY s.id DESC LIMIT 12`)
-      data.lists.departures = q.all(`SELECT j.id, j.job_no, pr.name client, pol.code pol, pod.code pod, j.etd, j.department FROM jobs j LEFT JOIN parties pr ON pr.id = j.client_id LEFT JOIN locations pol ON pol.id = j.pol_id LEFT JOIN locations pod ON pod.id = j.pod_id WHERE j.deleted_at IS NULL AND j.atd IS NULL AND j.job_status NOT IN ('CLOSED','CANCELLED') AND substr(j.etd,1,10) BETWEEN ? AND ? ORDER BY j.etd LIMIT 10`, today, addDays(today, 7))
-      data.lists.arrivals = q.all(`SELECT j.id, j.job_no, pr.name client, pol.code pol, pod.code pod, j.eta, j.department FROM jobs j LEFT JOIN parties pr ON pr.id = j.client_id LEFT JOIN locations pol ON pol.id = j.pol_id LEFT JOIN locations pod ON pod.id = j.pod_id WHERE j.deleted_at IS NULL AND j.ata IS NULL AND j.job_status NOT IN ('CLOSED','CANCELLED') AND substr(j.eta,1,10) BETWEEN ? AND ? ORDER BY j.eta LIMIT 10`, today, addDays(today, 7))
-      data.charts.jobs_by_mode = q.all(`SELECT COALESCE(mode,'Other') name, COUNT(*) value FROM jobs WHERE deleted_at IS NULL AND job_status IN ('OPENED','IN PROGRESS','ON HOLD') GROUP BY mode`)
+      data.lists.recent_jobs = q.all(`SELECT j.id, j.job_no, j.deal_name, j.deal_type, pr.name client, p.title property, j.job_status, j.operational_status, j.deal_date FROM jobs j LEFT JOIN parties pr ON pr.id = j.client_id LEFT JOIN properties p ON p.id = j.property_id WHERE j.deleted_at IS NULL ORDER BY j.id DESC LIMIT 12`)
+      data.lists.target_closes = q.all(`SELECT j.id, j.job_no, pr.name client, p.title property, j.deal_type, j.target_close FROM jobs j LEFT JOIN parties pr ON pr.id = j.client_id LEFT JOIN properties p ON p.id = j.property_id WHERE j.deleted_at IS NULL AND j.actual_close IS NULL AND j.job_status NOT IN ('Completed','Cancelled') AND j.target_close IS NOT NULL AND j.target_close BETWEEN ? AND ? ORDER BY j.target_close LIMIT 10`, today, addDays(today, 10))
+      data.charts.jobs_by_mode = q.all(`SELECT COALESCE(deal_type,'Other') name, COUNT(*) value FROM jobs WHERE deleted_at IS NULL AND job_status NOT IN ('Completed','Cancelled') GROUP BY deal_type`)
       data.charts.jobs_by_status = q.all(`SELECT job_status name, COUNT(*) value FROM jobs WHERE deleted_at IS NULL GROUP BY job_status`)
       if (can_('finance')) {
-        data.charts.top_customers = q.all(`SELECT pr.name, SUM(j.total_revenue) v FROM jobs j JOIN parties pr ON pr.id = j.client_id WHERE j.deleted_at IS NULL AND j.job_status <> 'CANCELLED' AND j.job_date BETWEEN ? AND ? GROUP BY j.client_id, pr.name ORDER BY v DESC LIMIT 6`, addDays(today, -90), today).map(r => ({ name: r.name, value: m(r.v) }))
+        data.charts.top_customers = q.all(`SELECT pr.name, SUM(j.total_revenue) v FROM jobs j JOIN parties pr ON pr.id = j.client_id WHERE j.deleted_at IS NULL AND j.job_status <> 'Cancelled' AND j.deal_date BETWEEN ? AND ? GROUP BY j.client_id, pr.name ORDER BY v DESC LIMIT 6`, addDays(today, -90), today).map(r => ({ name: r.name, value: m(r.v) }))
         data.charts.revenue_trend = (() => {
-          const rows = q.all(`SELECT substr(job_date,1,7) AS month, SUM(total_revenue) rev, SUM(total_cost) cost, SUM(profit) profit FROM jobs WHERE deleted_at IS NULL AND job_status <> 'CANCELLED' AND job_date BETWEEN ? AND ? GROUP BY month ORDER BY month`, addDays(monthStart(), -150), today)
+          const rows = q.all(`SELECT substr(deal_date,1,7) AS month, SUM(total_revenue) rev, SUM(total_cost) cost, SUM(profit) profit FROM jobs WHERE deleted_at IS NULL AND job_status <> 'Cancelled' AND deal_date BETWEEN ? AND ? GROUP BY month ORDER BY month`, addDays(monthStart(), -150), today)
           return rows.map(r => ({ month: r.month, revenue: m(r.rev), cost: m(r.cost), profit: m(r.profit) }))
         })()
         // "Sales (Branch)": invoiced vs unbilled work per branch for the current month
@@ -80,9 +82,6 @@ export default async function (app: FastifyInstance) {
       k.my_tasks = n(`SELECT COUNT(*) FROM tasks WHERE assignee_id = ? AND status <> 'Done' AND deleted_at IS NULL`, user.id)
       data.lists.my_tasks = q.all(`SELECT id, title, due_date, priority, status, link_label, link_entity, link_id FROM tasks WHERE assignee_id = ? AND status <> 'Done' AND deleted_at IS NULL ORDER BY due_date IS NULL, due_date LIMIT 8`, user.id)
     }
-    if (can_('warehouse')) {
-      k.low_stock = n(`SELECT COUNT(*) FROM (SELECT i.id FROM items i LEFT JOIN stock_moves s ON s.item_id = i.id AND s.deleted_at IS NULL WHERE i.deleted_at IS NULL AND i.min_stock > 0 GROUP BY i.id HAVING COALESCE(SUM(s.qty),0) < i.min_stock)`)
-    }
 
     // alerts
     const a = data.alerts as { level: 'danger' | 'warn' | 'info'; text: string; link: string }[]
@@ -90,13 +89,12 @@ export default async function (app: FastifyInstance) {
     if (can_('finance') && can_('reports') && k.ar_overdue > 0) a.push({ level: 'warn', text: `Overdue receivables: AED ${k.ar_overdue.toLocaleString()}`, link: '/reports?r=ar_aging' })
     if (can_('finance')) { const bills = n(`SELECT COUNT(*) FROM bills WHERE status IN ('Posted','Partially paid') AND balance > 0 AND due_date <= ? AND deleted_at IS NULL`, addDays(today, 7)); if (bills) a.push({ level: 'warn', text: `${bills} vendor bills due within 7 days`, link: '/e/bills' }) }
     if (can_('sales')) {
-      const u = n(`SELECT COUNT(DISTINCT c.job_id) FROM job_charges c JOIN jobs j ON j.id = c.job_id WHERE c.kind='Revenue' AND c.status='Unbilled' AND j.job_status IN ('DELIVERED','CLOSED') AND c.deleted_at IS NULL AND j.deleted_at IS NULL`); if (u && can_('finance') && can_('reports')) a.push({ level: 'warn', text: `${u} delivered jobs still have unbilled revenue`, link: '/reports?r=unbilled_charges' })
-      const f = n(`SELECT COUNT(*) FROM job_containers c JOIN jobs j ON j.id = c.job_id WHERE c.deleted_at IS NULL AND j.deleted_at IS NULL AND j.job_status NOT IN ('CLOSED','CANCELLED') AND c.status <> 'Empty returned' AND c.free_time_until IS NOT NULL AND c.free_time_until <= ?`, addDays(today, 3)); if (f && can_('reports')) a.push({ level: 'danger', text: `${f} containers reach end of free time within 3 days`, link: '/reports?r=container_status' })
+      const u = n(`SELECT COUNT(DISTINCT c.job_id) FROM job_charges c JOIN jobs j ON j.id = c.job_id WHERE c.kind='Revenue' AND c.status='Unbilled' AND j.job_status IN ('Title Deed Issued','Completed') AND c.deleted_at IS NULL AND j.deleted_at IS NULL`); if (u && can_('finance') && can_('reports')) a.push({ level: 'warn', text: `${u} completed deals still have unbilled revenue`, link: '/reports?r=unbilled_charges' })
+      const oc = n(`SELECT COUNT(*) FROM jobs WHERE job_status <> 'Cancelled' AND deleted_at IS NULL AND target_close IS NOT NULL AND actual_close IS NULL AND target_close < ?`, today); if (oc && can_('reports')) a.push({ level: 'danger', text: `${oc} deals are past their target close date and not yet completed`, link: '/e/jobs' })
     }
     if (can_('sales')) { const x = n(`SELECT COUNT(*) FROM quotations WHERE status = 'Sent' AND valid_until BETWEEN ? AND ? AND deleted_at IS NULL`, today, addDays(today, 3)); if (x) a.push({ level: 'info', text: `${x} sent quotations expire within 3 days`, link: '/e/quotations' }); const pa = n(`SELECT COUNT(*) FROM quotations WHERE approval_status = 'Pending' AND deleted_at IS NULL`); if (pa) a.push({ level: 'warn', text: `${pa} quotations awaiting margin approval`, link: '/e/quotations' }) }
     if (can_('reports')) { const dx = runReport('document_expiries', { days: 30 }).rows.length; if (dx) a.push({ level: 'warn', text: `${dx} documents expire within 30 days`, link: '/reports?r=document_expiries' }) }
     if (can_('support')) { const t = n(`SELECT COUNT(*) FROM tickets WHERE status NOT IN ('Resolved','Closed') AND due_at < ? AND deleted_at IS NULL`, nowIso().slice(0, 16)); if (t) a.push({ level: 'danger', text: `${t} tickets are past their SLA`, link: '/e/tickets' }) }
-    if (can_('warehouse') && k.low_stock) a.push({ level: 'warn', text: `${k.low_stock} items below minimum stock`, link: '/warehouse/stock?low=1' })
     return data
   })
 
@@ -108,8 +106,7 @@ export default async function (app: FastifyInstance) {
     if (user.party_id) return []
     const pat = `%${term.replace(/[\\%_]/g, c => '\\' + c)}%`
     const specs: { entity: string; cols: string[]; module: string; group: string }[] = [
-      { entity: 'jobs', cols: ['job_no', 'mbl_no', 'hbl_no', 'booking_no', 'customer_ref', 'sb_no', 'boe_no', 'do_no'], module: 'sales', group: 'Deals' },
-      { entity: 'shipments', cols: ['shipment_no', 'hbl_no'], module: 'sales', group: 'Deals' },
+      { entity: 'jobs', cols: ['job_no', 'deal_name'], module: 'sales', group: 'Deals' },
       { entity: 'parties', cols: ['name', 'code', 'trn', 'email'], module: 'crm', group: 'Customers & parties' },
       { entity: 'contacts', cols: ['name', 'email', 'phone', 'mobile'], module: 'crm', group: 'Contacts' },
       { entity: 'leads', cols: ['company', 'lead_no', 'contact_name', 'email'], module: 'crm', group: 'Leads' },
@@ -117,12 +114,9 @@ export default async function (app: FastifyInstance) {
       { entity: 'quotations', cols: ['quote_no'], module: 'sales', group: 'Quotations' },
       { entity: 'invoices', cols: ['invoice_no', 'reference'], module: 'finance', group: 'Invoices' },
       { entity: 'bills', cols: ['bill_no', 'vendor_invoice_no'], module: 'finance', group: 'Vendor bills' },
-      { entity: 'bookings', cols: ['booking_no'], module: 'sales', group: 'Deals' },
-      { entity: 'customs_declarations', cols: ['declaration_no', 'ref_no'], module: 'customs', group: 'Customs' },
       { entity: 'items', cols: ['sku', 'name', 'barcode'], module: 'warehouse', group: 'Items' },
       { entity: 'tickets', cols: ['ticket_no', 'subject'], module: 'support', group: 'Tickets' },
       { entity: 'employees', cols: ['name', 'emp_no'], module: 'hr', group: 'Employees' },
-      { entity: 'vehicles', cols: ['plate_no'], module: 'transport', group: 'Vehicles' },
       { entity: 'announcements', cols: ['title'], module: 'documents', group: 'Blog' },
     ]
     const out: any[] = []
@@ -133,9 +127,6 @@ export default async function (app: FastifyInstance) {
       if (!rows.length) continue
       const labels = labelsFor(s.entity, rows.map(r => r.id))
       for (const r of rows) out.push({ group: s.group, id: r.id, entity: s.entity, label: labels.get(r.id) ?? `#${r.id}`, link: s.entity === 'jobs' ? `/jobs/${r.id}` : `/e/${s.entity}/${r.id}`, icon: def.icon })
-    }
-    if (can(user, 'sales', 'view')) {
-      for (const c of q.all(`SELECT c.container_no, c.job_id, j.job_no FROM job_containers c JOIN jobs j ON j.id = c.job_id WHERE c.deleted_at IS NULL AND j.deleted_at IS NULL AND c.container_no LIKE ? ESCAPE '\\' LIMIT 5`, pat)) out.push({ group: 'Containers', id: c.job_id, entity: 'jobs', label: `${c.container_no} · job ${c.job_no}`, link: `/jobs/${c.job_id}`, icon: 'Container' })
     }
     return out
   })
@@ -194,12 +185,11 @@ export default async function (app: FastifyInstance) {
     const pct = (a: number, b: number) => (b ? r2((a / b) * 100) : null)
     const sales90 = m(Math.round(n(`SELECT COALESCE(SUM(${SIGN} * i.subtotal * i.ex_rate),0) FROM invoices i WHERE ${SALES} AND i.invoice_date BETWEEN ? AND ?`, d90, today)))
     const ar = m(Math.round(n(`SELECT COALESCE(SUM(balance * ex_rate),0) FROM invoices WHERE status IN ('Posted','Partially paid') AND doc_type IN ('Tax Invoice','Debit Note') AND balance > 0 AND deleted_at IS NULL`)))
-    const jobs = q.all(`SELECT etd, atd, eta, ata, job_date, closed_at, total_revenue, profit FROM jobs WHERE deleted_at IS NULL AND job_status <> 'CANCELLED' AND job_date >= ?`, d90)
-    const dep = jobs.filter(j => j.etd && j.atd), arr = jobs.filter(j => j.eta && j.ata)
-    const depOk = dep.filter(j => Date.parse(j.atd) - Date.parse(j.etd) <= 86400000).length, arrOk = arr.filter(j => Date.parse(j.ata) - Date.parse(j.eta) <= 86400000).length
-    const transit = jobs.filter(j => j.atd && j.ata).map(j => daysBetween(j.atd, j.ata))
-    const cycle = jobs.filter(j => j.closed_at).map(j => daysBetween(j.job_date, j.closed_at))
-    const rev = jobs.reduce((s, j) => s + j.total_revenue, 0), prof = jobs.reduce((s, j) => s + j.profit, 0)
+    const deals = q.all(`SELECT deal_date, target_close, actual_close, job_status, created_at, total_revenue, profit FROM jobs WHERE deleted_at IS NULL AND job_status <> 'Cancelled' AND deal_date >= ?`, d90)
+    const closed = deals.filter(j => j.job_status === 'Completed' && j.target_close && j.actual_close)
+    const onTime = closed.filter(j => Date.parse(j.actual_close) <= Date.parse(j.target_close)).length
+    const cycle = deals.filter(j => j.actual_close).map(j => daysBetween(j.deal_date, j.actual_close))
+    const rev = deals.reduce((s, j) => s + j.total_revenue, 0), prof = deals.reduce((s, j) => s + j.profit, 0)
     const quotes = n(`SELECT COUNT(*) FROM quotations WHERE deleted_at IS NULL AND quote_date >= ? AND status <> 'Draft'`, d90), won = n(`SELECT COUNT(*) FROM quotations WHERE deleted_at IS NULL AND quote_date >= ? AND status IN ('Accepted','Converted to job')`, d90)
     const leads = n(`SELECT COUNT(*) FROM leads WHERE deleted_at IS NULL AND substr(created_at,1,10) >= ?`, d90), conv = n(`SELECT COUNT(*) FROM leads WHERE deleted_at IS NULL AND status = 'Converted' AND substr(created_at,1,10) >= ?`, d90)
     const tix = n(`SELECT COUNT(*) FROM tickets WHERE deleted_at IS NULL AND status IN ('Resolved','Closed') AND substr(created_at,1,10) >= ?`, d90), tixOk = n(`SELECT COUNT(*) FROM tickets WHERE deleted_at IS NULL AND status IN ('Resolved','Closed') AND resolved_at <= due_at AND substr(created_at,1,10) >= ?`, d90)
@@ -209,13 +199,11 @@ export default async function (app: FastifyInstance) {
     return {
       period: `Last 90 days (to ${today})`,
       kpis: [
-        mk('ontime_dep', 'On-time departure', pct(depOk, dep.length), '%', 90, true, `${dep.length} jobs tracked`),
-        mk('ontime_arr', 'On-time arrival', pct(arrOk, arr.length), '%', 85, true, `${arr.length} jobs tracked`),
-        mk('transit', 'Average transit time', avg(transit), 'days', null, false),
-        mk('cycle', 'Average job cycle (open → closed)', avg(cycle), 'days', 30, false),
-        mk('margin', 'Gross margin on jobs', pct(prof, rev), '%', minMargin || null, true),
+        mk('ontime_dep', 'Deals closed on time', pct(onTime, closed.length), '%', 90, true, `${closed.length} completed deals tracked`),
+        mk('cycle', 'Average deal cycle (opened → closed)', avg(cycle), 'days', 90, false),
+        mk('margin', 'Gross margin on deals', pct(prof, rev), '%', minMargin || null, true),
         mk('dso', 'Days sales outstanding', sales90 > 0 ? r2(ar / (sales90 / 90)) : null, 'days', 45, false, `AR ${ar.toLocaleString()} / daily sales`),
-        mk('unbilled', 'Unbilled revenue charges', m(Math.round(n(`SELECT COALESCE(SUM(c.base_amount),0) FROM job_charges c JOIN jobs j ON j.id = c.job_id WHERE c.kind='Revenue' AND c.status='Unbilled' AND c.deleted_at IS NULL AND j.deleted_at IS NULL AND j.job_status <> 'CANCELLED'`))), 'AED', 0, false),
+        mk('unbilled', 'Unbilled revenue charges', m(Math.round(n(`SELECT COALESCE(SUM(c.base_amount),0) FROM job_charges c JOIN jobs j ON j.id = c.job_id WHERE c.kind='Revenue' AND c.status='Unbilled' AND c.deleted_at IS NULL AND j.deleted_at IS NULL AND j.job_status <> 'Cancelled'`))), 'AED', 0, false),
         mk('quote_conv', 'Quotation conversion', pct(won, quotes), '%', 30, true, `${won} of ${quotes} quotes`),
         mk('lead_conv', 'Lead conversion', pct(conv, leads), '%', 15, true, `${conv} of ${leads} leads`),
         mk('ticket_sla', 'Tickets resolved within SLA', pct(tixOk, tix), '%', 90, true, `${tix} resolved`),

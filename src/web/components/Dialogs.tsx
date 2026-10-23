@@ -65,7 +65,7 @@ export function ReconcileDialog({ txn, onClose, onDone }: { txn: any; onClose: (
 
 export function PodDialog({ order, onClose, onDone }: { order: any; onClose: () => void; onDone: () => void }) {
   const toast = useToast(); const cv = useRef<HTMLCanvasElement>(null); const [name, setName] = useState(order.pod_signed_by ?? ''); const [drawn, setDrawn] = useState(false)
-  useEffect(() => { const c = cv.current!; const x = c.getContext('2d')!; x.lineWidth = 2.2; x.lineCap = 'round'; x.strokeStyle = '#161d1a'; let down = false
+  useEffect(() => { const c = cv.current!; const x = c.getContext('2d')!; x.lineWidth = 2.2; x.lineCap = 'round'; x.strokeStyle = '#0f1714'; let down = false
     const pos = (e: PointerEvent) => { const r = c.getBoundingClientRect(); return [(e.clientX - r.left) * (c.width / r.width), (e.clientY - r.top) * (c.height / r.height)] }
     const d = (e: PointerEvent) => { down = true; const [px, py] = pos(e); x.beginPath(); x.moveTo(px, py); c.setPointerCapture(e.pointerId) }
     const m = (e: PointerEvent) => { if (!down) return; const [px, py] = pos(e); x.lineTo(px, py); x.stroke(); setDrawn(true) }

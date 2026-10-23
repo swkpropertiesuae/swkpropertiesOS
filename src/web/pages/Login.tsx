@@ -5,6 +5,8 @@ import { get, post } from '../lib/api'
 import { ProductBrand } from '../components/ProductBrand'
 import { useMeta } from '../lib/meta'
 
+const MODULES = ['Company & admin', 'CRM & sales pipeline', 'Accounting & finance', 'Tax & e-invoicing', 'Procurement & inventory', 'HR & payroll', 'Projects & documents']
+
 export function Login() {
   const { reload } = useMeta(); const nav = useNavigate()
   const [email, setEmail] = useState(''); const [pw, setPw] = useState(''); const [totp, setTotp] = useState(''); const [needTotp, setNeedTotp] = useState(false)
@@ -29,22 +31,25 @@ export function Login() {
   }
   return (
     <div className="login-world min-h-full grid lg:grid-cols-[1.05fr_1fr]">
-      <div className="login-brand hidden lg:flex flex-col justify-between text-white p-12 relative overflow-hidden" style={{ background: 'linear-gradient(160deg,#025e3d 0%,#007b52 55%,#0b6e4c 100%)' }}>
-        <img src="/brand/route-pattern.svg" alt="" className="absolute inset-0 w-full h-full object-cover opacity-20" aria-hidden />
-        <img src="/brand/logo-reverse.svg" alt="SWK Properties" className="relative w-[280px]" />
-        <div className="relative max-w-[460px]">
-          <h1 className="text-white text-[38px] font-extrabold leading-[1.1] m-0">One system for every shipment.</h1>
-          <p className="text-[17px] text-white/85 mt-4 leading-relaxed">Track and manage sales, shipments, jobs, accounts and warehouse — from enquiry to cash — in a single workspace built for SWK Properties.</p>
-          <div className="grid grid-cols-2 gap-3 mt-8 text-sm">{['Master jobs & sub-jobs', 'Quotations & rate cards', 'Customs SB / BOE', 'Ledger, VAT & banking', 'Warehouse & transport', 'Track & trace + EDI'].map(x => <div key={x} className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#7ce3b6]" />{x}</div>)}</div>
+      <div className="login-brand hidden lg:flex flex-col justify-between text-white p-12 relative overflow-hidden" style={{ background: 'linear-gradient(160deg,#1a2620 0%,#0f1714 55%,#0d1310 100%)' }}>
+        <img src="/brand/swk-logo.png" alt="" aria-hidden className="absolute -right-24 -bottom-20 w-[420px] opacity-[.08] pointer-events-none" />
+        <img src="/brand/swk-logo.png" alt="SWK Properties" className="relative w-[240px]" />
+        <div className="relative max-w-[480px]">
+          <h1 className="text-white text-[36px] font-extrabold leading-[1.12] m-0">One system for<br />every part of the business.</h1>
+          <p className="text-[16px] text-white/80 mt-4 leading-relaxed">Run CRM, sales, accounting, tax, procurement, inventory, HR, payroll, projects and documents — one connected workspace built for SWK Properties.</p>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 mt-8 text-[13.5px]">{MODULES.map(x => <div key={x} className="flex items-center gap-2.5"><span className="w-1.5 h-1.5 rounded-full bg-[#ff9a75] flex-none" />{x}</div>)}</div>
         </div>
-        <div className="relative text-xs text-white/70">© {new Date().getFullYear()} SWK Properties L.L.C. · Dubai, United Arab Emirates</div>
+        <a className="brand-partner-wrap relative w-fit no-underline" href="https://digitalburj.com/business-os" target="_blank" rel="noopener noreferrer">
+          <span className="mr-2.5 text-[11.5px] font-semibold text-white/70">Brand partner</span>
+          <img src="/brand/digitalburj-wordmark.webp" alt="DigitalBurj Business OS" width="408" height="78" className="inline-block h-[30px] w-auto rounded-md bg-white px-3 py-2" />
+        </a>
+        <div className="relative text-xs text-white/55">© {new Date().getFullYear()} SWK Properties L.L.C. · Dubai, United Arab Emirates</div>
       </div>
       <div className="flex items-center justify-center p-6 bg-pearl">
         <form onSubmit={submit} className="w-full max-w-[400px]" aria-labelledby="signin-h">
-          <img src="/brand/logo-primary.svg" alt="SWK Properties" className="w-[210px] mb-8 lg:hidden" />
-          <img src="/brand/icon-primary.svg" alt="" aria-hidden width="46" className="mb-5 hidden lg:block" />
+          <img src="/brand/swk-logo-ink.png" alt="SWK Properties" className="w-[132px] mb-8" />
           <h2 id="signin-h" className="text-[28px] font-extrabold m-0">Sign in</h2>
-          <p className="text-muted mt-1 mb-6">Welcome back to DigitalBurj OS.</p>
+          <p className="text-muted mt-1 mb-6">Welcome back to the SWK Properties workspace.</p>
           {err && <div role="alert" className="mb-4 px-3 py-2.5 rounded-lg bg-blush border border-[#f2bcc3] text-[#8f1325] text-sm font-medium">{err}</div>}
           <label className="label" htmlFor="email">E-mail</label>
           <input id="email" className="input mb-4" style={{ minHeight: 44 }} type="email" autoComplete="username" required autoFocus value={email} onChange={e => setEmail(e.target.value)} placeholder="you@swkpropertiesuae.com" />
@@ -52,12 +57,11 @@ export function Login() {
           <div className="relative mb-4"><input id="pw" className="input pr-11" style={{ minHeight: 44 }} type={show ? 'text' : 'password'} autoComplete="current-password" required value={pw} onChange={e => setPw(e.target.value)} /><button type="button" className="absolute right-1 top-1 btn ghost icon" onClick={() => setShow(s => !s)} aria-label={show ? 'Hide password' : 'Show password'}>{show ? <EyeOff /> : <Eye />}</button></div>
           {needTotp && <><label className="label" htmlFor="totp">Authenticator code</label><input id="totp" className="input mb-4 tracking-[.4em] text-center text-lg" style={{ minHeight: 44 }} inputMode="numeric" autoComplete="one-time-code" maxLength={6} autoFocus required value={totp} onChange={e => setTotp(e.target.value.replace(/\D/g, ''))} /></>}
           <button className="btn green w-full" style={{ minHeight: 46, fontSize: 15 }} disabled={busy}><LogIn /> {busy ? 'Signing in…' : needTotp ? 'Verify & sign in' : 'Sign in'}</button>
-          {demo?.enabled && <div className="mt-5 pt-5 border-t border-line"><button type="button" className="btn outline w-full" style={{ minHeight: 44 }} disabled={busy} onClick={() => void login(demo.email, demo.password)}>Explore the demo workspace</button><p className="text-xs text-muted mt-2 mb-0">A separate, fictional company with sample customers, shipments, invoices and AI activity. It never touches real data and resets every night.</p></div>}
-          <p className="text-xs text-muted mt-6 leading-relaxed">Access is limited to authorised DigitalBurj staff and customers. Activity is logged. After five failed attempts the account is locked for 15 minutes.</p>
+          {demo?.enabled && <div className="mt-5 pt-5 border-t border-line"><button type="button" className="btn outline w-full" style={{ minHeight: 44 }} disabled={busy} onClick={() => void login(demo.email, demo.password)}>Explore the demo workspace</button><p className="text-xs text-muted mt-2 mb-0">A separate, fictional company with sample records, invoices and AI activity. It never touches real data and resets every night.</p></div>}
+          <p className="text-xs text-muted mt-6 leading-relaxed">Access is limited to authorised SWK Properties staff and partners. Activity is logged. After five failed attempts the account is locked for 15 minutes.</p>
           <ProductBrand />
         </form>
       </div>
     </div>
   )
 }
-

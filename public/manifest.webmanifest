@@ -1,15 +1,15 @@
 {
-  "name": "SWK Properties OS",
-  "short_name": "SWK Properties OS",
-  "description": "SWK Properties UAE Real Estate Enterprise Corporate Dashboard",
+  "name": "SWK Properties Business OS",
+  "short_name": "SWK OS",
+  "description": "CRM, sales, accounting, tax, procurement, inventory, HR, payroll, projects and documents for SWK Properties — by DigitalBurj Business OS.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#F7F8F5",
-  "theme_color": "#007b52",
+  "background_color": "#0d1310",
+  "theme_color": "#0f1714",
   "lang": "en",
   "icons": [
-    {"src": "/app-icon-192.png", "sizes": "192x192", "type": "image/png"},
-    {"src": "/app-icon-512.png", "sizes": "512x512", "type": "image/png"}
+    {"src": "/app-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}
   ]
 }

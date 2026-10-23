@@ -33,12 +33,5 @@ export default defineConfig({
         changeOrigin: false
       }
     }
-  },
-  css: {
-    preprocessorOptions: {
-      scss: {
-        additionalData: `@use "sass:color"; @import "./src/web/assets/css/variables.scss";`
-      }
-    }
   }
 })

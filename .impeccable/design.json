@@ -605,14 +605,14 @@
       "name": "Cash Account Card",
       "kind": "custom",
       "refersTo": "cash-card",
-      "description": "Deep green account surface; preview uses a value placeholder.",
-      "html": "<section class=\"ds-cash\"><header>Cash &amp; bank</header><strong>\u2014 <small>AED</small></strong><footer>Elvora Shipping L.L.C. <a href=\"#\">Accounts \u2197</a></footer></section>",
-      "css": ".ds-cash{font-family:var(--font-sans, Instrument Sans, system-ui, sans-serif);padding:24px;border-radius:16px;background:#025e3d;color:#fff;box-shadow:0 15px 28px -19px #025e3d80}.ds-cash header,.ds-cash footer{font-size:12px;color:#d3eee0}.ds-cash strong{display:block;font-family:var(--font-display, Plus Jakarta Sans, sans-serif);font-size:38px;letter-spacing:-.03em;margin:22px 0 24px}.ds-cash small{font-size:14px;font-weight:400}.ds-cash footer{display:flex;justify-content:space-between;gap:12px;font-size:11px}.ds-cash a{color:#fff;text-decoration:none}.ds-cash a:hover{text-decoration:underline}.ds-cash a:focus-visible{outline:3px solid var(--focus, #1fa06b);outline-offset:2px;}"
+      "description": "Deep ink account surface; preview uses a value placeholder.",
+      "html": "<section class=\"ds-cash\"><header>Cash &amp; bank</header><strong>\u2014 <small>AED</small></strong><footer>SWK Properties L.L.C. <a href=\"#\">Accounts \u2197</a></footer></section>",
+      "css": ".ds-cash{font-family:var(--font-sans, Instrument Sans, system-ui, sans-serif);padding:24px;border-radius:16px;background:#0f1714;color:#fff;box-shadow:0 15px 28px -19px #0f171480}.ds-cash header,.ds-cash footer{font-size:12px;color:#c9d6cf}.ds-cash strong{display:block;font-family:var(--font-display, Plus Jakarta Sans, sans-serif);font-size:38px;letter-spacing:-.03em;margin:22px 0 24px}.ds-cash small{font-size:14px;font-weight:400}.ds-cash footer{display:flex;justify-content:space-between;gap:12px;font-size:11px}.ds-cash a{color:#fff;text-decoration:none}.ds-cash a:hover{text-decoration:underline}.ds-cash a:focus-visible{outline:3px solid var(--focus, #f23a1d);outline-offset:2px;}"
     }
   ],
   "narrative": {
-    "northStar": "The Calm Operating Wallet",
-    "overview": "Elvora translates the supplied wallet reference into a calm operating workspace for the owner and operations team. Quiet pill navigation, a narrow icon rail and floating rounded surfaces create clear access to financial context and shipment work. Emerald, graphite and warm neutral tints retain the existing Elvora brand.\n\nThe same surface language spans workspaces, dashboards, records, forms, dialogs and sign-in. Repository logos, icon marks and self-hosted fonts remain the only brand assets. The reference supplies composition; real API data and permission-filtered operational workflows supply the content.",
+    "northStar": "The Calm Operating Desk",
+    "overview": "DigitalBurj translates the supplied wallet reference into a calm operating workspace for the owner and the sales and finance teams. Quiet pill navigation, a narrow icon rail and floating rounded surfaces create clear access to financial context and deal work. DigitalBurj orange, deep red, graphite ink and warm paper tints form the SWK Properties brand palette.\n\nThe same surface language spans workspaces, dashboards, records, forms, dialogs and sign-in. Repository logos, icon marks and self-hosted fonts remain the only brand assets. The reference supplies composition; real API data and permission-filtered real-estate workflows supply the content.",
     "keyCharacteristics": [
       "Capsule navigation and circular shortcuts.",
       "Light neutral canvas, white floating surfaces and restrained brand tints.",
@@ -622,7 +622,7 @@
     "rules": [
       {
         "name": "The Brand Continuity Rule",
-        "body": "Translate the reference composition using Elvora's existing identity assets and palette.",
+        "body": "Translate the reference composition using SWK Properties' existing identity assets and the DigitalBurj palette.",
         "section": "colors"
       },
       {
@@ -632,7 +632,7 @@
       }
     ],
     "dos": [
-      "Do use the supplied Elvora assets, fonts and brand palette.",
+      "Do use the supplied SWK Properties assets, fonts and DigitalBurj brand palette.",
       "Do derive navigation and displayed figures from permitted metadata and actual API data.",
       "Do keep table scrolling inside its surface and labels able to wrap.",
       "Do keep keyboard focus visible and respect reduced motion.",

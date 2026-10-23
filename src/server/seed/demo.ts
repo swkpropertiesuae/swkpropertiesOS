@@ -72,7 +72,7 @@ export async function seedDemoScenarios(): Promise<void> {
   console.log('Cleaned up duplicate admin users')
   for (const [name, email, r, d] of STAFF) createRecord(getDef('users'), { name, email, password: 'Demo-' + Math.random().toString(36).slice(2) + 'Aa1!x', role_id: role(r), branch_id: dxb, department_id: dept(d), active: true, must_change_password: false }, sys)
 
-  const admin = loadUser(presenter.id)
+  const admin = loadUser(presenter.id) as NonNullable<ReturnType<typeof loadUser>>
   const ctx: Ctx = { user: admin, system: true }
   const today = todayStr(), d = (n: number) => addDays(today, n)
   const net30 = idBy('payment_terms', 'name', 'Net 30 days')
@@ -190,7 +190,7 @@ export async function seedDemoScenarios(): Promise<void> {
   // Create a bank account
   const main_bank = mk(ctx, 'bank_accounts', { name: 'Main AED Account', type: 'Bank', currency: 'AED', gl_account_id: idBy('accounts', 'code', '1100'), active: true })
 
-  const rec1 = mk(ctx, 'receipts', { party_id: buyer, bank_account_id: main_bank.id, receipt_date: today, method: 'Bank transfer', bank_account_id: idBy('bank_accounts', 'name', 'Main AED Account'), currency: 'AED', amount: 57000, status: 'Posted' })
+  const rec1 = mk(ctx, 'receipts', { party_id: buyer, bank_account_id: main_bank.id, receipt_date: today, method: 'Bank transfer', currency: 'AED', amount: 57000, status: 'Posted' })
   // Note: allocations would need receipt_allocations table
 
   console.log('DigitalBurj demo data seeded')

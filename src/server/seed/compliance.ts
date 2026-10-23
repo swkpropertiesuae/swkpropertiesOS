@@ -50,8 +50,8 @@ export function seedCompliance(opts: { demo?: boolean } = {}) {
   }
   const cur = (k: string) => String(getSetting(k) ?? '')
   setSettings({
-    company_name: cur('company_name') === 'SWK Properties L.L.C.' ? 'ELVORA SHIPPING L.L.C' : cur('company_name'),
-    company_name_ar: cur('company_name_ar') || 'إلفورا للشحن ش.ذ.م.م', licence_name_en: cur('licence_name_en') || 'ELVORA SHIPPING L.L.C',
+    company_name: cur('company_name').startsWith('ELVORA') ? 'SWK Properties L.L.C' : cur('company_name'),
+    company_name_ar: cur('company_name_ar') === 'إلفورا للشحن ش.ذ.م.م' ? 'س دبليو كيه للعقارات ش.ذ.م.م' : (cur('company_name_ar') || 'س دبليو كيه للعقارات ش.ذ.م.م'), licence_name_en: cur('licence_name_en').startsWith('ELVORA') ? 'SWK Properties L.L.C' : (cur('licence_name_en') || 'SWK Properties L.L.C'),
     company_legal_form: cur('company_legal_form') || 'Limited Liability Company – Single Owner (LLC – SO)',
     company_trade_license: cur('company_trade_license') || '1645802', licence_authority: cur('licence_authority') || 'Dubai Economy and Tourism (DET)',
     licence_issue_date: cur('licence_issue_date') || '2026-08-17', licence_expiry_date: cur('licence_expiry_date') || '2027-08-16',

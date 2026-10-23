@@ -19,7 +19,7 @@ export function seedCompanyDocuments() {
     ct_application_status: 'Submitted - awaiting FTA decision',
   }
   for (const [key, value] of Object.entries(facts)) if (!getSetting(key)) patch[key] = value
-  if (getSetting('company_name') === 'SWK Properties L.L.C.') patch.company_name = 'ELVORA SHIPPING L.L.C'
+  if (getSetting('company_name') === 'ELVORA SHIPPING L.L.C') patch.company_name = 'SWK Properties L.L.C'
   setSettings(patch)
   const items = [
     { type: 'ICP establishment card', name: 'ICP establishment card', reference_no: '2/1/1336642', status: 'Active', expiry_date: '2027-08-16', notes: 'Electronic establishment card supplied by DigitalBurj. Not evidence of MOHRE/WPS enrolment.' },

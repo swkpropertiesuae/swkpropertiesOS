@@ -36,7 +36,7 @@ function NotificationBell() {
           <div className="flex items-center px-4 py-2.5 border-b border-line"><b className="font-display">Notifications</b><div className="flex-1" />{unread > 0 && <button className="btn ghost sm" onClick={() => void read()}><Check /> Mark all read</button>}</div>
           <div className="max-h-[60vh] overflow-auto">
             {!q.data?.rows.length ? <div className="p-8 text-center text-muted text-sm">You're all caught up.</div> : q.data.rows.map(n => (
-              <button key={n.id} className={cls('w-full text-start px-4 py-3 border-0 border-b border-line bg-transparent cursor-pointer hover:bg-hover', !n.read_at && 'bg-[#f1faf5]')} onClick={() => { void read([n.id]); setOpen(false); if (n.link) nav(n.link) }}>
+              <button key={n.id} className={cls('w-full text-start px-4 py-3 border-0 border-b border-line bg-transparent cursor-pointer hover:bg-hover', !n.read_at && 'bg-mint')} onClick={() => { void read([n.id]); setOpen(false); if (n.link) nav(n.link) }}>
                 <div className="flex gap-2 items-start">{!n.read_at && <span className="w-2 h-2 rounded-full bg-emerald mt-1.5 flex-none" />}<div className="min-w-0"><div className="text-[13.5px] font-semibold text-ink">{n.title}</div>{n.body && <div className="text-xs text-muted notification-body">{n.body}</div>}<div className="text-[11px] text-muted mt-0.5">{fmtIsoStamp(n.created_at)}</div></div></div>
               </button>))}
           </div>
@@ -78,7 +78,10 @@ export function Shell() {
   return (
     <div className="workspace-frame h-full flex flex-col">
       <header className="topbar no-print">
-        <Link to="/" className="flex items-center gap-2 mr-2" aria-label="DigitalBurj OS home"><img src="/brand/logo-primary.svg" alt="SWK Properties" width="132" height="35" className="h-8 w-auto max-w-[132px] object-contain" /><span className="font-display font-extrabold text-[17px] tracking-tight hidden sm:block">SWK Business OS</span></Link>
+        <Link to="/" className="flex items-center gap-2.5 mr-2" aria-label="SWK Properties home">
+          <img src="/brand/swk-logo-ink.png" alt="SWK Properties" width="40" height="40" className="h-[40px] w-auto object-contain" />
+          <span className="font-display font-extrabold text-[16px] tracking-tight hidden sm:block">Business OS<span>Brand partner · DigitalBurj</span></span>
+        </Link>
         <nav className="primary-pills" aria-label="Primary navigation">
           <Link to="/dashboard" className={cls('primary-pill', loc.pathname === '/dashboard' && 'active')}><LayoutGrid size={15} />Dashboard</Link>
           <Link to="/" className={cls('primary-pill', (loc.pathname === '/' || loc.pathname.startsWith('/workspace/')) && 'active')}>Workspaces</Link>
@@ -103,7 +106,7 @@ export function Shell() {
             {!isPrint && <div className="section-navigation no-print"><SectionBack fallback={loc.pathname === '/' ? '/dashboard' : activeGroup && loc.pathname !== workspacePath(activeGroup) ? workspacePath(activeGroup) : '/'} />{loc.pathname !== '/' && <nav className="workspace-breadcrumb" aria-label="Breadcrumb"><Link to="/"><LayoutGrid size={16} />Workspaces</Link>{activeGroup && <><ChevronRight size={14} /><Link to={workspacePath(activeGroup)}>{activeGroup.label}</Link></>}</nav>}</div>}
             <Outlet context={{ openGuide: () => setGuide(true), openSearch: () => setPalette(true), logout }} />
           </main>
-          <footer className="statusbar no-print"><span className="s1">User : {me?.email}</span><span className="s2"><Clock /></span><span className="s3 flex-1">DigitalBurj OS</span><ProductBrand compact /></footer>
+          <footer className="statusbar no-print"><span className="s1">User : {me?.email}</span><span className="s2"><Clock /></span><span className="s3 flex-1">SWK Properties Business OS</span><ProductBrand compact /></footer>
         </div>
       </div>
       <Modal open={!!workspaceMenu} onClose={() => setWorkspaceMenu(null)} title={workspaceMenu?.label} width={700} className="workspace-popup">

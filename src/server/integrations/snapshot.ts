@@ -14,7 +14,7 @@ export function businessSnapshot(): Snapshot {
   const SIGN = `CASE WHEN i.doc_type='Credit Note' THEN -1 ELSE 1 END`
   const d: Record<string, any> = {
     open_jobs: n(`SELECT COUNT(*) FROM jobs WHERE job_status IN ('OPENED','IN PROGRESS','ON HOLD') AND deleted_at IS NULL`),
-    jobs_opened_month: n(`SELECT COUNT(*) FROM jobs WHERE job_date >= ? AND deleted_at IS NULL AND job_status <> 'CANCELLED'`, mStart),
+    jobs_opened_month: n(`SELECT COUNT(*) FROM jobs WHERE deal_date >= ? AND deleted_at IS NULL AND job_status <> 'Cancelled'`, mStart),
     revenue_month_aed: aed(n(`SELECT COALESCE(SUM(${SIGN} * i.subtotal * i.ex_rate),0) FROM invoices i WHERE ${SALES} AND i.invoice_date >= ?`, mStart)),
     ar_outstanding_aed: aed(n(`SELECT COALESCE(SUM(balance * ex_rate),0) FROM invoices WHERE status IN ('Posted','Partially paid') AND doc_type IN ('Tax Invoice','Debit Note') AND balance > 0 AND deleted_at IS NULL`)),
     ar_overdue_aed: aed(n(`SELECT COALESCE(SUM(balance * ex_rate),0) FROM invoices WHERE status IN ('Posted','Partially paid') AND doc_type IN ('Tax Invoice','Debit Note') AND balance > 0 AND due_date < ? AND deleted_at IS NULL`, today)),

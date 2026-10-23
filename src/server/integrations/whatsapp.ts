@@ -74,12 +74,12 @@ export function phonesForParty(partyId: number): string[] {
 // ------------------------------------------------------------------ summaries for commands
 function trackSummary(query: string, partyId?: number): string {
   const key = query.trim()
-  if (!key) return 'Send: track <job no / container / MBL>'
-  const j = q.get(`SELECT j.* FROM jobs j WHERE j.deleted_at IS NULL AND (j.job_no = ? OR j.mbl_no = ? OR j.hbl_no = ? OR j.id IN (SELECT job_id FROM job_containers WHERE container_no = ? AND deleted_at IS NULL)) ${partyId ? 'AND j.client_id = ' + Number(partyId) : ''} LIMIT 1`, key.toUpperCase(), key, key, key.toUpperCase())
-  if (!j) return `No job found for "${key}"${partyId ? ' on your account' : ''}.`
+  if (!key) return 'Send: track <deal no.>'
+  const j = q.get(`SELECT j.* FROM jobs j WHERE j.deleted_at IS NULL AND (j.job_no = ? OR UPPER(j.deal_name) LIKE '%' || UPPER(?) || '%') ${partyId ? 'AND j.client_id = ' + Number(partyId) : ''} ORDER BY j.deal_date DESC LIMIT 1`, key.toUpperCase(), key)
+  if (!j) return `No deal found for "${key}"${partyId ? ' on your account' : ''}.`
   const ev = q.all(`SELECT event_at, event_type, location FROM job_events WHERE job_id = ? AND deleted_at IS NULL AND visible_to_customer = 1 ORDER BY event_at DESC, id DESC LIMIT 3`, j.id)
-  const loc = (id: number | null) => (id ? q.val<string>(`SELECT code FROM locations WHERE id = ?`, id) : '') ?? ''
-  return [`Job ${j.job_no} – ${j.job_status}`, `${loc(j.pol_id)} → ${loc(j.pod_id)}  ETA ${j.eta ? String(j.eta).slice(0, 10) : 'TBA'}`, ...ev.map(e => `• ${String(e.event_at).replace('T', ' ')} ${e.event_type}${e.location ? ' – ' + e.location : ''}`)].join('\n')
+  const property = j.property_id ? q.val<string>(`SELECT name FROM properties WHERE id = ?`, j.property_id) : ''
+  return [`Deal ${j.job_no} – ${j.job_status}`, `${j.deal_name ?? ''}${property ? ' · ' + property : ''}${j.target_close ? `  Target close ${String(j.target_close).slice(0, 10)}` : ''}`, ...ev.map(e => `• ${String(e.event_at).replace('T', ' ')} ${e.event_type}${e.location ? ' – ' + e.location : ''}`)].join('\n')
 }
 function overdueSummary(partyId?: number): string {
   const rows = q.all(`SELECT i.invoice_no, i.due_date, i.balance, i.currency, pr.name FROM invoices i JOIN parties pr ON pr.id = i.party_id WHERE i.status IN ('Posted','Partially paid') AND i.doc_type IN ('Tax Invoice','Debit Note') AND i.balance > 0 ${partyId ? 'AND i.party_id = ' + Number(partyId) : 'AND i.due_date < ?'} AND i.deleted_at IS NULL ORDER BY i.due_date LIMIT 12`, ...(partyId ? [] : [todayStr()]))

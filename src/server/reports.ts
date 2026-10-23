@@ -27,93 +27,60 @@ const SIGN = `CASE WHEN i.doc_type = 'Credit Note' THEN -1 ELSE 1 END`
 export const REPORTS: ReportDef[] = [
   // ---------------------------------------------------------------- operations
   {
-    key: 'job_register', label: 'Job register', group: 'Operations', module: 'sales', description: 'All master jobs with route, dates and result.',
-    params: [...FROM_TO, { name: 'branch_id', label: 'Branch', type: 'ref', ref: 'branches' }, { name: 'client_id', label: 'Client', type: 'ref', ref: 'parties' }, { name: 'job_status', label: 'Status', type: 'select', options: ['OPENED', 'IN PROGRESS', 'ON HOLD', 'DELIVERED', 'CLOSED', 'CANCELLED'] }, { name: 'department', label: 'Department', type: 'text' }],
+    key: 'job_register', label: 'Deal register', group: 'Operations', module: 'sales', description: 'All deal files with property, dates and result.',
+    params: [...FROM_TO, { name: 'branch_id', label: 'Branch', type: 'ref', ref: 'branches' }, { name: 'client_id', label: 'Client', type: 'ref', ref: 'parties' }, { name: 'job_status', label: 'Status', type: 'select', options: ['Lead', 'Active Mandate', 'Offer Submitted', 'Offer Accepted', 'Contract Signed', 'DLD Submitted', 'DLD Approved', 'Title Deed Issued', 'Completed', 'On Hold', 'Cancelled'] }, { name: 'deal_type', label: 'Deal type', type: 'select', options: ['Sale', 'Lease', 'Off-Plan Sale', 'Commercial Lease', 'Staff Housing', 'Bulk Deal'] }],
     run: p => {
-      const { from, to } = range(p); const f = filterSql(p, { branch_id: 'j.branch_id', client_id: 'j.client_id', job_status: 'j.job_status', department: 'j.department' })
-      const rows = q.all(`SELECT j.job_no, j.job_date, pr.name AS client, j.department, b.code AS branch, j.job_status, j.mbl_no, j.hbl_no, pol.code AS pol, pod.code AS pod, j.etd, j.eta, j.total_revenue, j.total_cost, j.profit
-        FROM jobs j LEFT JOIN parties pr ON pr.id = j.client_id LEFT JOIN branches b ON b.id = j.branch_id LEFT JOIN locations pol ON pol.id = j.pol_id LEFT JOIN locations pod ON pod.id = j.pod_id
-        WHERE j.deleted_at IS NULL AND j.job_date BETWEEN ? AND ? ${f.sql} ORDER BY j.job_date DESC, j.id DESC`, from, to, ...f.args).map(r => ({ ...r, total_revenue: m(r.total_revenue), total_cost: m(r.total_cost), profit: m(r.profit) }))
-      return { title: 'Job register', columns: [{ key: 'job_no', label: 'Job No' }, { key: 'job_date', label: 'Date', type: 'date' }, { key: 'client', label: 'Client' }, { key: 'department', label: 'Department' }, { key: 'branch', label: 'Br.' }, { key: 'job_status', label: 'Status' }, { key: 'mbl_no', label: 'MBL / AWB' }, { key: 'hbl_no', label: 'HBL' }, { key: 'pol', label: 'POL' }, { key: 'pod', label: 'POD' }, { key: 'etd', label: 'ETD', type: 'datetime' }, { key: 'eta', label: 'ETA', type: 'datetime' }, { key: 'total_revenue', label: 'Revenue', type: 'money' }, { key: 'total_cost', label: 'Cost', type: 'money' }, { key: 'profit', label: 'Profit', type: 'money' }], rows, totals: sumKeys(rows, ['total_revenue', 'total_cost', 'profit']) }
+      const { from, to } = range(p); const f = filterSql(p, { branch_id: 'j.branch_id', client_id: 'j.client_id', job_status: 'j.job_status', deal_type: 'j.deal_type' })
+      const rows = q.all(`SELECT j.job_no, j.deal_date, pr.name AS client, j.deal_type, b.code AS branch, j.job_status, j.deal_name, pp.name AS property, j.target_close, j.actual_close, j.deal_value, j.commission_amount, j.total_revenue, j.total_cost, j.profit
+        FROM jobs j LEFT JOIN parties pr ON pr.id = j.client_id LEFT JOIN branches b ON b.id = j.branch_id LEFT JOIN properties pp ON pp.id = j.property_id
+        WHERE j.deleted_at IS NULL AND j.deal_date BETWEEN ? AND ? ${f.sql} ORDER BY j.deal_date DESC, j.id DESC`, from, to, ...f.args).map(r => ({ ...r, deal_value: m(r.deal_value), commission_amount: m(r.commission_amount), total_revenue: m(r.total_revenue), total_cost: m(r.total_cost), profit: m(r.profit) }))
+      return { title: 'Deal register', columns: [{ key: 'job_no', label: 'Deal No' }, { key: 'deal_date', label: 'Date', type: 'date' }, { key: 'client', label: 'Client' }, { key: 'deal_type', label: 'Type' }, { key: 'branch', label: 'Br.' }, { key: 'job_status', label: 'Status' }, { key: 'deal_name', label: 'Deal name' }, { key: 'property', label: 'Property' }, { key: 'target_close', label: 'Target close', type: 'date' }, { key: 'actual_close', label: 'Actual close', type: 'date' }, { key: 'deal_value', label: 'Deal value', type: 'money' }, { key: 'commission_amount', label: 'Commission', type: 'money' }, { key: 'total_revenue', label: 'Revenue', type: 'money' }, { key: 'total_cost', label: 'Cost', type: 'money' }, { key: 'profit', label: 'Profit', type: 'money' }], rows, totals: sumKeys(rows, ['deal_value', 'commission_amount', 'total_revenue', 'total_cost', 'profit']) }
     },
   },
   {
-    key: 'job_profitability', label: 'Job profitability', group: 'Operations', module: 'reports', description: 'Revenue, cost and margin per job, most profitable first.',
+    key: 'job_profitability', label: 'Deal profitability', group: 'Operations', module: 'reports', description: 'Revenue, cost and margin per deal, most profitable first.',
     params: [...FROM_TO, { name: 'branch_id', label: 'Branch', type: 'ref', ref: 'branches' }],
     run: p => {
       const { from, to } = range(p); const f = filterSql(p, { branch_id: 'j.branch_id' })
-      const rows = q.all(`SELECT j.job_no, j.job_date, pr.name AS client, j.department, j.job_status, j.total_revenue, j.total_cost, j.profit FROM jobs j LEFT JOIN parties pr ON pr.id = j.client_id WHERE j.deleted_at IS NULL AND j.job_status <> 'CANCELLED' AND j.job_date BETWEEN ? AND ? ${f.sql} ORDER BY j.profit DESC`, from, to, ...f.args)
-        .map(r => ({ ...r, total_revenue: m(r.total_revenue), total_cost: m(r.total_cost), profit: m(r.profit), margin: r.total_revenue > 0 ? r2((r.profit / r.total_revenue) * 100) : null }))
-      const t = sumKeys(rows, ['total_revenue', 'total_cost', 'profit']); (t as any).margin = t.total_revenue > 0 ? r2((t.profit / t.total_revenue) * 100) : null
-      return { title: 'Job profitability', columns: [{ key: 'job_no', label: 'Job No' }, { key: 'job_date', label: 'Date', type: 'date' }, { key: 'client', label: 'Client' }, { key: 'department', label: 'Department' }, { key: 'job_status', label: 'Status' }, { key: 'total_revenue', label: 'Revenue', type: 'money' }, { key: 'total_cost', label: 'Cost', type: 'money' }, { key: 'profit', label: 'Profit', type: 'money' }, { key: 'margin', label: 'Margin %', type: 'percent' }], rows, totals: t }
+      const rows = q.all(`SELECT j.job_no, j.deal_date, pr.name AS client, j.deal_type, j.job_status, j.deal_value, j.commission_amount, j.total_revenue, j.total_cost, j.profit FROM jobs j LEFT JOIN parties pr ON pr.id = j.client_id WHERE j.deleted_at IS NULL AND j.job_status <> 'Cancelled' AND j.deal_date BETWEEN ? AND ? ${f.sql} ORDER BY j.profit DESC`, from, to, ...f.args)
+        .map(r => ({ ...r, deal_value: m(r.deal_value), commission_amount: m(r.commission_amount), total_revenue: m(r.total_revenue), total_cost: m(r.total_cost), profit: m(r.profit), margin: r.total_revenue > 0 ? r2((r.profit / r.total_revenue) * 100) : null }))
+      const t = sumKeys(rows, ['deal_value', 'commission_amount', 'total_revenue', 'total_cost', 'profit']); (t as any).margin = t.total_revenue > 0 ? r2((t.profit / t.total_revenue) * 100) : null
+      return { title: 'Deal profitability', columns: [{ key: 'job_no', label: 'Deal No' }, { key: 'deal_date', label: 'Date', type: 'date' }, { key: 'client', label: 'Client' }, { key: 'deal_type', label: 'Type' }, { key: 'job_status', label: 'Status' }, { key: 'deal_value', label: 'Deal value', type: 'money' }, { key: 'commission_amount', label: 'Commission', type: 'money' }, { key: 'total_revenue', label: 'Revenue', type: 'money' }, { key: 'total_cost', label: 'Cost', type: 'money' }, { key: 'profit', label: 'Profit', type: 'money' }, { key: 'margin', label: 'Margin %', type: 'percent' }], rows, totals: t }
     },
   },
   {
-    key: 'customer_profitability', label: 'Customer profitability', group: 'Operations', module: 'reports', description: 'Jobs, revenue and profit by client.', params: FROM_TO,
+    key: 'customer_profitability', label: 'Customer profitability', group: 'Operations', module: 'reports', description: 'Deals, revenue and profit by client.', params: FROM_TO,
     run: p => {
       const { from, to } = range(p)
-      const rows = q.all(`SELECT pr.name AS client, COUNT(*) AS jobs, SUM(j.total_revenue) rev, SUM(j.total_cost) cost, SUM(j.profit) profit FROM jobs j LEFT JOIN parties pr ON pr.id = j.client_id WHERE j.deleted_at IS NULL AND j.job_status <> 'CANCELLED' AND j.job_date BETWEEN ? AND ? GROUP BY j.client_id, pr.name ORDER BY profit DESC`, from, to)
-        .map(r => ({ client: r.client, jobs: r.jobs, revenue: m(r.rev), cost: m(r.cost), profit: m(r.profit), margin: r.rev > 0 ? r2((r.profit / r.rev) * 100) : null }))
-      return { title: 'Customer profitability', columns: [{ key: 'client', label: 'Client' }, { key: 'jobs', label: 'Jobs', type: 'number' }, { key: 'revenue', label: 'Revenue', type: 'money' }, { key: 'cost', label: 'Cost', type: 'money' }, { key: 'profit', label: 'Profit', type: 'money' }, { key: 'margin', label: 'Margin %', type: 'percent' }], rows, totals: sumKeys(rows, ['jobs', 'revenue', 'cost', 'profit']) }
+      const rows = q.all(`SELECT pr.name AS client, COUNT(*) AS deals, SUM(j.total_revenue) rev, SUM(j.total_cost) cost, SUM(j.profit) profit FROM jobs j LEFT JOIN parties pr ON pr.id = j.client_id WHERE j.deleted_at IS NULL AND j.job_status <> 'Cancelled' AND j.deal_date BETWEEN ? AND ? GROUP BY j.client_id, pr.name ORDER BY profit DESC`, from, to)
+        .map(r => ({ client: r.client, deals: r.deals, revenue: m(r.rev), cost: m(r.cost), profit: m(r.profit), margin: r.rev > 0 ? r2((r.profit / r.rev) * 100) : null }))
+      return { title: 'Customer profitability', columns: [{ key: 'client', label: 'Client' }, { key: 'deals', label: 'Deals', type: 'number' }, { key: 'revenue', label: 'Revenue', type: 'money' }, { key: 'cost', label: 'Cost', type: 'money' }, { key: 'profit', label: 'Profit', type: 'money' }, { key: 'margin', label: 'Margin %', type: 'percent' }], rows, totals: sumKeys(rows, ['deals', 'revenue', 'cost', 'profit']) }
     },
   },
   {
-    key: 'lane_profitability', label: 'Lane profitability', group: 'Operations', module: 'reports', description: 'Volume and margin by trade lane (POL → POD).', params: FROM_TO,
+    key: 'deal_type_profitability', label: 'Profitability by deal type', group: 'Operations', module: 'reports', description: 'Volume and margin by deal type (Sale, Lease, Off-Plan…).', params: FROM_TO,
     run: p => {
       const { from, to } = range(p)
-      const rows = q.all(`SELECT pol.code || ' → ' || pod.code AS lane, j.department, COUNT(*) jobs, SUM(j.total_revenue) rev, SUM(j.total_cost) cost, SUM(j.profit) profit FROM jobs j JOIN locations pol ON pol.id = j.pol_id JOIN locations pod ON pod.id = j.pod_id WHERE j.deleted_at IS NULL AND j.job_status <> 'CANCELLED' AND j.job_date BETWEEN ? AND ? GROUP BY j.pol_id, j.pod_id, j.department, pol.code, pod.code ORDER BY jobs DESC`, from, to)
-        .map(r => ({ lane: r.lane, department: r.department, jobs: r.jobs, revenue: m(r.rev), cost: m(r.cost), profit: m(r.profit), margin: r.rev > 0 ? r2((r.profit / r.rev) * 100) : null }))
-      return { title: 'Lane profitability', columns: [{ key: 'lane', label: 'Lane' }, { key: 'department', label: 'Department' }, { key: 'jobs', label: 'Jobs', type: 'number' }, { key: 'revenue', label: 'Revenue', type: 'money' }, { key: 'cost', label: 'Cost', type: 'money' }, { key: 'profit', label: 'Profit', type: 'money' }, { key: 'margin', label: 'Margin %', type: 'percent' }], rows, totals: sumKeys(rows, ['jobs', 'revenue', 'cost', 'profit']) }
+      const rows = q.all(`SELECT COALESCE(deal_type,'Other') AS type, COUNT(*) deals, SUM(j.total_revenue) rev, SUM(j.total_cost) cost, SUM(j.profit) profit FROM jobs j WHERE j.deleted_at IS NULL AND j.job_status <> 'Cancelled' AND j.deal_date BETWEEN ? AND ? GROUP BY j.deal_type ORDER BY deals DESC`, from, to)
+        .map(r => ({ type: r.type, deals: r.deals, revenue: m(r.rev), cost: m(r.cost), profit: m(r.profit), margin: r.rev > 0 ? r2((r.profit / r.rev) * 100) : null }))
+      return { title: 'Profitability by deal type', columns: [{ key: 'type', label: 'Deal type' }, { key: 'deals', label: 'Deals', type: 'number' }, { key: 'revenue', label: 'Revenue', type: 'money' }, { key: 'cost', label: 'Cost', type: 'money' }, { key: 'profit', label: 'Profit', type: 'money' }, { key: 'margin', label: 'Margin %', type: 'percent' }], rows, totals: sumKeys(rows, ['deals', 'revenue', 'cost', 'profit']) }
     },
   },
   {
-    key: 'open_jobs_aging', label: 'Open jobs ageing', group: 'Operations', module: 'sales', description: 'Jobs not yet closed, by age — find work stuck in the pipeline.', params: [],
+    key: 'open_jobs_aging', label: 'Open deals ageing', group: 'Operations', module: 'sales', description: 'Deals not yet completed, by age — find work stuck in the pipeline.', params: [],
     run: () => {
       const today = todayStr()
-      const rows = q.all(`SELECT j.job_no, j.job_date, pr.name AS client, j.department, j.job_status, j.operational_status, j.total_revenue, (SELECT COUNT(*) FROM job_charges c WHERE c.job_id = j.id AND c.kind='Revenue' AND c.status='Unbilled' AND c.deleted_at IS NULL) unbilled FROM jobs j LEFT JOIN parties pr ON pr.id = j.client_id WHERE j.deleted_at IS NULL AND j.job_status NOT IN ('CLOSED','CANCELLED') ORDER BY j.job_date`).map(r => ({ ...r, age: daysBetween(r.job_date, today), total_revenue: m(r.total_revenue) }))
-      return { title: 'Open jobs ageing', columns: [{ key: 'job_no', label: 'Job No' }, { key: 'job_date', label: 'Opened', type: 'date' }, { key: 'age', label: 'Age (days)', type: 'number' }, { key: 'client', label: 'Client' }, { key: 'department', label: 'Department' }, { key: 'job_status', label: 'Status' }, { key: 'operational_status', label: 'Operational status' }, { key: 'unbilled', label: 'Unbilled charges', type: 'number' }, { key: 'total_revenue', label: 'Revenue', type: 'money' }], rows }
+      const rows = q.all(`SELECT j.job_no, j.deal_date, pr.name AS client, j.deal_type, j.job_status, j.operational_status, j.target_close, j.total_revenue, (SELECT COUNT(*) FROM job_charges c WHERE c.job_id = j.id AND c.kind='Revenue' AND c.status='Unbilled' AND c.deleted_at IS NULL) unbilled FROM jobs j LEFT JOIN parties pr ON pr.id = j.client_id WHERE j.deleted_at IS NULL AND j.job_status NOT IN ('Completed','Cancelled') ORDER BY j.deal_date`).map(r => ({ ...r, age: daysBetween(r.deal_date, today), total_revenue: m(r.total_revenue) }))
+      return { title: 'Open deals ageing', columns: [{ key: 'job_no', label: 'Deal No' }, { key: 'deal_date', label: 'Opened', type: 'date' }, { key: 'age', label: 'Age (days)', type: 'number' }, { key: 'client', label: 'Client' }, { key: 'deal_type', label: 'Type' }, { key: 'job_status', label: 'Status' }, { key: 'operational_status', label: 'Stage' }, { key: 'target_close', label: 'Target close', type: 'date' }, { key: 'unbilled', label: 'Unbilled charges', type: 'number' }, { key: 'total_revenue', label: 'Revenue', type: 'money' }], rows }
     },
   },
   {
-    key: 'unbilled_charges', label: 'Unbilled revenue charges', group: 'Operations', module: 'finance', description: 'Revenue charges on jobs that have not been invoiced yet.', params: [],
+    key: 'unbilled_charges', label: 'Unbilled revenue charges', group: 'Operations', module: 'finance', description: 'Revenue charges on deals that have not been invoiced yet.', params: [],
     run: () => {
-      const rows = q.all(`SELECT j.job_no, j.job_date, j.job_status, pr.name AS bill_to, cc.name AS charge, c.description, c.qty, c.rate, c.currency, c.amount, c.base_amount FROM job_charges c JOIN jobs j ON j.id = c.job_id LEFT JOIN parties pr ON pr.id = COALESCE(c.party_id, j.client_id) LEFT JOIN charge_codes cc ON cc.id = c.charge_code_id WHERE c.deleted_at IS NULL AND j.deleted_at IS NULL AND c.kind = 'Revenue' AND c.status = 'Unbilled' AND j.job_status <> 'CANCELLED' ORDER BY j.job_date, j.job_no`).map(r => ({ ...r, rate: m(r.rate), amount: m(r.amount), base_amount: m(r.base_amount) }))
-      return { title: 'Unbilled revenue charges', columns: [{ key: 'job_no', label: 'Job No' }, { key: 'job_date', label: 'Date', type: 'date' }, { key: 'job_status', label: 'Job status' }, { key: 'bill_to', label: 'Bill to' }, { key: 'charge', label: 'Charge' }, { key: 'qty', label: 'Qty', type: 'number' }, { key: 'rate', label: 'Rate', type: 'money' }, { key: 'currency', label: 'Cur' }, { key: 'amount', label: 'Amount', type: 'money' }, { key: 'base_amount', label: 'Amount (AED)', type: 'money' }], rows, totals: sumKeys(rows, ['base_amount']) }
+      const rows = q.all(`SELECT j.job_no, j.deal_date, j.job_status, pr.name AS bill_to, cc.name AS charge, c.description, c.qty, c.rate, c.currency, c.amount, c.base_amount FROM job_charges c JOIN jobs j ON j.id = c.job_id LEFT JOIN parties pr ON pr.id = COALESCE(c.party_id, j.client_id) LEFT JOIN charge_codes cc ON cc.id = c.charge_code_id WHERE c.deleted_at IS NULL AND j.deleted_at IS NULL AND c.kind = 'Revenue' AND c.status = 'Unbilled' AND j.job_status <> 'Cancelled' ORDER BY j.deal_date, j.job_no`).map(r => ({ ...r, rate: m(r.rate), amount: m(r.amount), base_amount: m(r.base_amount) }))
+      return { title: 'Unbilled revenue charges', columns: [{ key: 'job_no', label: 'Deal No' }, { key: 'deal_date', label: 'Date', type: 'date' }, { key: 'job_status', label: 'Deal status' }, { key: 'bill_to', label: 'Bill to' }, { key: 'charge', label: 'Charge' }, { key: 'qty', label: 'Qty', type: 'number' }, { key: 'rate', label: 'Rate', type: 'money' }, { key: 'currency', label: 'Cur' }, { key: 'amount', label: 'Amount', type: 'money' }, { key: 'base_amount', label: 'Amount (AED)', type: 'money' }], rows, totals: sumKeys(rows, ['base_amount']) }
     },
   },
-  {
-    key: 'shipment_register', label: 'Shipment (sub-job) register', group: 'Operations', module: 'sales', description: 'House shipments with shipper, consignee and status.', params: FROM_TO,
-    run: p => {
-      const { from, to } = range(p)
-      const rows = q.all(`SELECT s.shipment_no, j.job_no, j.job_date, s.status, s.hbl_no, sh.name AS shipper, cn.name AS consignee, s.commodity, s.packages, s.gross_weight, s.volume_cbm, s.delivered_at FROM shipments s JOIN jobs j ON j.id = s.job_id LEFT JOIN parties sh ON sh.id = s.shipper_id LEFT JOIN parties cn ON cn.id = s.consignee_id WHERE s.deleted_at IS NULL AND j.job_date BETWEEN ? AND ? ORDER BY s.id DESC`, from, to)
-      return { title: 'Shipment register', columns: [{ key: 'shipment_no', label: 'Sub-job' }, { key: 'job_no', label: 'Master job' }, { key: 'status', label: 'Status' }, { key: 'hbl_no', label: 'HBL / HAWB' }, { key: 'shipper', label: 'Shipper' }, { key: 'consignee', label: 'Consignee' }, { key: 'commodity', label: 'Commodity' }, { key: 'packages', label: 'Pkgs', type: 'number' }, { key: 'gross_weight', label: 'Weight kg', type: 'number' }, { key: 'volume_cbm', label: 'CBM', type: 'number' }, { key: 'delivered_at', label: 'Delivered', type: 'datetime' }], rows, totals: sumKeys(rows, ['packages', 'gross_weight', 'volume_cbm']) }
-    },
-  },
-  {
-    key: 'container_status', label: 'Container status & free time', group: 'Operations', module: 'sales', description: 'Containers on open jobs with free-time countdown (demurrage / detention watch).', params: [],
-    run: () => {
-      const today = todayStr()
-      const rows = q.all(`SELECT c.container_no, ct.code AS type, c.seal_no, c.status, j.job_no, pr.name AS client, c.gate_in_at, c.gate_out_at, c.free_time_until FROM job_containers c JOIN jobs j ON j.id = c.job_id LEFT JOIN container_types ct ON ct.id = c.type_id LEFT JOIN parties pr ON pr.id = j.client_id WHERE c.deleted_at IS NULL AND j.deleted_at IS NULL AND j.job_status NOT IN ('CLOSED','CANCELLED') AND c.status NOT IN ('Empty returned') ORDER BY c.free_time_until IS NULL, c.free_time_until`).map(r => ({ ...r, days_left: r.free_time_until ? daysBetween(today, r.free_time_until) : null }))
-      return { title: 'Container status & free time', columns: [{ key: 'container_no', label: 'Container' }, { key: 'type', label: 'Type' }, { key: 'seal_no', label: 'Seal' }, { key: 'status', label: 'Status' }, { key: 'job_no', label: 'Job' }, { key: 'client', label: 'Client' }, { key: 'free_time_until', label: 'Free time until', type: 'date' }, { key: 'days_left', label: 'Days left', type: 'number' }], rows }
-    },
-  },
-  {
-    key: 'on_time', label: 'On-time performance', group: 'Operations', module: 'reports', description: 'Share of jobs departing / arriving within 24 hours of plan, by month.', params: FROM_TO,
-    run: p => {
-      const { from, to } = range(p)
-      const jobs = q.all(`SELECT substr(job_date,1,7) mth, etd, atd, eta, ata FROM jobs WHERE deleted_at IS NULL AND job_status <> 'CANCELLED' AND job_date BETWEEN ? AND ?`, from, to)
-      const by = new Map<string, { dep: number; depOk: number; arr: number; arrOk: number }>()
-      for (const j of jobs) {
-        const x = by.get(j.mth) ?? { dep: 0, depOk: 0, arr: 0, arrOk: 0 }
-        if (j.etd && j.atd) { x.dep++; if (Date.parse(j.atd) - Date.parse(j.etd) <= 86400000) x.depOk++ }
-        if (j.eta && j.ata) { x.arr++; if (Date.parse(j.ata) - Date.parse(j.eta) <= 86400000) x.arrOk++ }
-        by.set(j.mth, x)
-      }
-      const rows = [...by.entries()].sort().map(([month, x]) => ({ month, departures: x.dep, dep_on_time: x.depOk, dep_pct: x.dep ? r2((x.depOk / x.dep) * 100) : null, arrivals: x.arr, arr_on_time: x.arrOk, arr_pct: x.arr ? r2((x.arrOk / x.arr) * 100) : null }))
-      return { title: 'On-time performance', columns: [{ key: 'month', label: 'Month' }, { key: 'departures', label: 'Departures tracked', type: 'number' }, { key: 'dep_on_time', label: 'On time', type: 'number' }, { key: 'dep_pct', label: 'On-time %', type: 'percent' }, { key: 'arrivals', label: 'Arrivals tracked', type: 'number' }, { key: 'arr_on_time', label: 'On time', type: 'number' }, { key: 'arr_pct', label: 'On-time %', type: 'percent' }], rows, note: 'On time = actual within 24 hours of the planned date. Only jobs with both planned and actual dates are counted.' }
-    },
-  },
-  // ---------------------------------------------------------------- sales
   {
     key: 'sales_by_branch', label: 'Sales by branch', group: 'Sales', module: 'reports', description: 'Posted invoices (net of credit notes) by branch, in base currency.', params: FROM_TO,
     run: p => {
@@ -300,21 +267,11 @@ export const REPORTS: ReportDef[] = [
   },
   // ---------------------------------------------------------------- transport / people / support
   {
-    key: 'transport_utilisation', label: 'Fleet utilisation', group: 'Transport', module: 'transport', description: 'Trips, distance, revenue and cost per vehicle.', params: FROM_TO,
-    run: p => {
-      const { from, to } = range(p)
-      const rows = q.all(`SELECT COALESCE(v.plate_no, 'Subcontracted') AS vehicle, COUNT(*) trips, COALESCE(SUM(t.distance_km),0) km, COALESCE(SUM(t.rate),0) rev, COALESCE(SUM(t.cost),0) cost FROM transport_orders t LEFT JOIN vehicles v ON v.id = t.vehicle_id WHERE t.deleted_at IS NULL AND t.status <> 'Cancelled' AND substr(COALESCE(t.pickup_at, t.created_at),1,10) BETWEEN ? AND ? GROUP BY t.vehicle_id, v.plate_no ORDER BY trips DESC`, from, to).map(r => ({ vehicle: r.vehicle, trips: r.trips, km: r.km, revenue: m(r.rev), cost: m(r.cost), margin: m(r.rev - r.cost) }))
-      return { title: 'Fleet utilisation', columns: [{ key: 'vehicle', label: 'Vehicle' }, { key: 'trips', label: 'Trips', type: 'number' }, { key: 'km', label: 'Distance (km)', type: 'number' }, { key: 'revenue', label: 'Revenue', type: 'money' }, { key: 'cost', label: 'Cost', type: 'money' }, { key: 'margin', label: 'Margin', type: 'money' }], rows, totals: sumKeys(rows, ['trips', 'km', 'revenue', 'cost', 'margin']) }
-    },
-  },
-  {
     key: 'document_expiries', label: 'Expiring documents', group: 'Compliance', module: 'reports', description: 'Licences, visas, registrations, contracts and uploaded documents expiring soon.', params: [{ name: 'days', label: 'Within (days)', type: 'number', default: '60' }],
     run: p => {
       const days = Math.min(Number(p.days) || 60, 730); const today = todayStr(), limit = addDays(today, days)
       const rows: any[] = []
       const push = (type: string, record: string, document: string, date: string | null, link: string) => { if (date && date <= limit) rows.push({ type, record, document, expiry: date, days_left: daysBetween(today, date), link }) }
-      for (const v of q.all(`SELECT id, plate_no, registration_expiry, insurance_expiry FROM vehicles WHERE deleted_at IS NULL AND status <> 'Inactive'`)) { push('Vehicle', v.plate_no, 'Registration (Mulkiya)', v.registration_expiry, `/e/vehicles/${v.id}`); push('Vehicle', v.plate_no, 'Insurance', v.insurance_expiry, `/e/vehicles/${v.id}`) }
-      for (const d of q.all(`SELECT id, name, licence_expiry, visa_expiry FROM drivers WHERE deleted_at IS NULL AND active = 1`)) { push('Driver', d.name, 'Driving licence', d.licence_expiry, `/e/drivers/${d.id}`); push('Driver', d.name, 'Visa', d.visa_expiry, `/e/drivers/${d.id}`) }
       for (const c of q.all(`SELECT id, name, type, expiry_date FROM compliance_items WHERE deleted_at IS NULL AND status IN ('Active','Expired') AND expiry_date IS NOT NULL`)) push('Company licence', c.name, c.type, c.expiry_date, `/e/compliance_items/${c.id}`)
       for (const e of q.all(`SELECT id, name, work_permit_expiry FROM employees WHERE deleted_at IS NULL AND status IN ('Active','On leave','Probation') AND work_permit_expiry IS NOT NULL`)) push('Employee', e.name, 'Work permit / labour contract', e.work_permit_expiry, `/e/employees/${e.id}`)
       for (const e of q.all(`SELECT id, name, passport_expiry, eid_expiry, visa_expiry, health_card_expiry FROM employees WHERE deleted_at IS NULL AND status IN ('Active','On leave','Probation')`)) { push('Employee', e.name, 'Passport', e.passport_expiry, `/e/employees/${e.id}`); push('Employee', e.name, 'Emirates ID', e.eid_expiry, `/e/employees/${e.id}`); push('Employee', e.name, 'Visa / residence', e.visa_expiry, `/e/employees/${e.id}`); push('Employee', e.name, 'Health insurance', e.health_card_expiry, `/e/employees/${e.id}`) }

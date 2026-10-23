@@ -111,23 +111,18 @@ export function setNextInvoiceNumber(next: number, date = todayStr()) {
   q.run(`INSERT INTO sequences(key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`, invoiceSeriesKey(pattern, date), next - 1)
 }
 
-/** Copy shipment facts from the linked job into blank invoice fields so the printed invoice carries them. Anything typed on the invoice wins. */
+/** Copy deal facts from the linked job into blank invoice fields so the printed document carries them. Anything typed on the document wins. */
 function fillShipmentFromJob(rec: Rec) {
-  const j = q.get(`SELECT j.hbl_no, j.mbl_no, j.vessel_name, j.voyage_no, j.place_of_receipt, j.commodity, j.gross_weight, j.packages, j.trade,
-      (SELECT name FROM locations WHERE id = j.por_id) por, (SELECT name FROM locations WHERE id = j.pol_id) pol, (SELECT name FROM locations WHERE id = j.pod_id) pod,
-      (SELECT name FROM locations WHERE id = j.pof_id) pof
+  const j = q.get(`SELECT j.deal_name, j.deal_type, j.job_status, j.deal_value, j.commission_amount,
+      (SELECT name FROM properties WHERE id = j.property_id) property, (SELECT name FROM units WHERE id = j.unit_id) unit
     FROM jobs j WHERE j.id = ?`, rec.job_id)
   if (!j) return
-  const boxes = q.all<{ container_no: string; code: string }>(`SELECT c.container_no, t.code FROM job_containers c LEFT JOIN container_types t ON t.id = c.type_id WHERE c.job_id = ? AND c.deleted_at IS NULL ORDER BY c.id`, rec.job_id)
   const set = (k: string, v: any) => { if ((rec[k] === undefined || rec[k] === null || rec[k] === '') && v !== undefined && v !== null && v !== '') rec[k] = v }
-  set('ship_bl_no', j.hbl_no || j.mbl_no)
-  set('ship_vessel', [j.vessel_name, j.voyage_no].filter(Boolean).join(' / '))
-  set('ship_receipt', j.place_of_receipt || j.por)
-  set('ship_pol', j.pol); set('ship_pod', j.pod); set('ship_destination', j.pof)
-  set('ship_containers', boxes.filter(b => b.container_no).map(b => (b.code ? `${b.container_no} / ${b.code}` : b.container_no)).join(' | '))
-  set('ship_cargo', j.commodity)
-  set('ship_weight', j.gross_weight ? `${Number(j.gross_weight).toLocaleString('en-US', { maximumFractionDigits: 2 })} KGS` : '')
-  set('trade', j.trade)
+  const facts = [j.property, j.unit].filter(Boolean).join(' / ')
+  set('ship_receipt', facts)
+  set('ship_pol', facts); set('ship_pod', '')
+  set('ship_cargo', [j.deal_name, j.deal_type].filter(Boolean).join(' – '))
+  set('ship_weight', j.deal_value ? `${Number(j.deal_value).toLocaleString('en-US', { maximumFractionDigits: 2 })} AED` : '')
 }
 
 export const invoiceHooks: Hooks = {

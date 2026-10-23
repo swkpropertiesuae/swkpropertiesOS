@@ -106,7 +106,7 @@ export function Pagination({ page, pageSize, total, onPage, onSize }: { page: nu
   )
 }
 
-export function Panel({ title, color = '#15526B', tools, children, className, bodyClass = '', collapsible = true }: { title: ReactNode; color?: string; tools?: ReactNode; children: ReactNode; className?: string; bodyClass?: string; collapsible?: boolean }) {
+export function Panel({ title, color = '#0f1714', tools, children, className, bodyClass = '', collapsible = true }: { title: ReactNode; color?: string; tools?: ReactNode; children: ReactNode; className?: string; bodyClass?: string; collapsible?: boolean }) {
   const [open, setOpen] = useState(true)
   return (
     <section className={cls('panel', className)}>
@@ -129,6 +129,6 @@ export function PageHeader({ title, subtitle, actions, back, icon }: { title: Re
   )
 }
 export function Kpi({ label, value, hint, tone, onClick, className }: { className?: string; label: string; value: ReactNode; hint?: ReactNode; tone?: 'red' | 'amber' | 'green'; onClick?: () => void }) {
-  return <div className={cls('card kpi', className, onClick && 'cursor-pointer hover:shadow-md transition-shadow')} role={onClick ? 'button' : undefined} tabIndex={onClick ? 0 : undefined} onKeyDown={e => { if (onClick && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onClick() } }} onClick={onClick} style={tone ? { borderTop: `3px solid ${tone === 'red' ? '#c32135' : tone === 'amber' ? '#d9a21a' : '#007b52'}` } : undefined}><div className="l">{label}</div><div className="v">{value}</div>{hint && <div className="text-xs text-muted mt-0.5">{hint}</div>}</div>
+  return <div className={cls('card kpi', className, onClick && 'cursor-pointer hover:shadow-md transition-shadow')} role={onClick ? 'button' : undefined} tabIndex={onClick ? 0 : undefined} onKeyDown={e => { if (onClick && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onClick() } }} onClick={onClick} style={tone ? { borderTop: `3px solid ${tone === 'red' ? '#c32135' : tone === 'amber' ? '#b9741f' : '#f23a1d'}` } : undefined}><div className="l">{label}</div><div className="v">{value}</div>{hint && <div className="text-xs text-muted mt-0.5">{hint}</div>}</div>
 }
 

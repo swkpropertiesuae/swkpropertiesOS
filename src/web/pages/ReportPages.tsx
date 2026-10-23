@@ -17,7 +17,7 @@ export function ReportResultView({ res }: { res: any }) {
   if (res.layout === 'statement') return (
     <div className="print-sheet !w-auto !min-h-0 !shadow-none max-w-3xl" style={{ boxShadow: 'none' }}>
       <table><tbody>{res.rows.map((r: any, i: number) => r.kind === 'header' ? <tr key={i}><td colSpan={3} className="!bg-[#eef3ef] font-bold uppercase text-[11px] tracking-wider !pt-3">{r.name}</td></tr>
-        : <tr key={i} className={cls(r.kind === 'total' && 'font-bold', r.kind === 'grand' && 'font-extrabold text-[13px] !bg-[#dcf1e6]', r.kind === 'check' && 'text-muted italic')}><td style={{ width: 70 }} className="text-muted">{r.code}</td><td style={{ paddingLeft: r.kind === 'line' ? 18 : 8 }}>{r.name}</td><td className="num" style={{ textAlign: 'right', width: 140 }}>{r.kind === 'check' && Math.abs(r.amount) < 0.005 ? <Check size={14} className="inline text-emerald" /> : fmtMoney(r.amount)}</td></tr>)}</tbody></table>
+        : <tr key={i} className={cls(r.kind === 'total' && 'font-bold', r.kind === 'grand' && 'font-extrabold text-[13px] !bg-[#f2ede2]', r.kind === 'check' && 'text-muted italic')}><td style={{ width: 70 }} className="text-muted">{r.code}</td><td style={{ paddingLeft: r.kind === 'line' ? 18 : 8 }}>{r.name}</td><td className="num" style={{ textAlign: 'right', width: 140 }}>{r.kind === 'check' && Math.abs(r.amount) < 0.005 ? <Check size={14} className="inline text-emerald" /> : fmtMoney(r.amount)}</td></tr>)}</tbody></table>
       {res.note && <p className="text-xs text-muted mt-3">{res.note}</p>}
     </div>)
   return (
