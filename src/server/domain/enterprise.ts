@@ -20,16 +20,15 @@ export const offerHooks:Hooks={beforeSave({rec,old,ctx}){
  if(rfq.status!=='Issued')throw bad('Responses require an issued RFQ')
  if(!dateValid(rfq.response_deadline))throw bad('RFQ response deadline has passed')
  if(!q.val('SELECT 1 FROM rfq_providers WHERE rfq_id=? AND provider_id=? AND deleted_at IS NULL',rfq.id,rec.provider_id))throw bad('Provider was not invited to this RFQ')
- for(const k of ['freight','local_charges'])if(!Number.isFinite(rec[k])||rec[k]<0)throw bad('Rate components must be non-negative amounts')
- for(const k of ['transit_days','free_days'])if(!Number.isInteger(rec[k])||rec[k]<0||rec[k]>3650)throw bad('Transit/free days must be 0–3650')
+ for(const k of ['commission_pct_seller','commission_pct_buyer','commission_pct_landlord','commission_pct_tenant'])if(!Number.isFinite(rec[k])||rec[k]<0||rec[k]>10)throw bad('Rate components must be 0–10%')
  if(!Number.isFinite(rec.ex_rate)||rec.ex_rate<=0||(rec.currency==='AED'&&rec.ex_rate!==1))throw bad('Provide a positive exchange rate; AED uses 1')
  if(!dateValid(rec.valid_until))throw bad('Response validity must be today or later')
  if(rec.terms.trim().length<10)throw bad('Record rate inclusions, exclusions and terms')
- rec.total=Math.round((rec.freight+rec.local_charges)*100)/100;rec.total_aed=Math.round(rec.total*rec.ex_rate*100)/100
+ rec.total=Math.round((rec.commission_pct_seller+rec.commission_pct_buyer+rec.commission_pct_landlord+rec.commission_pct_tenant)*rec.deal_value*100)/100;rec.total_aed=Math.round(rec.total*rec.ex_rate*100)/100
  rec.revision=(q.val<number>('SELECT MAX(revision) FROM rfq_offers WHERE rfq_id=? AND provider_id=?',rec.rfq_id,rec.provider_id)??0)+1;rec.received_at=nowIso()
 }}
 export function issueRfq(id:number,ctx:Ctx){assertCan(ctx,'sales','edit');const r=getRecord(getDef('carrier_rfqs'),id,ctx);if(r.status!=='Draft')throw bad('RFQ has already been issued or closed');if(!dateValid(r.response_deadline))throw bad('Deadline has passed');if(!r.children.providers.length)throw bad('Invite at least one provider')
- for(const p of r.children.providers){const mail=queueEmail({to:p.email,subject:`Rate request ${r.rfq_no}: ${r.origin} → ${r.destination}`,body:`${r.title}\nMode: ${r.mode}\nOrigin: ${r.origin}\nDestination: ${r.destination}\nRequirements: ${r.cargo}\nRespond by: ${r.response_deadline}\nPlease include freight, local charges, currency, transit days, free days, validity and all exclusions.`,link_entity:'carrier_rfqs',link_id:id,userId:ctx.user?.id});q.run('UPDATE rfq_providers SET outbox_id=? WHERE id=?',mail,p.id)}
+ for(const p of r.children.providers){const mail=queueEmail({to:p.email,subject:`Rate request ${r.rfq_no}: ${r.origin} → ${r.destination}`,body:`${r.title}\nMode: ${r.mode}\nOrigin: ${r.origin}\nDestination: ${r.destination}\nProperty requirements: ${r.cargo}\nRespond by: ${r.response_deadline}\nPlease include commission rates, currency, validity and all exclusions.`,link_entity:'carrier_rfqs',link_id:id,userId:ctx.user?.id});q.run('UPDATE rfq_providers SET outbox_id=? WHERE id=?',mail,p.id)}
  return patchRecord(getDef('carrier_rfqs'),id,{status:'Issued'},ctx)
 }
 export function compareRfq(id:number,ctx:Ctx){const rfq=getRecord(getDef('carrier_rfqs'),id,ctx);const rows=listRecords(getDef('rfq_offers'),{filters:[{field:'rfq_id',op:'eq',value:id}],pageSize:1000},ctx).rows
