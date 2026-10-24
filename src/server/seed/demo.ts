@@ -7,7 +7,11 @@ import { addDays, todayStr } from '../util'
 import { postInvoice, postReceipt } from '../domain/finance'
 
 const idBy = (table: string, col: string, v: string) => q.val<number>(`SELECT id FROM ${table} WHERE ${col} = ? AND deleted_at IS NULL`, v)!
-const mk = (ctx: Ctx, e: string, p: any) => createRecord(getDef(e), p, ctx)
+// Starter data must never stop the server from booting: a record that fails validation is logged and skipped.
+const mk = (ctx: Ctx, e: string, p: any): any => {
+  try { return createRecord(getDef(e), p, ctx) }
+  catch (err: any) { console.warn(`[seed] skipped ${e}: ${err?.message ?? err}`); return { id: null } }
+}
 
 const STAFF: [string, string, string, string][] = [
   ['Ahmed Al Mansoori', 'ahmed@demo.swkproperties.ae', 'Sales', 'SAL'],
@@ -166,8 +170,8 @@ export async function seedDemoScenarios(): Promise<void> {
   for (const [dl, revCode, costCode] of [[dl1, 'COMM-SALE', 'COMM-SALE'], [dl2, 'COMM-SALE', 'COMM-SALE'], [dl3, 'COMM-LEASE', 'COMM-LEASE']] as const) {
     const ccRev = idBy('charge_codes', 'code', revCode)
     const ccCost = idBy('charge_codes', 'code', costCode)
-    if (ccRev) mk(ctx, 'job_charges', { job_id: dl, kind: 'Revenue', charge_code_id: ccRev, description: 'Brokerage commission', qty: 1, rate: dl.deal_value * (dl.commission_pct || 2) / 100, currency: 'AED', status: 'Unbilled' })
-    if (ccCost) mk(ctx, 'job_charges', { job_id: dl, kind: 'Cost', charge_code_id: ccCost, description: 'Referral fee', qty: 1, rate: dl.deal_value * 0.5 / 100, currency: 'AED', party_id: owner, status: 'Unbilled' })
+    if (ccRev) mk(ctx, 'job_charges', { job_id: dl.id, kind: 'Revenue', charge_code_id: ccRev, description: 'Brokerage commission', qty: 1, rate: (dl.deal_value ?? 0) * (dl.commission_pct || 2) / 100, currency: 'AED', status: 'Unbilled' })
+    if (ccCost) mk(ctx, 'job_charges', { job_id: dl.id, kind: 'Cost', charge_code_id: ccCost, description: 'Referral fee', qty: 1, rate: (dl.deal_value ?? 0) * 0.5 / 100, currency: 'AED', party_id: owner, status: 'Unbilled' })
   }
 
   // Sales Contract (for dl3 - accepted offer)

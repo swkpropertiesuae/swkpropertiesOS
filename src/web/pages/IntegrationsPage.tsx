@@ -74,7 +74,7 @@ function SectionCard({ s, open, onToggle, ready, presets, pdf, onSaved }: { s: S
               <button className="btn outline" disabled={!!busy} onClick={() => void act('full', async () => { const r = await post<any>('/api/integrations/supabase/sync', { full: true }); if (!r.ok) throw new Error(r.errors.join('; ')); return `Full resync: ${r.rows} rows` })}>Full resync</button></>}
             {s.key === 'storage' && <button className="btn outline" disabled={!!busy} onClick={() => void act('bk', async () => { const r = await post<any>('/api/integrations/backup-r2'); return `Backup ${r.name} ${r.r2 ? 'uploaded to R2' : 'saved locally (R2 not configured)'}` })}><Cloud /> Backup to R2 now</button>}
           </div>
-          {res && <div className={cls('flex items-center gap-2 text-sm rounded-xl p-3 border', res.ok ? 'bg-mint border-[#bfe3d0] text-fold' : 'bg-blush border-[#f2bcc3] text-[#8f1325]')}>{res.ok ? <CheckCircle2 size={18} /> : <XCircle size={18} />} {res.text}</div>}
+          {res && <div className={cls('flex items-center gap-2 text-sm rounded-xl p-3 border', res.ok ? 'bg-mint border-[#d5ddeb] text-fold' : 'bg-blush border-[#f2bcc3] text-[#8f1325]')}>{res.ok ? <CheckCircle2 size={18} /> : <XCircle size={18} />} {res.text}</div>}
         </div>
       )}
     </div>

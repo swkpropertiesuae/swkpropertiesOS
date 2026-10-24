@@ -38,6 +38,8 @@ export function seedCompliance(opts: { demo?: boolean } = {}) {
       if (!q.val(`SELECT 1 FROM licence_activities WHERE activity_en = ?`, en)) createRecord(getDef('licence_activities'), { activity_en: en, activity_ar: ar, covers, status: 'Active', source: 'Trade licence (demo)' }, SYSTEM_CTX)
     put([
       { type: 'Trade licence', name: 'Commercial licence (DET)', reference_no: '1645802', authority: 'Dubai Economy and Tourism (DET)', status: 'Active', issue_date: '2026-08-17', expiry_date: '2027-08-16', portal_url: 'https://www.dubaided.gov.ae', notes: 'LLC – Single Owner. Capital AED 200,000 (200 shares). Licence address: Naif, Parcel ID 118-157 – the office number is printed in Arabic on the licence; copy it exactly onto documents. Activities: Real Estate Broker; Property Management; Maintenance Service; Valuation Service. Licence conditions: no change of location or licence details without DET approval; separate permits for extra offices; signboard in Arabic and English; invoices must show amounts and VAT.' },
+      ...common('Demo workspace – fictional record.'),
+    ])
     return
   }
   const cur = (k: string) => String(getSetting(k) ?? '')

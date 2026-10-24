@@ -24,7 +24,7 @@ export function BankImportPage() {
           <div className="text-xs text-muted mt-1">CSV needs a header row with Date and Debit/Credit (or Amount) columns; day-first dates (31/12/2026) are understood. {name && <b>Loaded: {name} ({text.length.toLocaleString()} characters)</b>}</div></div>
         <div className="flex gap-2 items-center"><button className="btn green" disabled={!bank || !text || busy} onClick={() => void run()}><FileUp /> {busy ? 'Importing…' : 'Import & auto-match'}</button>
           <button className="btn outline" onClick={async () => { try { const r = await post<any>('/api/finance/bank/auto-match', {}); toast.ok(`${r.matched} more lines matched`) } catch (e: any) { toast.error(e.message) } }}>Re-run auto-match</button></div>
-        {res && <div className="rounded-xl bg-mint border border-[#bfe3d0] p-3 text-[14px]">Imported <b>{res.created}</b> new lines · <b>{res.duplicates}</b> duplicates skipped · <b>{res.matched}</b> auto-matched.</div>}
+        {res && <div className="rounded-xl bg-mint border border-[#d5ddeb] p-3 text-[14px]">Imported <b>{res.created}</b> new lines · <b>{res.duplicates}</b> duplicates skipped · <b>{res.matched}</b> auto-matched.</div>}
         <div className="text-xs text-muted">Live feeds: an aggregator or automation tool can push transactions to a private webhook – see Integrations → Bank feed webhook.</div>
       </div>
     </div>

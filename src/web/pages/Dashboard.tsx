@@ -1,241 +1,316 @@
-import { useRef, useState } from 'react'
+import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Bot, Plus, ArrowRight, AlertTriangle, Info, TriangleAlert, Home, KeyRound, Workflow, Wallet, FileText, CalendarDays, LayoutGrid, ChevronLeft, ChevronRight, Mail } from 'lucide-react'
-import { Bar, BarChart, CartesianGrid, Cell, ComposedChart, Legend, Line, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { motion, useReducedMotion } from 'motion/react'
+import { Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import {
+  AlertTriangle, ArrowRight, ArrowUpRight, BadgeCheck, Bot, Building2, Calculator, CalendarCheck, CalendarDays, Clock, FileSignature, Gavel,
+  HandCoins, Home, KanbanSquare, KeyRound, LineChart, Megaphone, Percent, Plus, Rocket, Sparkles, Trophy, UserPlus, Users, Wallet, Wrench,
+} from 'lucide-react'
 import { get } from '../lib/api'
 import { useMeta } from '../lib/meta'
-import { Badge, ErrorBox, Kpi, Loading, Panel, Empty } from '../ui/kit'
-import { fmtCompact, fmtDate, fmtDateTime, fmtMoney, cls } from '../lib/format'
+import { fmtDate, fmtDateTime } from '../lib/format'
+import { ErrorBox } from '../ui/kit'
+import { AnimatedNumber, Bar, CHART, Card, EmptyState, Pill, ProgressRing, Reveal, RevealItem, SWK, Sparkline, StatTile, aed, num, rise } from '../swk/ui'
+import { COMMUNITIES } from '../swk/uae'
 
-const C = { emerald: '#f23a1d', ocean: '#c9260e', teal: '#ff7a45', aviation: '#8a6a52', copper: '#b9741f', violet: '#566058', champagne: '#e0c9a8', red: '#c32135', graphite: '#0f1714' }
-const PIE = [C.emerald, C.ocean, C.copper, C.violet, C.teal, C.aviation, C.champagne]
-const money = (v: any) => fmtMoney(Number(v), 0)
+const PHOTOS = ['marina-sky-penthouse-1', 'palm-garden-homes-1', 'hills-estate-golf-mansion-1', 'business-bay-executive-tower-2', 'creek-harbour-waterside-townhouse-1', 'jvc-boulevard-residences-2', 'arabian-ranches-courtyard-villa-2', 'villa-sanctuary-6', 'islands-2-1', 'river-cove-residences-1']
+const photoFor = (id: number) => `/media/properties/${PHOTOS[Math.abs(id) % PHOTOS.length]}.webp`
+
+function dubaiHour() { return Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Dubai', hour: '2-digit', hour12: false }).format(new Date())) }
+function greeting() { const h = dubaiHour(); return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening' }
+const STAGE_PROB: Record<string, number> = { Inquiry: 0.1, Closed: 1, Lead: 0.1, Viewing: 0.2, Offer: 0.4, Negotiation: 0.55, Contract: 0.75, 'DLD Process': 0.9, Handover: 0.95 }
 
 export function Dashboard() {
-  const { me, can, meta } = useMeta()
+  const { me, can } = useMeta()
   const nav = useNavigate()
+  const reduce = useReducedMotion()
   const q = useQuery({ queryKey: ['dashboard'], queryFn: () => get<any>('/api/dashboard'), refetchInterval: 120000 })
+  const props = useQuery({ queryKey: ['dash-props'], queryFn: () => get<any>('/api/e/properties', { pageSize: 12, sort: 'listed_date', dir: 'desc' }), enabled: can('properties', 'view') })
+  const units = useQuery({ queryKey: ['dash-units'], queryFn: () => get<any>('/api/e/units', { pageSize: 500 }), enabled: can('properties', 'view') })
+  const brief = useQuery({ queryKey: ['ai-brief'], queryFn: () => get<{ output: string; started_at: string; name: string }>('/api/ai/brief'), retry: false, enabled: can('ai', 'view') })
+
+  const d = q.data ?? {}, k = d.kpis ?? {}, ch = d.charts ?? {}, ls = d.lists ?? {}
+  const unitRows: any[] = units.data?.rows ?? []
+  const occupied = unitRows.filter(u => /leased|occupied|rented|sold/i.test(u.status ?? '')).length
+  const occupancy = unitRows.length ? (occupied / unitRows.length) * 100 : 0
+  const funnel: any[] = ch.pipeline_funnel ?? []
+  const funnelMax = Math.max(1, ...funnel.map(s => Number(s.count) || 0))
+  const pipelineTotal = funnel.filter(f => f.stage !== 'Closed').reduce((s, f) => s + (Number(f.value) || 0), 0)
+  const weighted = funnel.filter(f => f.stage !== 'Closed').reduce((s, f) => s + (Number(f.value) || 0) * (STAGE_PROB[f.stage] ?? 0.3), 0)
+  const trend: any[] = ch.revenue_trend ?? []
+  const agenda = useMemo(() => [
+    ...(ls.upcoming_viewings ?? []).map((v: any) => ({ id: `v${v.id}`, kind: 'Viewing', at: v.scheduled_at, title: v.property_title || 'Property viewing', sub: [v.contact, v.agent].filter(Boolean).join(' · '), to: `/e/viewings/${v.id}`, Icon: CalendarCheck })),
+    ...(ls.target_closes ?? []).map((j: any) => ({ id: `j${j.id}`, kind: 'Target close', at: j.target_close, title: j.property || j.job_no, sub: j.client, to: `/e/jobs/${j.id}`, Icon: FileSignature })),
+    ...(ls.renewals ?? []).map((l: any) => ({ id: `l${l.id}`, kind: 'Lease renewal', at: l.end_date, title: l.unit_title || 'Lease', sub: l.tenant, to: `/e/leases/${l.id}`, Icon: KeyRound })),
+  ].sort((a, b) => String(a.at ?? '').localeCompare(String(b.at ?? ''))).slice(0, 7), [ls])
+
   if (q.error) return <ErrorBox error={q.error} onRetry={() => void q.refetch()} />
-  if (!q.data) return <Loading />
-  const d = q.data, k = d.kpis ?? {}
-  const base = meta?.settings.base_currency ?? 'AED'
+  if (!q.data) return <DashboardSkeleton />
 
-  if (d.portal) return (
-    <div className="fade-in dashboard-page">
-      <Welcome name={me?.name} portal />
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5"><Kpi label="Open deals" value={k.open_jobs} /><Kpi label="Completed deals" value={k.delivered} /><Kpi label={`Outstanding (${base})`} value={fmtMoney(k.outstanding)} /></div>
-      <Panel title="Your recent deals" color={C.teal} bodyClass="table-wrap"><table className="grid"><thead><tr><th>Deal no.</th><th>Deal</th><th>Property</th><th>Date</th><th>Stage</th></tr></thead><tbody>{d.recent_jobs.map((j: any) => <tr key={j.id} className="clickable" onClick={() => nav(`/jobs/${j.id}`)}><td><Link className="link" to={`/jobs/${j.id}`}>{j.job_no}</Link></td><td>{j.deal_name}</td><td>{j.property}</td><td>{fmtDate(j.deal_date)}</td><td><Badge value={j.operational_status ?? j.job_status} /></td></tr>)}</tbody></table></Panel>
+  const firstName = (me?.name || '').split(' ')[0] || 'there'
+  const summary = [
+    k.viewings_week !== undefined && `${k.viewings_week} viewing${k.viewings_week === 1 ? '' : 's'} this week`,
+    k.offers_pending !== undefined && `${k.offers_pending} offer${k.offers_pending === 1 ? '' : 's'} awaiting a decision`,
+    k.leads_today !== undefined && `${k.leads_today} new lead${k.leads_today === 1 ? '' : 's'} today`,
+  ].filter(Boolean).join(' · ')
+
+  return (
+    <div className="grid gap-5 max-w-[1680px] mx-auto">
+      {/* ------------------------------------------------------------ hero */}
+      <motion.section className="relative overflow-hidden rounded-[26px] text-white" style={{ background: 'linear-gradient(120deg, #0b1a33 0%, #14305c 55%, #1d4f86 120%)' }}
+        initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}>
+        <div className="absolute inset-0 opacity-[.22] bg-cover bg-center mix-blend-luminosity" style={{ backgroundImage: 'url(/media/hero/dubai-skyline-hero.webp)', backgroundPosition: 'center 40%' }} />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgba(11,26,51,.96) 0%, rgba(11,26,51,.78) 45%, rgba(11,26,51,.25) 100%)' }} />
+        {!reduce && <motion.div className="absolute -top-24 right-[12%] w-[420px] h-[420px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(201,169,110,.28), transparent 65%)' }} animate={{ x: [0, -30, 0], y: [0, 20, 0] }} transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }} />}
+        <img src="/brand/skyline-front.svg" alt="" aria-hidden className="absolute bottom-0 left-0 w-full h-[70px] opacity-[.18] pointer-events-none" />
+        <div className="relative grid gap-6 lg:grid-cols-[1.4fr_1fr] items-end p-6 sm:p-8">
+          <div>
+            <div className="text-[11px] font-semibold tracking-[.26em] uppercase text-[#dcc8a2]">{new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Dubai', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date())}</div>
+            <h1 className="m-0 mt-2 font-display font-medium text-white text-[30px] sm:text-[40px] leading-[1.05]">{greeting()}, <span className="swk-shimmer-text font-semibold">{firstName}</span></h1>
+            <p className="mt-3 mb-0 text-[15px] text-[#c3cde0] max-w-[620px]">{summary || 'Here is what is happening across your listings, deals and leases today.'}</p>
+            <div className="flex flex-wrap gap-2 mt-5">
+              {can('crm', 'create') && <Link to="/e/leads?new=1" className="swk-btn swk-btn-gold"><UserPlus size={16} />New lead</Link>}
+              {can('mandates', 'create') && <Link to="/e/viewings?new=1" className="swk-btn" style={{ color: '#fff', background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.18)' }}><CalendarCheck size={16} />Book viewing</Link>}
+              <Link to="/toolkit" className="swk-btn" style={{ color: '#fff', background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.18)' }}><Calculator size={16} />Deal toolkit</Link>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { l: 'Pipeline', v: pipelineTotal, f: (x: number) => aed(x, { compact: true }) },
+              { l: 'Weighted GCI', v: weighted * 0.02, f: (x: number) => aed(x, { compact: true }) },
+              { l: 'Occupancy', v: occupancy, f: (x: number) => `${x.toFixed(0)}%` },
+            ].map((s, i) => (
+              <motion.div key={s.l} className="swk-glass px-4 py-3.5" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 + i * 0.08, duration: 0.6 }}>
+                <div className="text-[10.5px] uppercase tracking-[.16em] text-[#a9b8d2]">{s.l}</div>
+                <div className="font-display text-[20px] sm:text-[24px] font-semibold text-white mt-1"><AnimatedNumber value={s.v} format={s.f} /></div>
+              </motion.div>))}
+          </div>
+        </div>
+      </motion.section>
+
+      {/* ------------------------------------------------------------ KPI strip */}
+      <Reveal className="grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
+        <StatTile label="Leads today" value={Number(k.leads_today ?? 0)} hint={`${k.leads_qualified ?? 0} qualified`} icon={<UserPlus size={16} />} to="/e/leads" spark={[2, 3, 2, 4, 3, 5, Number(k.leads_today ?? 0) + 3]} />
+        <StatTile label="Viewings · 7 days" value={Number(k.viewings_week ?? 0)} hint={`${k.viewings_missed ?? 0} no-shows (30d)`} icon={<CalendarCheck size={16} />} to="/e/viewings" />
+        <StatTile label="Offers pending" value={Number(k.offers_pending ?? 0)} hint="Awaiting seller / landlord" icon={<HandCoins size={16} />} to="/e/offers" />
+        <StatTile label="Live listings" value={Number(k.properties_available ?? 0)} hint={`${k.properties_reserved ?? 0} under offer`} icon={<Building2 size={16} />} to="/listings" />
+        <StatTile label="Commission received" value={Number(k.received_month ?? 0)} format={v => aed(v, { compact: true })} hint="This month" icon={<Percent size={16} />} to="/e/receipts" tone="champ" />
+        <StatTile label="Rent arrears" value={Number(k.arrears_aed ?? 0)} format={v => aed(v, { compact: true })} hint={`${k.arrears_count ?? 0} cheques overdue`} icon={<Wallet size={16} />} to="/pdc" tone="navy" />
+      </Reveal>
+
+      {/* ------------------------------------------------------------ attention */}
+      {d.alerts?.length > 0 && (
+        <Reveal className="grid gap-2">
+          {d.alerts.slice(0, 4).map((a: any, i: number) => (
+            <RevealItem key={i}>
+              <Link to={a.link} className="flex items-center gap-3 px-4 py-3 rounded-2xl border text-[13.5px] transition-colors hover:brightness-[.98]" style={{ background: a.level === 'danger' ? '#fbeae5' : a.level === 'warn' ? '#fbf3e2' : '#eef2f9', borderColor: a.level === 'danger' ? '#f0c6ba' : a.level === 'warn' ? '#ecdcb6' : '#d8e1f0', color: SWK.ink }}>
+                <AlertTriangle size={17} color={a.level === 'danger' ? SWK.dune : a.level === 'warn' ? SWK.champDeep : SWK.ocean} /><span className="flex-1" dir="auto">{a.text}</span><ArrowRight size={15} />
+              </Link>
+            </RevealItem>))}
+        </Reveal>)}
+
+      {/* ------------------------------------------------------------ pipeline + agenda */}
+      <Reveal className="grid gap-4 xl:grid-cols-12">
+        <Card className="xl:col-span-8" title="Sales pipeline" subtitle="Deals by stage · count and value (AED)" to="/pipeline"
+          actions={<Pill tone="champ">Weighted {aed(weighted, { compact: true })}</Pill>}>
+          {funnel.every(s => !Number(s.count)) ? <EmptyState title="No deals in the pipeline yet" hint="Open a deal file and it will move through these stages." action={can('sales', 'create') && <Link to="/e/jobs?new=1" className="swk-btn swk-btn-primary mt-2"><Plus size={16} />Open a deal</Link>} /> : (
+            <div className="grid gap-3 pt-1">
+              {funnel.map((s, i) => (
+                <div key={s.stage} className="grid grid-cols-[120px_1fr_auto] sm:grid-cols-[150px_1fr_150px] items-center gap-3">
+                  <div className="text-[13px] font-semibold text-ink truncate">{s.stage}</div>
+                  <div className="relative h-9 rounded-xl bg-[#f3eee4] overflow-hidden">
+                    <motion.div className="absolute inset-y-0 left-0 rounded-xl flex items-center px-3 text-[12px] font-semibold text-white" style={{ background: `linear-gradient(90deg, ${CHART[i % 2 ? 3 : 0]}, ${i % 2 ? SWK.sky : SWK.ocean})` }}
+                      initial={{ width: 0 }} whileInView={{ width: `${Math.max(8, (Number(s.count) / funnelMax) * 100)}%` }} viewport={{ once: true }} transition={{ duration: 1, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}>
+                      {Number(s.count) > 0 && `${s.count} deal${Number(s.count) === 1 ? '' : 's'}`}
+                    </motion.div>
+                  </div>
+                  <div className="text-right text-[13px] font-semibold text-ink tabular-nums">{aed(Number(s.value), { compact: true })}<div className="text-[11px] font-medium text-muted">{Math.round((STAGE_PROB[s.stage] ?? 0.3) * 100)}% likely</div></div>
+                </div>))}
+            </div>)}
+        </Card>
+
+        <Card className="xl:col-span-4" title="Today & upcoming" subtitle="Viewings, target closes and renewals" to="/calendar">
+          {agenda.length === 0 ? <EmptyState title="Nothing scheduled" hint="Viewings, transfer dates and renewals will appear here." /> : (
+            <ol className="relative m-0 p-0 list-none">
+              <span className="absolute left-[18px] top-2 bottom-2 w-px bg-gradient-to-b from-[#c9a96e] to-transparent" />
+              {agenda.map((a, i) => (
+                <motion.li key={a.id} className="relative" initial={{ opacity: 0, x: -8 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.06 }}>
+                  <Link to={a.to} className="flex items-start gap-3 py-2.5 group">
+                    <span className="relative z-[1] w-9 h-9 rounded-xl grid place-items-center flex-none bg-white border border-[#e7e1d4] text-[#14305c] group-hover:border-[#c9a96e] transition-colors"><a.Icon size={16} /></span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-2"><span className="text-[11px] font-semibold uppercase tracking-wider text-[#9a7a42]">{a.kind}</span><span className="text-[11.5px] text-muted">{a.kind === 'Viewing' ? fmtDateTime(a.at) : fmtDate(a.at)}</span></span>
+                      <span className="block text-[13.5px] font-semibold text-ink truncate">{a.title}</span>
+                      {a.sub && <span className="block text-[12px] text-muted truncate">{a.sub}</span>}
+                    </span>
+                  </Link>
+                </motion.li>))}
+            </ol>)}
+        </Card>
+      </Reveal>
+
+      {/* ------------------------------------------------------------ revenue + portfolio + market */}
+      <Reveal className="grid gap-4 xl:grid-cols-12">
+        <Card className="xl:col-span-5" title="Commission & revenue" subtitle="By deal month (AED)" to={can('reports', 'view') ? '/reports' : undefined}>
+          <div style={{ height: 250 }}>
+            {trend.every(r => !Number(r.revenue) && !Number(r.profit)) ? <EmptyState title="No revenue posted yet" hint="Commission invoices will build this trend." /> : (
+              <ResponsiveContainer><AreaChart data={trend} margin={{ top: 10, right: 6, left: -8, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="gRev" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={SWK.navy} stopOpacity={0.35} /><stop offset="100%" stopColor={SWK.navy} stopOpacity={0} /></linearGradient>
+                  <linearGradient id="gPro" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={SWK.champ} stopOpacity={0.45} /><stop offset="100%" stopColor={SWK.champ} stopOpacity={0} /></linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 4" stroke="#ece6da" vertical={false} />
+                <XAxis dataKey="month" tickLine={false} axisLine={false} />
+                <YAxis tickLine={false} axisLine={false} tickFormatter={v => aed(v, { compact: true }).replace('AED ', '')} width={52} />
+                <Tooltip formatter={(v: any) => aed(Number(v))} />
+                <Area type="monotone" dataKey="revenue" name="Revenue" stroke={SWK.navy} strokeWidth={2.4} fill="url(#gRev)" />
+                <Area type="monotone" dataKey="profit" name="Net" stroke={SWK.champDeep} strokeWidth={2.4} fill="url(#gPro)" />
+              </AreaChart></ResponsiveContainer>)}
+          </div>
+        </Card>
+
+        <Card className="xl:col-span-3" title="Portfolio" subtitle="Units and listing status" to="/e/units">
+          <div className="flex items-center gap-4">
+            <ProgressRing value={occupancy} size={108} label={`${occupancy.toFixed(0)}%`} sub="occupied" color={SWK.oasis} />
+            <div className="grid gap-1.5 text-[13px] flex-1 min-w-0">
+              <div className="swk-kv"><span>Units managed</span><b>{num(unitRows.length)}</b></div>
+              <div className="swk-kv"><span>Vacant</span><b>{num(k.vacant_units ?? unitRows.length - occupied)}</b></div>
+              <div className="swk-kv"><span>Renewals · 90d</span><b>{num(k.renewals_due ?? 0)}</b></div>
+            </div>
+          </div>
+          {(ch.properties_status ?? []).length > 0 && (
+            <div className="flex items-center gap-3 mt-3">
+              <div style={{ width: 96, height: 96 }} className="flex-none"><ResponsiveContainer><PieChart><Pie data={ch.properties_status} dataKey="value" nameKey="name" innerRadius={30} outerRadius={46} paddingAngle={3} cornerRadius={4} stroke="none">{ch.properties_status.map((_: any, i: number) => <Cell key={i} fill={CHART[i % CHART.length]} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></div>
+              <ul className="m-0 p-0 list-none grid gap-1 text-[12.5px] flex-1 min-w-0">{ch.properties_status.map((s: any, i: number) => <li key={s.name} className="flex items-center gap-2"><i className="w-2.5 h-2.5 rounded-full flex-none" style={{ background: CHART[i % CHART.length] }} /><span className="truncate flex-1 text-body">{s.name}</span><b className="text-ink">{s.value}</b></li>)}</ul>
+            </div>)}
+        </Card>
+
+        <Card className="xl:col-span-4" title="Market pulse" subtitle="Price per sq ft · year on year" to="/market" actions={<Pill tone="grey">Indicative</Pill>}>
+          <div className="grid gap-0.5">
+            {COMMUNITIES.slice(0, 5).map(c => {
+              const yoy = ((c.ppsf - c.ppsfLY) / c.ppsfLY) * 100
+              return (
+                <Link key={c.id} to="/market" className="flex items-center gap-3 py-2 rounded-xl hover:bg-[#faf6ee] px-1 -mx-1 transition-colors">
+                  <span className="w-10 h-10 rounded-xl bg-cover bg-center flex-none" style={{ backgroundImage: `url(${c.image.replace('.webp', '-640.webp')}), url(${c.image})` }} />
+                  <span className="min-w-0 flex-1"><span className="block text-[13.5px] font-semibold text-ink truncate">{c.name}</span><span className="block text-[12px] text-muted">AED {num(c.ppsf)}/sqft · {c.yieldPct}% yield</span></span>
+                  <Sparkline data={c.trend} width={70} height={26} color={SWK.oasis} />
+                  <span className="text-[12px] font-semibold text-[#157a52] w-[52px] text-right">+{yoy.toFixed(1)}%</span>
+                </Link>)
+            })}
+          </div>
+        </Card>
+      </Reveal>
+
+      {/* ------------------------------------------------------------ featured listings */}
+      {(props.data?.rows ?? []).length > 0 && (
+        <section>
+          <div className="flex items-end justify-between gap-3 mb-3">
+            <div><div className="swk-eyebrow">Inventory</div><h2 className="m-0 text-[20px] font-semibold text-ink">Latest listings</h2></div>
+            <Link to="/listings" className="swk-btn swk-btn-ghost">Listing Studio <ArrowUpRight size={15} /></Link>
+          </div>
+          <Reveal className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {props.data.rows.slice(0, 4).map((p: any) => (
+              <motion.div key={p.id} variants={rise} whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 300, damping: 24 }}>
+                <Link to={`/e/properties/${p.id}`} className="block swk-card group">
+                  <div className="relative h-[170px] overflow-hidden">
+                    <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-[1.06]" style={{ backgroundImage: `url(${photoFor(p.id)})` }} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0b1a33]/70 to-transparent" />
+                    <div className="absolute top-3 left-3 flex gap-1.5">{p.is_off_plan ? <Pill tone="champ">Off-plan</Pill> : <Pill tone="navy">Ready</Pill>}{p.is_exclusive && <Pill tone="oasis">Exclusive</Pill>}</div>
+                    <div className="absolute bottom-3 left-3 right-3 text-white font-display text-[19px] font-semibold">{p.price ? aed(p.price) : p.rent_annual ? `${aed(p.rent_annual)}/yr` : 'Price on request'}</div>
+                  </div>
+                  <div className="p-4">
+                    <div className="text-[14px] font-semibold text-ink truncate">{p.title}</div>
+                    <div className="text-[12.5px] text-muted truncate">{p.address || p.property_type}</div>
+                    <div className="flex items-center gap-3 mt-2.5 text-[12.5px] text-body">
+                      <span>{p.bedrooms ? `${p.bedrooms} BR` : 'Studio'}</span><span className="w-1 h-1 rounded-full bg-[#d4c7ad]" /><span>{num(p.area_sqft)} sqft</span>
+                      {p.rera_permit_no ? <span className="ml-auto inline-flex items-center gap-1 text-[#17625f] font-semibold"><BadgeCheck size={14} />Permit</span> : <span className="ml-auto text-[#a33a22] font-semibold">No permit</span>}
+                    </div>
+                  </div>
+                </Link>
+              </motion.div>))}
+          </Reveal>
+        </section>)}
+
+      {/* ------------------------------------------------------------ work queues */}
+      <Reveal className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+        <Card title="Lead queue" subtitle="Respond within 15 minutes to win the lead" to="/e/leads" actions={can('crm', 'create') && <Link to="/e/leads?new=1" className="swk-icon-link" aria-label="New lead"><Plus size={16} /></Link>}>
+          {(ls.lead_queue ?? []).length === 0 ? <EmptyState title="Inbox zero" hint="New portal, WhatsApp and website enquiries land here." /> : ls.lead_queue.slice(0, 6).map((l: any) => (
+            <Link key={l.id} to={`/e/leads/${l.id}`} className="swk-row hover:bg-[#faf6ee] rounded-xl px-1 -mx-1">
+              <span className="swk-row-ic"><Users size={16} /></span>
+              <span className="min-w-0 flex-1"><span className="swk-row-t block">{l.contact_name || l.company}</span><span className="swk-row-s block">{[l.source, l.phone].filter(Boolean).join(' · ')}</span></span>
+              <span className="text-right"><span className="block text-[12.5px] font-semibold text-ink">{l.est_value ? aed(l.est_value, { compact: true }) : '—'}</span><Pill tone={/new/i.test(l.status) ? 'dune' : 'navy'}>{l.status}</Pill></span>
+            </Link>))}
+        </Card>
+
+        <Card title="Offers awaiting decision" subtitle="Purchase and lease offers" to="/e/offers">
+          {(ls.offers_pipeline ?? []).length === 0 ? <EmptyState title="No pending offers" hint="Submitted and negotiating offers appear here." /> : ls.offers_pipeline.slice(0, 6).map((o: any) => (
+            <Link key={o.id} to={`/e/offers/${o.id}`} className="swk-row hover:bg-[#faf6ee] rounded-xl px-1 -mx-1">
+              <span className="swk-row-ic"><HandCoins size={16} /></span>
+              <span className="min-w-0 flex-1"><span className="swk-row-t block">{o.property_title}</span><span className="swk-row-s block">{o.buyer} · {fmtDate(o.offer_date)}</span></span>
+              <span className="text-right"><span className="block text-[12.5px] font-semibold text-ink">{aed(o.offer_price, { compact: true })}</span><Pill tone="champ">{o.status}</Pill></span>
+            </Link>))}
+        </Card>
+
+        <Card title="Compliance watch" subtitle="RERA, DLD and licence health" to="/rera" tone="champ">
+          {[
+            { l: 'Mandates (Form A) expiring · 14d', v: Number(k.mandates_expiring ?? 0), to: '/e/mandates', Icon: FileSignature },
+            { l: 'Stale listings · 21+ days', v: Number(k.stale_listings ?? 0), to: '/listings', Icon: Megaphone },
+            { l: 'Licence & document issues', v: Number(k.compliance_issues ?? 0), to: '/compliance', Icon: Gavel },
+            { l: 'Open maintenance', v: Number(k.maintenance_open ?? 0), to: '/e/maintenance', Icon: Wrench },
+          ].map(r => (
+            <Link key={r.l} to={r.to} className="swk-row">
+              <span className="swk-row-ic" style={{ background: '#fff' }}><r.Icon size={16} /></span>
+              <span className="swk-row-t flex-1">{r.l}</span>
+              <span className="font-display text-[18px] font-semibold" style={{ color: r.v > 0 ? SWK.dune : SWK.oasis }}>{r.v}</span>
+            </Link>))}
+          <div className="mt-3"><div className="flex justify-between text-[12px] mb-1.5"><span className="text-muted">Mandates active</span><b className="text-ink">{k.mandates_active ?? 0}</b></div><Bar value={Number(k.mandates_active ?? 0) - Number(k.mandates_expiring ?? 0)} max={Math.max(1, Number(k.mandates_active ?? 0))} color={SWK.oasis} /></div>
+        </Card>
+      </Reveal>
+
+      {/* ------------------------------------------------------------ AI brief */}
+      {brief.data?.output && (
+        <Reveal>
+          <Card title={<span className="inline-flex items-center gap-2"><Bot size={18} />{brief.data.name} · today’s briefing</span>} subtitle={String(brief.data.started_at).replace('T', ' ').slice(0, 16)} to="/ai" tone="navy">
+            <div dir="auto" className="text-[13.5px] whitespace-pre-line leading-relaxed text-[#d9e1ee] max-h-[220px] overflow-auto">{brief.data.output}</div>
+          </Card>
+        </Reveal>)}
+
+      {/* ------------------------------------------------------------ module launcher */}
+      <section>
+        <div className="mb-3"><div className="swk-eyebrow">SWK OS suite</div><h2 className="m-0 text-[20px] font-semibold text-ink">Jump into a workspace</h2></div>
+        <Reveal className="grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
+          {[
+            { l: 'Deal Pipeline', s: 'Drag deals to MOU & transfer', to: '/pipeline', I: KanbanSquare },
+            { l: 'Market Pulse', s: 'Prices, yields, supply', to: '/market', I: LineChart },
+            { l: 'Off-Plan', s: 'Launches & payment plans', to: '/offplan', I: Rocket },
+            { l: 'PDC Vault', s: 'Cheques & deposits', to: '/pdc', I: Wallet },
+            { l: 'Owner 360', s: 'Landlord portfolios', to: '/owners', I: Home },
+            { l: 'Leaderboard', s: 'Agent GCI & licences', to: '/agents', I: Trophy },
+            { l: 'RERA Centre', s: 'BRN, Trakheesi, AML', to: '/rera', I: Gavel },
+            { l: 'Deal Toolkit', s: 'DLD fees, mortgage, RERA', to: '/toolkit', I: Calculator },
+            { l: 'Listing Studio', s: 'Quality & portals', to: '/listings', I: Megaphone },
+            { l: 'Calendar', s: 'Viewings & transfers', to: '/calendar', I: CalendarDays },
+            { l: 'AI Concierge', s: 'Briefings & approvals', to: '/ai', I: Sparkles },
+            { l: 'Activity', s: 'Calls & follow-ups', to: '/e/activities', I: Clock },
+          ].map(m => (
+            <motion.div key={m.to} variants={rise} whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 320, damping: 22 }}>
+              <Link to={m.to} className="group flex flex-col gap-3 h-full p-4 rounded-[18px] bg-white border border-[#e7e1d4] hover:border-[#dccaa6] hover:shadow-[0_18px_36px_-24px_rgba(11,26,51,.45)] transition-all">
+                <span className="w-10 h-10 rounded-xl grid place-items-center text-[#c9a96e] transition-transform group-hover:rotate-[-6deg] group-hover:scale-110" style={{ background: 'linear-gradient(145deg,#1b3a6b,#0b1a33)' }}><m.I size={18} /></span>
+                <span><span className="block text-[14px] font-semibold text-ink">{m.l}</span><span className="block text-[12px] text-muted">{m.s}</span></span>
+              </Link>
+            </motion.div>))}
+        </Reveal>
+      </section>
     </div>
   )
+}
 
-  const tiles: { label: string; value: any; hint?: any; tone?: any; surface?: string; to?: string; show: boolean; desk?: boolean }[] = [
-    { label: 'Open deals', surface: 'ocean', value: k.open_jobs, hint: `${k.jobs_month ?? 0} opened this month`, to: '/e/jobs?filters=' + encodeURIComponent(JSON.stringify([{ field: 'job_status', op: 'in', value: ['Lead', 'Active Mandate', 'Offer Submitted', 'Offer Accepted', 'Contract Signed', 'DLD Submitted', 'DLD Approved', 'On Hold'] }])), show: k.open_jobs !== undefined },
-    { label: 'In pipeline', surface: 'transit', value: k.in_transit, to: '/e/jobs?filters=' + encodeURIComponent(JSON.stringify([{ field: 'operational_status', op: 'in', value: ['Viewing', 'Offer', 'Negotiation', 'Contract', 'DLD Process', 'Handover'] }])), show: k.in_transit !== undefined },
-    { label: `Revenue this month (${base})`, surface: 'revenue', value: fmtMoney(k.revenue_month, 0), hint: `Deal profit ${fmtMoney(k.profit_month, 0)}`, show: k.revenue_month !== undefined },
-    { label: `Receivables (${base})`, surface: 'collections', value: fmtMoney(k.ar_outstanding, 0), hint: k.ar_overdue > 0 ? `${fmtMoney(k.ar_overdue, 0)} overdue` : 'Nothing overdue', tone: k.ar_overdue > 0 ? 'amber' : undefined, to: '/reports?r=ar_aging', show: k.ar_outstanding !== undefined },
-    { label: `Payables (${base})`, value: fmtMoney(k.ap_outstanding, 0), to: '/reports?r=ap_aging', show: k.ap_outstanding !== undefined },
-    { label: `Cash & bank (${base})`, value: fmtMoney(k.cash, 0), to: '/e/bank_accounts', show: k.cash !== undefined },
-    { label: `Unbilled work (${base})`, surface: 'collections', value: fmtMoney(k.unbilled, 0), tone: k.unbilled > 0 ? 'amber' : undefined, to: '/reports?r=unbilled_charges', show: k.unbilled !== undefined },
-    { label: 'Open quotations', value: k.quotes_open, to: '/e/quotations', show: k.quotes_open !== undefined },
-    { label: 'New leads', value: k.leads_new, hint: `Pipeline ${fmtMoney(k.pipeline, 0)}`, to: '/e/leads', show: k.leads_new !== undefined },
-    { label: 'Open tickets', value: k.tickets_open, to: '/e/tickets', show: k.tickets_open !== undefined },
-    { label: 'My open tasks', value: k.my_tasks, to: '/e/tasks', show: k.my_tasks !== undefined },
-    // §11 CEO desk strip — always rendered above the rest
-    { label: 'Leads today', desk: true, value: k.leads_today, hint: k.leads_qualified !== undefined ? `${k.leads_qualified} qualified leads` : undefined, to: '/e/leads', show: k.leads_today !== undefined },
-    { label: 'Viewings next 7 days', desk: true, value: k.viewings_week, hint: k.viewings_missed !== undefined ? `${k.viewings_missed} no-shows in 30 days` : undefined, to: '/e/viewings', show: k.viewings_week !== undefined },
-    { label: 'Offers pending', desk: true, value: k.offers_pending, to: '/e/offers', show: k.offers_pending !== undefined },
-    { label: `Pipeline value (${base})`, desk: true, surface: 'revenue', value: fmtMoney(k.pipeline_value, 0), hint: k.open_jobs !== undefined ? `${k.open_jobs} open deals` : undefined, to: '/e/jobs', show: k.pipeline_value !== undefined },
-    { label: 'Available properties', desk: true, value: k.properties_available, hint: k.properties_reserved !== undefined ? `${k.properties_reserved} reserved or under offer` : undefined, to: '/e/properties?filters=' + encodeURIComponent(JSON.stringify([{ field: 'status', op: 'eq', value: 'Available' }])), show: k.properties_available !== undefined },
-    { label: 'Renewals due (90 days)', desk: true, value: k.renewals_due, hint: k.vacant_units !== undefined ? `${k.vacant_units} vacant units` : undefined, to: '/e/leases', show: k.renewals_due !== undefined },
-    { label: `Rent arrears (${base})`, desk: true, value: fmtMoney(k.arrears_aed, 0), hint: k.arrears_count !== undefined ? `${k.arrears_count} schedules overdue` : undefined, to: '/e/rent_schedules?filters=' + encodeURIComponent(JSON.stringify([{ field: 'status', op: 'eq', value: 'Overdue' }])), show: k.arrears_aed !== undefined },
-    { label: `Commissions received (${base})`, desk: true, value: fmtMoney(k.received_month, 0), hint: k.commission_expected !== undefined ? `AED ${fmtMoney(k.commission_expected, 0)} still to invoice` : undefined, to: '/e/receipts', show: k.received_month !== undefined },
-    // supporting mandate + compliance figures in "More business figures"
-    { label: 'Open maintenance', value: k.maintenance_open, hint: k.maintenance_exceptions !== undefined ? `${k.maintenance_exceptions} urgent or emergency` : undefined, to: '/e/maintenance', show: k.maintenance_open !== undefined },
-    { label: 'Mandates expiring (14 days)', value: k.mandates_expiring, hint: k.mandates_active !== undefined ? `${k.mandates_active} active mandates` : undefined, to: '/e/mandates', show: k.mandates_expiring !== undefined },
-    { label: 'Stale mandates (21+ days)', value: k.stale_listings, to: '/e/mandates', show: k.stale_listings !== undefined },
-    { label: 'Compliance issues', value: k.compliance_issues, to: '/reports?r=document_expiries', show: k.compliance_issues !== undefined },
-  ].filter(t => t.show)
-
-  const ch = d.charts ?? {}, ls = d.lists ?? {}
-  const deskTiles = tiles.filter(t => t.desk), stdTiles = tiles.filter(t => !t.desk)
-  const kpiClick = (t: (typeof tiles)[number]) => t.to && (!t.to.startsWith('/reports') || (can('reports', 'view') && can('finance', 'view'))) ? () => nav(t.to!) : undefined
+function DashboardSkeleton() {
   return (
-    <div className="fade-in dashboard-page">
-      <Welcome name={me?.name} />
-      {deskTiles.length > 0 && <section className="dashboard-desk" aria-label="Real estate desk today"><h2 className="dashboard-section-title">Real estate desk today</h2><div className="dashboard-metrics">{deskTiles.map(t => <Kpi key={t.label} className={t.surface ? `metric-${t.surface}` : undefined} label={t.label} value={t.value ?? 0} hint={t.hint} onClick={kpiClick(t)} />)}</div></section>}
-      <section aria-label="Business at a glance"><div className="dashboard-metrics">{stdTiles.slice(0, 4).map(t => <Kpi key={t.label} className={t.surface ? `metric-${t.surface}` : undefined} label={t.label} value={t.value ?? 0} hint={t.hint} onClick={kpiClick(t)} />)}</div></section>
-      {d.alerts?.length > 0 && <details className="dashboard-disclosure dashboard-attention" open><summary>Needs attention <span>{d.alerts.length}</span></summary><div className="dashboard-alerts">{d.alerts.map((a: any, i: number) => (
-        <Link key={i} to={a.link} data-level={a.level} className="dashboard-alert flex items-center gap-3 px-4 py-2.5 text-[13.5px]">
-          {a.level === 'danger' ? <AlertTriangle size={17} /> : a.level === 'warn' ? <TriangleAlert size={17} /> : <Info size={17} />}<span className="flex-1" dir="auto">{a.text}</span><ArrowRight size={15} /></Link>))}</div></details>}
-
-
-      <OperationsDesk data={d} />
-        {ls.recent_jobs && (
-          <Panel className="xl:col-span-7" title="Latest deals" color={C.teal} tools={can('jobs', 'create') && <button onClick={() => nav('/e/jobs?new=1')} aria-label="New deal"><Plus size={17} /></button>} bodyClass="table-wrap max-h-[380px]">
-            <table className="grid"><thead><tr><th>Client</th><th>Deal no.</th><th>Property</th><th>Type</th><th>Date</th><th>Stage</th></tr></thead><tbody>
-              {ls.recent_jobs.length === 0 && <tr><td colSpan={6}><Empty title="No deals yet" hint="Open a deal file from a customer or an accepted quotation." action={can('jobs', 'create') && <button className="btn green" onClick={() => nav('/e/jobs?new=1')}><Plus /> New deal</button>} /></td></tr>}
-              {ls.recent_jobs.map((j: any) => <tr key={j.id} className="clickable" onClick={() => nav(`/jobs/${j.id}`)}><td className="max-w-[240px] truncate">{j.client}</td><td><Link className="link" to={`/jobs/${j.id}`} onClick={e => e.stopPropagation()}>{j.job_no}</Link></td><td className="max-w-[220px] truncate">{j.property}</td><td>{j.deal_type}</td><td className="whitespace-nowrap">{fmtDate(j.deal_date)}</td><td><Badge value={j.operational_status ?? j.job_status} /></td></tr>)}</tbody></table>
-          </Panel>)}
-
-      <details className="dashboard-disclosure dashboard-workflow"><summary>Deal workflow <span>Enquiry through completion</span></summary><DailyWorkflow data={d} base={base} /></details>
-      {can('ai', 'view') && <AiBrief />}
-      <details className="dashboard-disclosure dashboard-business"><summary>Business details and reports <span>Figures, charts and recent activity</span></summary>
-      <h2 className="dashboard-section-title">Deal activity and business results</h2>
-      <DashboardOverview data={d} base={base} />
-
-      <div className="grid gap-4 xl:grid-cols-12">
-        {ch.pipeline_funnel && (
-          <Panel className="xl:col-span-7" title="Deal pipeline funnel" color={C.emerald} tools={<span className="text-xs opacity-80 mr-1">deals · value ({base})</span>}>
-            <div className="p-3" style={{ height: 300 }}>
-              {ch.pipeline_funnel.every((s: any) => !s.count) ? <Empty title="No deals in the pipeline yet" hint="Open a deal file and it will travel through these stages." /> : (
-                <ResponsiveContainer><ComposedChart data={ch.pipeline_funnel} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2dfd5" vertical={false} />
-                  <XAxis dataKey="stage" tick={{ fontSize: 12.5 }} interval={0} angle={-16} textAnchor="end" height={54} />
-                  <YAxis yAxisId="count" tick={{ fontSize: 13 }} width={40} allowDecimals={false} />
-                  <YAxis yAxisId="value" orientation="right" tickFormatter={fmtCompact} tick={{ fontSize: 13 }} width={58} />
-                  <Tooltip formatter={(v: any, name: any) => (name === 'Deals' ? v : money(v))} />
-                  <Legend />
-                  <Bar yAxisId="count" dataKey="count" name="Deals" fill={C.emerald} radius={[6, 6, 0, 0]} maxBarSize={54} />
-                  <Bar yAxisId="value" dataKey="value" name="Value" fill={C.champagne} radius={[6, 6, 0, 0]} maxBarSize={54} />
-                </ComposedChart></ResponsiveContainer>)}
-            </div>
-          </Panel>)}
-        {ch.properties_status && (
-          <Panel className="xl:col-span-5" title="Properties by status" color={C.teal}>
-            <div className="p-3" style={{ height: 300 }}>
-              {ch.properties_status.length === 0 ? <Empty title="No properties yet" hint="Add mandates and properties to see the portfolio mix." /> : <ResponsiveContainer><PieChart><Pie data={ch.properties_status} dataKey="value" nameKey="name" innerRadius={62} outerRadius={94} cornerRadius={6} paddingAngle={4}>{ch.properties_status.map((_: any, i: number) => <Cell key={i} fill={PIE[i % PIE.length]} />)}</Pie><Tooltip /><Legend /></PieChart></ResponsiveContainer>}
-            </div>
-          </Panel>)}
-        {ls.upcoming_viewings && (
-          <Panel className="xl:col-span-7" title={<span className="flex items-center gap-2"><CalendarDays size={16} /> Upcoming viewings – next 7 days</span>} color={C.violet} tools={can('mandates', 'create') && <button onClick={() => nav('/e/viewings?new=1')} aria-label="New viewing"><Plus size={17} /></button>} bodyClass="table-wrap max-h-[330px]">
-            {ls.upcoming_viewings.length === 0 ? <Empty title="No viewings booked" hint="Book a viewing against a mandate or a lead and it appears here." /> : <table className="grid"><thead><tr><th>When</th><th>Property</th><th>Client</th><th>Agent</th><th>Status</th></tr></thead><tbody>{ls.upcoming_viewings.map((v: any) => <tr key={v.id} className="clickable" onClick={() => nav(`/e/viewings/${v.id}`)}><td className="whitespace-nowrap text-xs">{fmtDateTime(v.scheduled_at)}</td><td className="max-w-[220px] truncate">{v.property_title}</td><td>{v.contact}</td><td>{v.agent}</td><td><Badge value={v.status} />{v.follow_up_required ? <span className="text-xs text-muted"> · follow-up</span> : null}</td></tr>)}</tbody></table>}
-          </Panel>)}
-        {ch.viewings_outcome && ch.viewings_outcome.length > 0 && (
-          <Panel className="xl:col-span-5" title="Viewing outcomes – last 30 days" color={C.graphite}>
-            <div className="p-3" style={{ height: 300 }}><ResponsiveContainer><PieChart><Pie data={ch.viewings_outcome} dataKey="value" nameKey="name" innerRadius={62} outerRadius={94} cornerRadius={6} paddingAngle={4}>{ch.viewings_outcome.map((_: any, i: number) => <Cell key={i} fill={PIE[i % PIE.length]} />)}</Pie><Tooltip /><Legend /></PieChart></ResponsiveContainer></div>
-          </Panel>)}
-        {ls.offers_pipeline && (
-          <Panel className="xl:col-span-6" title="Offers awaiting a decision" color={C.copper} bodyClass="table-wrap max-h-[300px]">
-            {ls.offers_pipeline.length === 0 ? <Empty title="No pending offers" hint="Offers submitted or under negotiation appear here." /> : <table className="grid"><thead><tr><th>Date</th><th>Property</th><th>Buyer</th><th className="num">Price ({base})</th><th>Status</th></tr></thead><tbody>{ls.offers_pipeline.map((o: any) => <tr key={o.id} className="clickable" onClick={() => nav(`/e/offers/${o.id}`)}><td className="whitespace-nowrap text-xs">{fmtDate(o.offer_date)}</td><td className="max-w-[200px] truncate">{o.property_title}</td><td>{o.buyer}</td><td className="num">{money(o.offer_price)}</td><td><Badge value={o.status} /></td></tr>)}</tbody></table>}
-          </Panel>)}
-        {ls.renewals && (
-          <Panel className="xl:col-span-6" title="Lease renewals – next 90 days" color={C.aviation} bodyClass="table-wrap max-h-[300px]">
-            {ls.renewals.length === 0 ? <Empty title="Nothing expiring soon" hint="Leases ending in the next 90 days appear here to start renewals." /> : <table className="grid"><thead><tr><th>Ends</th><th>Unit</th><th>Tenant</th><th className="num">Annual rent ({base})</th><th>Status</th></tr></thead><tbody>{ls.renewals.map((l: any) => <tr key={l.id} className="clickable" onClick={() => nav(`/e/leases/${l.id}`)}><td className="whitespace-nowrap text-xs">{fmtDate(l.end_date)}</td><td className="max-w-[200px] truncate">{l.unit_title}</td><td>{l.tenant}</td><td className="num">{money(l.annual_rent)}</td><td><Badge value={l.status} /></td></tr>)}</tbody></table>}
-          </Panel>)}
-        {ls.lead_queue && (
-          <Panel className="xl:col-span-6" title="Lead queue – newest first" color={C.emerald} tools={can('crm', 'create') && <button onClick={() => nav('/e/leads?new=1')} aria-label="New lead"><Plus size={17} /></button>} bodyClass="table-wrap max-h-[300px]">
-            {ls.lead_queue.length === 0 ? <Empty title="No open leads" hint="New enquiries queue here until they convert or close." /> : <table className="grid"><thead><tr><th>Lead</th><th>Source</th><th className="num">Est. value ({base})</th><th>Status</th></tr></thead><tbody>{ls.lead_queue.map((l: any) => <tr key={l.id} className="clickable" onClick={() => nav(`/e/leads/${l.id}`)}><td><div className="font-semibold max-w-[220px] truncate">{l.company || l.contact_name}</div>{l.contact_name && l.company ? <div className="text-xs text-muted">{l.contact_name}{l.phone ? ` · ${l.phone}` : ''}</div> : null}</td><td>{l.source}</td><td className="num">{l.est_value ? money(l.est_value) : '—'}</td><td><Badge value={l.status} /></td></tr>)}</tbody></table>}
-          </Panel>)}
-        {ch.sales_branch && (
-          <Panel className="xl:col-span-7 dashboard-sales-panel" title="Sales by branch" color={C.ocean} tools={<span className="text-xs opacity-80 mr-1">invoiced this month · {base}</span>}>
-            <div className="p-3" style={{ height: 290 }}>
-              {ch.sales_branch.length === 0 ? <Empty title="No sales yet this month" hint="Invoiced revenue and unbilled deal work appear here by branch." /> : (
-                <ResponsiveContainer><BarChart data={ch.sales_branch} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" stroke="#e2dfd5" vertical={false} /><XAxis dataKey="branch" tick={{ fontSize: 14 }} /><YAxis tickFormatter={fmtCompact} tick={{ fontSize: 14 }} width={62} /><Tooltip formatter={money} /><Legend /><Bar dataKey="invoiced" name="Invoiced" fill={C.emerald} radius={[6, 6, 0, 0]} maxBarSize={90} /><Bar dataKey="unbilled" name="All work waiting to invoice" fill={C.champagne} radius={[6, 6, 0, 0]} maxBarSize={90} /></BarChart></ResponsiveContainer>)}
-            </div>
-          </Panel>)}
-        {ls.recent_calls && (
-          <Panel className="xl:col-span-5" title="Recent customer calls" color={C.violet} tools={can('crm', 'create') && <button onClick={() => nav('/e/activities?new=1&type=Call')} aria-label="Log a call"><Plus size={17} /></button>} bodyClass="max-h-[290px] overflow-auto">
-            {ls.recent_calls.length === 0 ? <Empty title="No calls logged" hint="Log calls from CRM → Calls & Activities." /> : <table className="grid"><thead><tr><th>Contact / company</th><th>When</th><th>Outcome</th></tr></thead><tbody>{ls.recent_calls.map((c: any) => <tr key={c.id} className="clickable" onClick={() => nav(`/e/activities/${c.id}`)}><td><div className="font-semibold">{c.contact_name || c.company || c.subject}</div><div className="text-xs text-muted">{c.company ?? ''} {c.phone ? '· ' + c.phone : ''}</div></td><td className="whitespace-nowrap text-xs">{fmtDateTime(c.start_at)}<div className="text-muted">{c.direction}</div></td><td>{c.outcome ? <Badge value={c.outcome} tone="grey" /> : ''}</td></tr>)}</tbody></table>}
-          </Panel>)}
-        {ch.revenue_trend && (
-          <Panel className="xl:col-span-12 dashboard-financial-panel" title="Revenue, cost & profit by deal month" color={C.emerald}>
-            <div className="p-3" style={{ height: 280 }}>{ch.revenue_trend.length === 0 ? <Empty title="No deal financials yet" /> : (
-              <ResponsiveContainer><ComposedChart data={ch.revenue_trend}><CartesianGrid strokeDasharray="3 3" stroke="#e2dfd5" vertical={false} /><XAxis dataKey="month" tick={{ fontSize: 14 }} /><YAxis tickFormatter={fmtCompact} tick={{ fontSize: 14 }} width={62} /><Tooltip formatter={money} /><Legend /><Bar dataKey="revenue" name="Revenue" fill={C.emerald} radius={[5, 5, 0, 0]} maxBarSize={44} /><Bar dataKey="cost" name="Cost" fill={C.copper} radius={[5, 5, 0, 0]} maxBarSize={44} /><Line type="monotone" dataKey="profit" name="Profit" stroke="var(--ink)" strokeWidth={2.5} dot={{ r: 3 }} /></ComposedChart></ResponsiveContainer>)}</div>
-          </Panel>)}
-        {ls.target_closes && (
-          <Panel className="xl:col-span-6" title={<span className="flex items-center gap-2"><CalendarDays size={16} /> Target closes – next 10 days</span>} color={C.ocean} bodyClass="max-h-[300px] overflow-auto">
-            {ls.target_closes.length === 0 ? <Empty title="No target closes in this window" hint="Set a target close date on a deal to plan the week." /> : <table className="grid"><tbody>{ls.target_closes.map((j: any) => <tr key={j.id} className="clickable" onClick={() => nav(`/jobs/${j.id}`)}><td><span className="link">{j.job_no}</span><div className="text-xs text-muted">{j.client}</div></td><td className="max-w-[220px] truncate">{j.property ?? '—'}</td><td className="whitespace-nowrap text-xs">{fmtDate(j.target_close)}</td></tr>)}</tbody></table>}
-          </Panel>)}
-        {ch.top_customers && ch.top_customers.length > 0 && (
-          <Panel className="xl:col-span-6" title="Top customers – revenue, last 90 days" color={C.copper}>
-            <div className="p-3" style={{ height: 280 }}><ResponsiveContainer><BarChart data={ch.top_customers} layout="vertical" margin={{ left: 20 }}><CartesianGrid strokeDasharray="3 3" stroke="#e2dfd5" horizontal={false} /><XAxis type="number" tickFormatter={fmtCompact} tick={{ fontSize: 14 }} /><YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 14 }} /><Tooltip formatter={money} /><Bar dataKey="value" name="Revenue" fill={C.copper} radius={[0, 6, 6, 0]} /></BarChart></ResponsiveContainer></div>
-          </Panel>)}
-        {ch.ar_aging && (
-          <Panel className="xl:col-span-6" title="Receivables ageing" color={C.violet}>
-            <div className="p-3" style={{ height: 280 }}><ResponsiveContainer><BarChart data={ch.ar_aging}><CartesianGrid strokeDasharray="3 3" stroke="#e2dfd5" vertical={false} /><XAxis dataKey="name" tick={{ fontSize: 14 }} /><YAxis tickFormatter={fmtCompact} tick={{ fontSize: 14 }} width={62} /><Tooltip formatter={money} /><Bar dataKey="value" name={`Outstanding ${base}`} radius={[6, 6, 0, 0]}>{ch.ar_aging.map((_: any, i: number) => <Cell key={i} fill={['#e3cbb5', '#c8a689', '#a37f63', '#7c5a3d', '#c32135'][i]} />)}</Bar></BarChart></ResponsiveContainer></div>
-          </Panel>)}
-        {ls.my_tasks && ls.my_tasks.length > 0 && (
-          <Panel className="xl:col-span-12" title="My tasks & follow-ups" color={C.graphite} tools={<button onClick={() => nav('/e/tasks')} aria-label="All tasks"><ArrowRight size={16} /></button>}>
-            <table className="grid"><tbody>{ls.my_tasks.map((t: any) => <tr key={t.id} className="clickable" onClick={() => nav(t.link_entity ? (t.link_entity === 'jobs' ? `/jobs/${t.link_id}` : `/e/${t.link_entity}/${t.link_id}`) : `/e/tasks/${t.id}`)}><td className="font-semibold">{t.title}</td><td className="text-muted text-xs">{t.link_label}</td><td className="whitespace-nowrap">{fmtDate(t.due_date)}</td><td><Badge value={t.priority} /></td></tr>)}</tbody></table>
-          </Panel>)}
-      </div>
-      {stdTiles.length > 4 && <section className="mt-8" aria-label="More business figures"><h2 className="dashboard-section-title">More business figures</h2><div className="dashboard-metrics">{stdTiles.slice(4).map(t => <Kpi key={t.label} className={t.surface ? `metric-${t.surface}` : undefined} label={t.label} value={t.value ?? 0} hint={t.hint} onClick={kpiClick(t)} />)}</div></section>}
-      </details>
+    <div className="grid gap-5 max-w-[1680px] mx-auto" aria-busy="true" aria-label="Loading dashboard">
+      <div className="h-[230px] rounded-[26px] animate-pulse" style={{ background: 'linear-gradient(120deg,#0b1a33,#14305c)' }} />
+      <div className="grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">{Array.from({ length: 6 }, (_, i) => <div key={i} className="h-[118px] rounded-[18px] bg-white border border-[#e7e1d4] animate-pulse" />)}</div>
+      <div className="grid gap-4 xl:grid-cols-12"><div className="xl:col-span-8 h-[320px] rounded-[20px] bg-white border border-[#e7e1d4] animate-pulse" /><div className="xl:col-span-4 h-[320px] rounded-[20px] bg-white border border-[#e7e1d4] animate-pulse" /></div>
     </div>
   )
-}
-
-function Welcome({ name, portal }: { name?: string; portal?: boolean }) {
-  const { can } = useMeta()
-  return <div className={cls('dashboard-welcome flex items-center gap-4 flex-wrap', !portal && 'control-welcome')}>
-    <div><h1 className="m-0">{portal ? 'Your deals & documents' : 'Your business desk'}</h1><div className="text-muted">{name ? `Hello, ${name.split(' ')[0]}. ` : ''}{portal ? 'Your deals, documents and invoices in one place.' : 'See what needs attention, keep deals moving and stay on top of payments.'}</div></div>
-    {!portal && <nav className="flex gap-2 flex-wrap" aria-label="Dashboard actions">{(can('crm', 'view') || can('finance', 'view') || can('admin', 'view')) && <Link className="btn outline" to="/email"><Mail size={16} />Email</Link>}<Link className="btn outline" to="/calendar"><CalendarDays size={16} />Schedule</Link>{can('jobs', 'create') && <Link className="btn dark" to="/e/jobs?new=1"><Plus size={16} />New deal</Link>}</nav>}
-  </div>
-}
-
-function DashboardOverview({ data: d, base }: { data: any; base: string }) {
-  const { can } = useMeta()
-  const k = d.kpis ?? {}, ch = d.charts ?? {}
-  const modes = ch.jobs_by_mode ?? []
-  const total = modes.reduce((n: number, m: any) => n + Number(m.value || 0), 0)
-  const shortcuts = [
-    { label: 'Deals', to: '/e/jobs', module: 'jobs', Icon: Home },
-    { label: 'Quotations', to: '/e/quotations', module: 'sales', Icon: FileText },
-    { label: 'Calendar', to: '/calendar', module: '', Icon: CalendarDays },
-    { label: 'All workspaces', to: '/', module: '', Icon: LayoutGrid },
-  ].filter(a => !a.module || can(a.module, 'view'))
-  return <section className="dashboard-top" aria-label="Business overview">
-    <section className="card overview-mix"><header><h2>Open deals by type</h2><span>{total} open deals</span></header>
-      {modes.length ? <><div style={{ height: 230 }}><ResponsiveContainer><PieChart><Pie data={modes} dataKey="value" nameKey="name" innerRadius={66} outerRadius={96} cornerRadius={7} paddingAngle={5}>{modes.map((_: any, i: number) => <Cell key={i} fill={PIE[i % PIE.length]} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></div><ul className="mode-legend">{modes.map((m: any, i: number) => <li key={m.name}><i style={{ background: PIE[i % PIE.length] }} />{m.name}<strong>{m.value}</strong></li>)}</ul></> : <Empty title="No open deals" hint="Your deal mix appears as deal files are opened." />}
-    </section>
-    <aside className="overview-account">
-      <section className="card quick-work"><h2>Quick actions</h2><div>{shortcuts.map(({ label, to, Icon }) => <Link key={to} to={to} title={label} aria-label={label}><Icon size={18} /><span>{label}</span></Link>)}</div></section>
-    </aside>
-  </section>
-}
-
-function AiBrief() {
-  const q = useQuery({ queryKey: ['ai-brief'], queryFn: () => get<{ output: string; started_at: string; name: string }>('/api/ai/brief'), retry: false })
-  if (!q.data?.output) return null
-  return (
-    <details className="dashboard-disclosure"><summary>AI briefing <span>{q.data.name}</span></summary><Link to="/ai" className="dashboard-brief block px-4 py-3 no-underline text-ink">
-      <div className="flex items-center gap-2 text-[12.5px] font-bold text-fold mb-1"><Bot size={16} /> {q.data.name} · today’s briefing <span className="font-normal text-muted">{String(q.data.started_at).replace('T', ' ').slice(0, 16)}</span><span className="flex-1" /><span className="underline">Open AI Team</span></div>
-      <div dir="auto" className="text-[13.5px] whitespace-pre-line leading-relaxed brief-output">{q.data.output}</div>
-    </Link></details>
-  )
-}
-
-
-
-function DailyWorkflow({ data, base }: { data: any; base: string }) {
-  const { can } = useMeta(), rail = useRef<HTMLDivElement>(null), [position, setPosition] = useState({ start: true, end: false })
-  const k = data.kpis || {}, ls = data.lists || {}
-  const steps = [
-    { title: 'Enquiry and quotation', surface: 'sales', detail: 'Follow up enquiries, agree the rate and confirm the customer’s acceptance.', value: `${k.quotes_open ?? 0} open quotations`, to: '/e/quotations', module: 'sales', Icon: FileText },
-    { title: 'Viewing and offer', surface: 'deal', detail: 'Open the deal file, arrange viewings and record the customer’s offer.', value: `${k.open_jobs ?? 0} open deals`, to: '/e/jobs', module: 'jobs', Icon: Home },
-    { title: 'DLD and documents', surface: 'documents', detail: 'Prepare the contract and ID documents for DLD registration and escrow.', value: 'Review deal documents', to: '/documents', module: 'documents', Icon: FileText },
-    { title: 'Transfer and handover', surface: 'delivery', detail: 'Arrange the transfer at the developer or the handover of keys to the tenant.', value: 'Check property handovers', to: '/e/handovers', module: 'properties', Icon: KeyRound },
-    { title: 'Invoice the customer', surface: 'billing', detail: 'Check deal charges and supplier costs, then prepare and send the invoice.', value: k.unbilled === undefined ? 'Review charges waiting to invoice' : `${fmtMoney(k.unbilled, 0)} ${base} waiting to invoice`, to: '/reports?r=unbilled_charges', module: 'finance', Icon: FileText },
-    { title: 'Collect payment and close', surface: 'collections', detail: 'Follow up overdue invoices, record the receipt and check the deal before closing it.', value: k.ar_overdue === undefined ? 'Review customer balances' : `${fmtMoney(k.ar_overdue, 0)} ${base} overdue`, to: '/reports?r=ar_aging', module: 'finance', Icon: Wallet },
-  ].filter(s => can(s.module, 'view') && (!s.to.startsWith('/reports') || can('reports', 'view')))
-  const move = (direction: number) => rail.current?.scrollBy({ left: direction * (rail.current.clientWidth * .8), behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
-  return <section className="daily-workflow" aria-label="Daily workflow"><header className="workflow-header"><div><h2>Move each deal forward</h2><p>Start with anything that needs attention, then follow the deal through to payment.</p></div><div className="flex gap-2"><button className="btn outline icon" aria-label="Previous workflow steps" disabled={position.start} onClick={() => move(-1)}><ChevronLeft /></button><button className="btn outline icon" aria-label="Next workflow steps" disabled={position.end || steps.length < 2} onClick={() => move(1)}><ChevronRight /></button></div></header>
-    <div className="workflow-carousel" ref={rail} tabIndex={0} aria-label="Deal workflow steps" onScroll={e => { const r = e.currentTarget; setPosition({ start: r.scrollLeft < 2, end: r.scrollLeft + r.clientWidth >= r.scrollWidth - 2 }) }}>{steps.map((s, i) => <Link key={s.title} to={s.to} className={`workflow-step workflow-${s.surface}`}><div className="workflow-step-head"><span>{i + 1}</span><s.Icon size={22} /></div><h3>{s.title}</h3><p>{s.detail}</p><strong>{s.value}</strong><span className="workflow-open">Open <ArrowRight size={16} /></span></Link>)}</div>
-    {(ls.target_closes || ls.my_tasks) && <div className="daily-schedule"><h3>Plan deals and follow-ups</h3><div>{ls.target_closes && <Link to="/calendar"><CalendarDays size={18} /><span><b>Upcoming target closes</b><small>Confirm documents and transfers</small></span><ArrowRight size={16} /></Link>}{ls.my_tasks && can('projects', 'view') && <Link to="/e/tasks"><CalendarDays size={18} /><span><b>{k.my_tasks ?? ls.my_tasks.length} open tasks</b><small>Check your follow-ups and due dates</small></span><ArrowRight size={16} /></Link>}</div></div>}
-  </section>
-}
-
-function OperationsDesk({ data }: { data: any }) {
-  const { can } = useMeta()
-  const lists = data.lists ?? {}, k = data.kpis ?? {}
-  const events = [
-    ...(lists.target_closes ?? []).map((j: any) => ({ ...j, direction: 'Target close', at: j.target_close, Icon: CalendarDays })),
-    ...(lists.upcoming_viewings ?? []).map((v: any) => ({ ...v, property: v.property_title, job_no: v.viewing_no, direction: 'Viewing', at: v.scheduled_at, Icon: CalendarDays, deal_type: 'Viewing' })),
-  ].sort((a, b) => String(a.at ?? '').localeCompare(String(b.at ?? ''))).slice(0, 5)
-  return <section className="operations-desk" aria-label="Deal desk">
-    <div className="desk-heading"><div><h2>Next on the deal desk</h2><p>Target closes and viewings planned over the next ten days.</p></div><Link className="btn outline" to="/calendar"><CalendarDays size={17} />Open schedule</Link></div>
-    {can('jobs', 'view') && <div className="movement-rail" aria-label="Upcoming deal milestones">{events.length ? events.map((j, i) => <Link className="movement-ticket" key={`${j.direction}-${j.id}-${i}`} to={j.direction === 'Viewing' ? `/e/viewings/${j.id}` : `/jobs/${j.id}`}><span className="movement-kind"><j.Icon size={19} />{j.direction}<span>{fmtDate(j.at)}</span></span><strong>{j.property || 'Property pending'}<ArrowRight size={18} />{j.deal_type || 'Deal'}</strong><span className="movement-client">{j.contact || j.client || 'Customer'}{j.job_no ? `· ${j.job_no}` : ''}</span><span className="movement-action">{j.direction === 'Viewing' ? 'Open viewing' : 'Review deal'} <ChevronRight size={16} /></span></Link>) : <div className="movement-empty"><Home size={28} /><div><strong>Your next target closes will appear here</strong><p>Add a target close date to a deal to plan the week ahead.</p></div>{can('jobs', 'create') && <Link className="btn dark" to="/e/jobs?new=1">Open a deal <ArrowRight size={16} /></Link>}</div>}</div>}
-    <div className="desk-summary">{k.open_jobs !== undefined && <span><Home size={17} /><b>{k.open_jobs}</b> open deals</span>}{k.in_transit !== undefined && <span><Workflow size={17} /><b>{k.in_transit}</b> in pipeline</span>}{k.viewings_week !== undefined && <span><CalendarDays size={17} /><b>{k.viewings_week}</b> viewings this week</span>}{k.my_tasks !== undefined && <span><CalendarDays size={17} /><b>{k.my_tasks}</b> follow-ups to do</span>}<span className="desk-owner">SWK Properties L.L.C.</span></div>
-  </section>
 }

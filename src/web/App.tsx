@@ -28,6 +28,17 @@ import { StudioHome, StudioEditor } from './pages/StudioPage'
 import { NewInvoicePage } from './pages/NewInvoicePage'
 import { Loading, ErrorBox } from './ui/kit'
 
+// SWK real-estate modules (code-split)
+const MarketPage = lazy(() => import('./pages/swk/MarketPage'))
+const ToolkitPage = lazy(() => import('./pages/swk/ToolkitPage'))
+const ListingsStudio = lazy(() => import('./pages/swk/ListingsStudio'))
+const OffPlanPage = lazy(() => import('./pages/swk/OffPlanPage'))
+const PdcVault = lazy(() => import('./pages/swk/PdcVault'))
+const PipelinePage = lazy(() => import('./pages/swk/PipelinePage'))
+const AgentsPage = lazy(() => import('./pages/swk/AgentsPage'))
+const ReraCentre = lazy(() => import('./pages/swk/ReraCentre'))
+const Owner360 = lazy(() => import('./pages/swk/Owner360'))
+
 function Guard({ module, children }: { module: string; children: ReactNode }) {
   const { can } = useMeta()
   return can(module, 'view') ? <>{children}</> : <ErrorBox error={new Error('You do not have access to this page. Ask an administrator to grant the permission.')} />
@@ -46,8 +57,18 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Navigate to="/dashboard" replace />} />
         <Route element={<Shell />}>
-          <Route index element={<Workspaces />} />
+          <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/workspaces" element={<Workspaces />} />
+          <Route path="/market" element={<MarketPage />} />
+          <Route path="/toolkit" element={<ToolkitPage />} />
+          <Route path="/listings" element={<Guard module="properties"><ListingsStudio /></Guard>} />
+          <Route path="/offplan" element={<Guard module="properties"><OffPlanPage /></Guard>} />
+          <Route path="/pdc" element={<Guard module="leases"><PdcVault /></Guard>} />
+          <Route path="/pipeline" element={<Guard module="sales"><PipelinePage /></Guard>} />
+          <Route path="/agents" element={<Guard module="hr"><AgentsPage /></Guard>} />
+          <Route path="/rera" element={<Guard module="compliance"><ReraCentre /></Guard>} />
+          <Route path="/owners" element={<Guard module="finance"><Owner360 /></Guard>} />
           <Route path="/workspace/:workspace" element={<Workspaces key={loc.pathname} />} />
           <Route path="/workspace-tools" element={<WorkspaceUtilities />} />
           <Route path="/e/:entity" element={<EntityListPage />} />
