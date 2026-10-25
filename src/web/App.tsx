@@ -7,6 +7,7 @@ import { useMeta } from './lib/meta'
 import { Shell } from './components/Shell'
 import { Login } from './pages/Login'
 import { Dashboard } from './pages/Dashboard'
+import { Launcher } from './pages/Launcher'
 import { Workspaces, WorkspaceUtilities } from './pages/Workspaces'
 import { EntityListPage, EntityRecordPage } from './pages/EntityPages'
 import { CalendarPage } from './pages/CalendarPage'
@@ -55,9 +56,10 @@ export default function App() {
   return (
     <Suspense fallback={<Loading />}>
       <Routes>
-        <Route path="/login" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/login" element={<Navigate to="/home" replace />} />
         <Route element={<Shell />}>
-          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route index element={<Navigate to="/home" replace />} />
+          <Route path="/home" element={<Launcher />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/workspaces" element={<Workspaces />} />
           <Route path="/market" element={<MarketPage />} />

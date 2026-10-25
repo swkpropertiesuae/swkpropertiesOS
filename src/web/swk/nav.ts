@@ -114,3 +114,50 @@ export function findNav(pathname: string) {
   }
   return best
 }
+
+/** Launcher ("Apps") presentation for each nav section — one tile per section on the post-sign-in home screen. */
+export type AppTone = 'navy' | 'champ' | 'oasis' | 'ocean' | 'dune' | 'plum'
+export const APP_META: Record<string, { blurb: string; icon: LucideIcon; tone: AppTone }> = {
+  command: { blurb: 'Dashboard, pipeline, market pulse & calendar', icon: LayoutDashboard, tone: 'navy' },
+  inventory: { blurb: 'Listings, units, off-plan launches & developers', icon: Building2, tone: 'ocean' },
+  clients: { blurb: 'Leads, contacts, WhatsApp & email', icon: Users, tone: 'oasis' },
+  sales: { blurb: 'Form A mandates, viewings, offers & deal files', icon: FileSignature, tone: 'champ' },
+  leasing: { blurb: 'Ejari leases, PDC cheques & maintenance', icon: KeyRound, tone: 'navy' },
+  owners: { blurb: 'Landlord portfolios, yields & statements', icon: UserRoundCog, tone: 'plum' },
+  finance: { blurb: 'Commissions, tax invoices, bank & statements', icon: Receipt, tone: 'oasis' },
+  compliance: { blurb: 'RERA centre, licences, filings & documents', icon: Gavel, tone: 'dune' },
+  team: { blurb: 'Agent leaderboard, HR, attendance & payroll', icon: Trophy, tone: 'ocean' },
+  tools: { blurb: 'Deal toolkit, Document Studio & reports', icon: Calculator, tone: 'champ' },
+  admin: { blurb: 'Settings, roles, audit trail & integrations', icon: Settings, tone: 'plum' },
+}
+
+export type LauncherApp = { key: string; label: string; blurb: string; icon: LucideIcon; tone: AppTone; items: NavItem[]; landing: string }
+
+/** Permission-filtered apps for the launcher. An app is hidden when none of its features are permitted. */
+export function launcherApps(can: (module: string, action?: 'view') => boolean): LauncherApp[] {
+  const out: LauncherApp[] = []
+  for (const s of SWK_NAV) {
+    const items = s.items.filter(i => !i.module || can(i.module, 'view'))
+    const meta = APP_META[s.key]
+    if (!items.length || !meta) continue
+    out.push({ key: s.key, label: s.label, ...meta, items, landing: items[0]!.to })
+  }
+  return out
+}
+
+const RECENT_KEY = 'swk.recent'
+/** Remembers the last few feature pages a user opened (per browser) so the launcher can offer a way back in. */
+export function rememberVisit(pathname: string) {
+  const hit = findNav(pathname)
+  if (!hit) return
+  try {
+    const list: string[] = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]')
+    localStorage.setItem(RECENT_KEY, JSON.stringify([hit.item.to, ...list.filter(t => t !== hit.item.to)].slice(0, 8)))
+  } catch { /* storage unavailable — recents are a convenience only */ }
+}
+export function recentItems(can: (module: string, action?: 'view') => boolean, limit = 4): (NavItem & { section: string })[] {
+  let list: string[] = []
+  try { list = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]') } catch { /* ignore */ }
+  const all = SWK_NAV.flatMap(s => s.items.map(i => ({ ...i, section: s.label })))
+  return list.map(to => all.find(i => i.to === to)).filter((i): i is NavItem & { section: string } => !!i && (!i.module || can(i.module, 'view'))).slice(0, limit)
+}

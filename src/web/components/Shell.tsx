@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'motion/react'
-import { Bell, Search, Plus, Check, ChevronDown, ChevronLeft, ChevronRight, LogOut, Menu, UserRound, LifeBuoy, LayoutGrid, Languages, X } from 'lucide-react'
+import { Bell, Search, Plus, Check, ChevronDown, ChevronRight, LogOut, UserRound, LifeBuoy, LayoutGrid, Languages } from 'lucide-react'
 import { useMeta } from '../lib/meta'
 import { get, post } from '../lib/api'
 import { cls, fmtIsoStamp } from '../lib/format'
 import { Modal, useClickOutside } from '../ui/kit'
 import { CommandPalette } from './CommandPalette'
-import { SWK_NAV, QUICK_CREATE, findNav } from '../swk/nav'
+import { APP_META, QUICK_CREATE, findNav, rememberVisit } from '../swk/nav'
 
 /** Live Dubai time (Gulf Standard Time). */
 function DubaiClock() {
@@ -63,53 +63,28 @@ function QuickCreate() {
   )
 }
 
-function Sidebar({ collapsed, setCollapsed, mobileOpen, closeMobile, openSearch, logout }: { collapsed: boolean; setCollapsed: (v: boolean) => void; mobileOpen: boolean; closeMobile: () => void; openSearch: () => void; logout: () => void }) {
-  const { me, can } = useMeta()
-  const loc = useLocation()
-  const sections = useMemo(() => SWK_NAV.map(s => ({ ...s, items: s.items.filter(i => !i.module || can(i.module, 'view')) })).filter(s => s.items.length), [can])
-  const active = findNav(loc.pathname)
-  const [closed, setClosed] = useState<Record<string, boolean>>(() => { try { return JSON.parse(localStorage.getItem('swk.nav.closed') || '{"admin":true,"team":true}') } catch { return {} } })
-  useEffect(() => { localStorage.setItem('swk.nav.closed', JSON.stringify(closed)) }, [closed])
-  const initials = (me?.name || me?.email || 'S').split(/[\s@.]+/).filter(Boolean).slice(0, 2).map(s => s[0]!.toUpperCase()).join('')
+/** The current app's pages, shown under the top bar in place of a sidebar. */
+function AppNav({ pathname }: { pathname: string }) {
+  const { can } = useMeta()
+  const here = findNav(pathname)
+  const items = useMemo(() => (here?.section.items ?? []).filter(i => !i.module || can(i.module, 'view')), [here, can])
+  if (!here || items.length < 1) return null
+  const meta = APP_META[here.section.key]
   return (
-    <aside className={cls('swk-side no-print', collapsed && 'collapsed', mobileOpen && 'mobile-open')} aria-label="Main navigation">
-      <button className="swk-collapse" onClick={() => setCollapsed(!collapsed)} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>{collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}</button>
-      <div className="swk-side-brand">
-        <Link to="/dashboard" className="flex items-center gap-3 min-w-0" onClick={closeMobile} aria-label="SWK OS home">
-          <img src="/brand/swk-logo-white.png" alt="SWK Properties" />
-          <span className="txt"><div className="t">SWK OS</div><div className="s">Real Estate · Dubai</div></span>
-        </Link>
-        <button className="swk-only-md ml-auto text-white/70 bg-transparent border-0 cursor-pointer" onClick={closeMobile} aria-label="Close menu"><X size={20} /></button>
-      </div>
-      <button className="swk-side-search" onClick={openSearch}><Search size={16} /><span>Search anything…</span><kbd>Ctrl K</kbd></button>
-      <nav className="swk-side-scroll">
-        {sections.map(s => {
-          const isClosed = !collapsed && closed[s.key] && active?.section.key !== s.key
+    <nav className="swk-subnav no-print" aria-label={`${here.section.label} pages`}>
+      <Link to="/home" className="app" title="Back to all apps">{meta && <meta.icon size={15} />}<span>{here.section.label}</span></Link>
+      <span className="div" aria-hidden />
+      <div className="scroll">
+        {items.map(i => {
+          const isActive = here.item.to === i.to
           return (
-            <div key={s.key} className="swk-side-group">
-              <button className="swk-side-group-btn" onClick={() => setClosed(c => ({ ...c, [s.key]: !isClosed }))} aria-expanded={!isClosed}><span>{s.label}</span><ChevronDown size={13} style={{ transform: isClosed ? 'rotate(-90deg)' : undefined }} /></button>
-              <AnimatePresence initial={false}>{!isClosed && (
-                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: .28, ease: [0.16, 1, 0.3, 1] }} style={{ overflow: 'hidden' }}>
-                  {s.items.map(i => {
-                    const isActive = active?.item.to === i.to
-                    return (
-                      <NavLink key={i.to} to={i.to} onClick={closeMobile} className={cls('swk-side-link', isActive && 'active')} title={collapsed ? i.label : undefined}>
-                        {isActive && <motion.span layoutId="swk-side-ind" className="swk-side-ind" transition={{ type: 'spring', stiffness: 380, damping: 32 }} />}
-                        <i.icon size={17} /><span className="swk-label">{i.label}</span>{i.isNew && <span className="new">NEW</span>}
-                      </NavLink>)
-                  })}
-                </motion.div>)}</AnimatePresence>
-            </div>)
+            <NavLink key={i.to} to={i.to} className={cls('lnk', isActive && 'active')} aria-current={isActive ? 'page' : undefined}>
+              {isActive && <motion.span layoutId="swk-subnav-ind" className="ind" transition={{ type: 'spring', stiffness: 380, damping: 32 }} />}
+              <i.icon size={15} /><span>{i.label}</span>{i.isNew && <em>NEW</em>}
+            </NavLink>)
         })}
-      </nav>
-      <div className="swk-side-foot">
-        <div className="swk-user">
-          <Link to="/profile" className="swk-avatar" onClick={closeMobile} title="My profile">{initials}</Link>
-          <div className="meta min-w-0"><div className="n">{me?.name || me?.email}</div><div className="r">{me?.role || 'SWK Properties'}</div></div>
-          <button onClick={logout} aria-label="Sign out" title="Sign out"><LogOut size={16} /></button>
-        </div>
       </div>
-    </aside>
+    </nav>
   )
 }
 
@@ -119,31 +94,28 @@ export function Shell() {
   const loc = useLocation()
   const [palette, setPalette] = useState(false)
   const [guide, setGuide] = useState(false)
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [collapsed, setCollapsedState] = useState(() => localStorage.getItem('swk.side.collapsed') === '1')
-  const setCollapsed = (v: boolean) => { setCollapsedState(v); localStorage.setItem('swk.side.collapsed', v ? '1' : '0') }
   const [userMenu, setUserMenu] = useState(false)
   const userRef = useClickOutside<HTMLDivElement>(() => setUserMenu(false))
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setPalette(true) } }
     window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h)
   }, [])
-  useEffect(() => { setMobileOpen(false) }, [loc.pathname])
+  useEffect(() => { rememberVisit(loc.pathname) }, [loc.pathname])
   const logout = async () => { try { await post('/api/auth/logout') } catch { /* ignore */ } setMe(null); nav('/login') }
   const isPrint = loc.pathname.startsWith('/print')
   const here = findNav(loc.pathname)
-  const pageTitle = here?.item.label ?? titleFromPath(loc.pathname)
+  const isHome = loc.pathname === '/home'
+  const pageTitle = isHome ? 'All apps' : here?.item.label ?? titleFromPath(loc.pathname)
   if (isPrint) return <main id="main"><Outlet context={{ openGuide: () => setGuide(true), openSearch: () => setPalette(true), logout }} /></main>
   const initials = (me?.name || me?.email || 'S').split(/[\s@.]+/).filter(Boolean).slice(0, 2).map(s => s[0]!.toUpperCase()).join('')
   return (
     <div className="swk-app">
-      <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} mobileOpen={mobileOpen} closeMobile={() => setMobileOpen(false)} openSearch={() => setPalette(true)} logout={logout} />
-      <AnimatePresence>{mobileOpen && <motion.div className="fixed inset-0 z-[25] bg-[#08142a]/50 swk-only-md" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMobileOpen(false)} />}</AnimatePresence>
       <div className="swk-main-col">
         <header className="swk-top no-print">
-          <button className="swk-tbtn swk-only-md" onClick={() => setMobileOpen(true)} aria-label="Open menu"><Menu size={18} /></button>
+          <Link to="/home" className="swk-brand" aria-label="SWK OS home"><img src="/brand/swk-logo-ink.png" alt="SWK Properties" /></Link>
+          <Link to="/home" className={cls('swk-apps-btn', isHome && 'on')} aria-label="All apps" title="All apps"><LayoutGrid size={17} /><span className="swk-hide-sm">Apps</span></Link>
           <div className="swk-top-title">
-            <div className="crumb"><Link to="/dashboard">SWK OS</Link>{here && <><ChevronRight size={11} /><span>{here.section.label}</span></>}</div>
+            <div className="crumb"><Link to="/home">SWK OS</Link>{here && <><ChevronRight size={11} /><span>{here.section.label}</span></>}</div>
             <div className="page">{pageTitle}</div>
           </div>
           <div className="flex-1" />
@@ -160,13 +132,14 @@ export function Shell() {
                 <div className="sep" />
                 <Link to="/profile" onClick={() => setUserMenu(false)}><span className="ic"><UserRound size={16} /></span>My profile & security</Link>
                 <Link to="/workspace-tools" onClick={() => setUserMenu(false)}><span className="ic"><Languages size={16} /></span>Language & preferences</Link>
-                <Link to="/workspaces" onClick={() => setUserMenu(false)}><span className="ic"><LayoutGrid size={16} /></span>All workspaces</Link>
+                <Link to="/home" onClick={() => setUserMenu(false)}><span className="ic"><LayoutGrid size={16} /></span>All apps</Link>
                 <button className="item" onClick={() => { setUserMenu(false); setGuide(true) }}><span className="ic"><LifeBuoy size={16} /></span>Quick guide</button>
                 <div className="sep" />
                 <button className="item" onClick={logout}><span className="ic"><LogOut size={16} /></span>Sign out</button>
               </motion.div>)}</AnimatePresence>
           </div>
         </header>
+        {!isHome && <AppNav pathname={loc.pathname} />}
         {me?.demo && <div className="demo-notice no-print"><span><strong>Demo workspace</strong> · fictional data · external sending disabled</span><details><summary>Details</summary><p>Isolated from production. Resets every night. External e-mail, WhatsApp and integrations are switched off.</p><button className="btn outline sm" onClick={async () => { if (confirm('Restore the demo to its original state and sign out?')) { await post('/api/demo/reset'); window.location.href = '/login' } }}>Reset demo</button></details></div>}
         {me?.defaultPassword && !me?.demo && <div className="no-print bg-[#f3e6c4] text-[#6b4a00] px-5 py-2 text-sm font-semibold flex items-center gap-3 flex-wrap">You are signed in with the default password. <Link to="/profile" className="underline">Change it now</Link></div>}
         <main className="swk-main" id="main">
