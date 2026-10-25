@@ -65,7 +65,7 @@ export function Login() {
       if (remember && em === email) localStorage.setItem('swk.remember', em); else if (!remember) localStorage.removeItem('swk.remember')
       setDone(true)
       await new Promise(res => setTimeout(res, reduce ? 0 : 550))
-      await reload(); nav('/dashboard', { replace: true })
+      await reload(); nav('/home', { replace: true })
     } catch (e: any) { setErr(e.message || 'Sign-in failed. Check your details and try again.') } finally { setBusy(false) }
   }
   const submit = (e: React.FormEvent) => { e.preventDefault(); void signIn(email, pw) }
