@@ -5,7 +5,7 @@ You will run a handful of commands on your own computer. Nothing here needs codi
 ## 0. What you are building
 
 ```
-Browser ──► Cloudflare Worker "digitalburj-os" ──► Container (the app, Node + Chromium) ──► Supabase PostgreSQL (your data)
+Browser ──► Cloudflare Worker "swk-os" ──► Container (the app, Node + Chromium) ──► Supabase PostgreSQL (your data)
                  (HTTPS, your domain)            runs in the Asia-Pacific region              Singapore
 ```
 
@@ -35,7 +35,7 @@ The app asks the database one question at a time and waits for each answer. If t
 | A computer with **Node.js 22** | `node -v` should print `v22…`. Install the LTS from nodejs.org |
 | **Git** | `git --version` |
 | **Docker Desktop**, running | Install from docker.com, open it, then `docker info` must not show an error. Wrangler builds the app image on your machine |
-| A **Cloudflare account** | You have one (shippingdigitalburj@gmail.com) |
+| A **Cloudflare account** | You have one (the Swkpropertiesuae88@gmail.com account) |
 | **Workers Paid plan** ($5) | Dashboard → *Workers & Pages* → *Plans* → choose **Workers Paid** |
 | Your **Supabase connection string** | See below |
 
@@ -48,9 +48,8 @@ Use **port 5432 (Session pooler)**, not 6543. **First reset the database passwor
 ## 2. Get the code
 
 ```bash
-git clone https://github.com/swkpropertiesuaellc/SWK OSLogisticsOS.git
-cd SWK OSLogisticsOS
-git checkout claude/sharp-thompson-9y53sg      # skip this once pull request #3 is merged
+git clone https://github.com/swkpropertiesuae/swkpropertiesOS.git
+cd swkpropertiesOS
 cd deploy/cloudflare
 npm install
 ```
@@ -83,15 +82,15 @@ Make sure Docker Desktop is running, then:
 ```bash
 npx wrangler deploy
 ```
-The first run takes **5–15 minutes**: it builds the app image, uploads it to Cloudflare, creates the Worker and the container. It prints your address, like `https://digitalburj-os.<your-subdomain>.workers.dev`.
+The first run takes **5–15 minutes**: it builds the app image, uploads it to Cloudflare, creates the Worker and the container. It prints your address, like `https://swk-os.<your-subdomain>.workers.dev`.
 
 > After the *first* deploy, Cloudflare needs **several more minutes** to prepare the container in the region. Until then you may see a "starting" message – just wait and refresh.
 
 ## 6. Check that it works (and how fast)
 
 ```bash
-curl https://digitalburj-os.<your-subdomain>.workers.dev/api/health
-curl https://digitalburj-os.<your-subdomain>.workers.dev/api/health/db
+curl https://swk-os.<your-subdomain>.workers.dev/api/health
+curl https://swk-os.<your-subdomain>.workers.dev/api/health/db
 ```
 The second one answers like `{"driver":"postgresql","avg_query_ms":4.1,"verdict":"excellent"}`.
 
@@ -102,7 +101,7 @@ The second one answers like `{"driver":"postgresql","avg_query_ms":4.1,"verdict"
 | 40–100 | sluggish – consider Option B |
 | over 100 | too slow – use Option B |
 
-The first start also creates all tables in Supabase (schema `digitalburj`) and can take a minute or two. Look at it: Supabase → *Table Editor* → choose schema **digitalburj**. Watch live logs any time with `npx wrangler tail`.
+The first start also creates all tables in Supabase (schema `swk`) and can take a minute or two. Look at it: Supabase → *Table Editor* → choose schema **digitalburj**. Watch live logs any time with `npx wrangler tail`.
 
 ## 7. First sign-in
 
@@ -114,8 +113,8 @@ Open your address. Sign in as `admin@swkpropertiesuae.com` with the `ADMIN_PASSW
 ## 8. Permanent file storage with R2 (do this before real use)
 
 1. Cloudflare dashboard → **R2 object storage** → *Get started* (enables R2; needs a payment method, the free tier is generous).
-2. *Create bucket* → name `digitalburj-files`.
-3. R2 → *Manage API tokens* → *Create API token* → permission **Object Read & Write** → limit it to the `digitalburj-files` bucket → create. Copy the **Account ID**, **Access Key ID** and **Secret Access Key** (shown once).
+2. *Create bucket* → name `swk-os-files`.
+3. R2 → *Manage API tokens* → *Create API token* → permission **Object Read & Write** → limit it to the `swk-os-files` bucket → create. Copy the **Account ID**, **Access Key ID** and **Secret Access Key** (shown once).
 4. In the app: *Administration → Integrations → Cloudflare R2* → paste the Account ID, key, secret and bucket → switch **Storage provider** to R2 and **nightly backup** on → *Test connection* → Save.
 
 Now documents are stored in R2 and a database snapshot is uploaded every night.
@@ -126,15 +125,15 @@ You need `swkpropertiesuae.com` on Cloudflare first:
 1. Dashboard → *Add a domain* → `swkpropertiesuae.com` → Free plan.
 2. Cloudflare copies your existing DNS records. **Compare them with your current provider, especially the `MX` (mail) and website records**, so nothing breaks.
 3. At your registrar, change the **nameservers** to the two Cloudflare gives you. Wait until Cloudflare says *Active* (minutes to a day).
-4. *Workers & Pages → digitalburj-os → Settings → Domains & Routes → Add → Custom domain* → `os.swkpropertiesuae.com`.
-5. Tell the app its address: `npx wrangler secret put PUBLIC_URL` → `https://os.swkpropertiesuae.com`, then `npx wrangler deploy`.
+4. *Workers & Pages → swk-os → Settings → Domains & Routes → Add → Custom domain* → `os.swkpropertiesuae.com`.
+4. The custom domain `os.swkpropertiesuae.com` is already declared in `deploy/cloudflare/wrangler.jsonc`, so `wrangler deploy` attaches it and issues the HTTPS certificate. Check it under *Workers & Pages → swk-os → Settings → Domains & Routes*.
 
 **info@swkpropertiesuae.com:** with the domain on Cloudflare, *Email → Email Routing* lets you forward `info@` (and `sales@`) to your inbox for free. Sending mail from the app still needs Resend or SMTP (Administration → Integrations).
 
 ## 10. Updating later
 
 ```bash
-cd SWK OSLogisticsOS && git pull
+cd swkpropertiesOS && git pull
 cd deploy/cloudflare && npm install && npx wrangler deploy
 ```
 Your data stays in Supabase; the app restarts with the new version.

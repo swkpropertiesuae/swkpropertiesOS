@@ -1,9 +1,12 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "digitalburj-os",
+  "name": "swk-os",
   "main": "src/index.ts",
   // Set this to the date you deploy.
   "compatibility_date": "2026-10-07",
+  // Public address. Cloudflare creates the DNS record and HTTPS certificate on deploy (zone swkpropertiesuae.com must be on this account).
+  "routes": [{ "pattern": "os.swkpropertiesuae.com", "custom_domain": true }],
+  "vars": { "PUBLIC_URL": "https://os.swkpropertiesuae.com", "PG_SCHEMA": "swk" },
   "observability": { "enabled": true },
 
   // Wakes the app every 5 minutes so its own scheduler keeps running (reminders, e-mail outbox, nightly backup).
@@ -11,7 +14,7 @@
 
   "containers": [
     {
-      "class_name": "SWK OS",
+      "class_name": "SwkOs",
       "image": "../../Dockerfile",
       "image_build_context": "../..",
       // 4 GiB: Node + the Chromium used for PDFs. Do not go below "basic" (1 GiB) and expect PDFs to work.
@@ -22,6 +25,6 @@
       "constraints": { "regions": ["APAC"] }
     }
   ],
-  "durable_objects": { "bindings": [{ "name": "ELVORA", "class_name": "SWK OS" }] },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["SWK OS"] }]
+  "durable_objects": { "bindings": [{ "name": "SWK_OS", "class_name": "SwkOs" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["SwkOs"] }]
 }
