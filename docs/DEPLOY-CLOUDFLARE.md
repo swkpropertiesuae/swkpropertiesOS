@@ -101,7 +101,7 @@ The second one answers like `{"driver":"postgresql","avg_query_ms":4.1,"verdict"
 | 40–100 | sluggish – consider Option B |
 | over 100 | too slow – use Option B |
 
-The first start also creates all tables in Supabase (schema `swk`) and can take a minute or two. Look at it: Supabase → *Table Editor* → choose schema **digitalburj**. Watch live logs any time with `npx wrangler tail`.
+The first start also creates all tables in Supabase (schema `swk`) and can take a minute or two. Look at it: Supabase → *Table Editor* → choose schema **swk**. Watch live logs any time with `npx wrangler tail`.
 
 ## 7. First sign-in
 
@@ -113,7 +113,7 @@ Open your address. Sign in as `admin@swkpropertiesuae.com` with the `ADMIN_PASSW
 ## 8. Permanent file storage with R2 (do this before real use)
 
 1. Cloudflare dashboard → **R2 object storage** → *Get started* (enables R2; needs a payment method, the free tier is generous).
-2. *Create bucket* → name `swk-os-files`.
+2. *Create bucket* → name `swk-os-files` (already created for this account).
 3. R2 → *Manage API tokens* → *Create API token* → permission **Object Read & Write** → limit it to the `swk-os-files` bucket → create. Copy the **Account ID**, **Access Key ID** and **Secret Access Key** (shown once).
 4. In the app: *Administration → Integrations → Cloudflare R2* → paste the Account ID, key, secret and bucket → switch **Storage provider** to R2 and **nightly backup** on → *Test connection* → Save.
 
@@ -125,7 +125,6 @@ You need `swkpropertiesuae.com` on Cloudflare first:
 1. Dashboard → *Add a domain* → `swkpropertiesuae.com` → Free plan.
 2. Cloudflare copies your existing DNS records. **Compare them with your current provider, especially the `MX` (mail) and website records**, so nothing breaks.
 3. At your registrar, change the **nameservers** to the two Cloudflare gives you. Wait until Cloudflare says *Active* (minutes to a day).
-4. *Workers & Pages → swk-os → Settings → Domains & Routes → Add → Custom domain* → `os.swkpropertiesuae.com`.
 4. The custom domain `os.swkpropertiesuae.com` is already declared in `deploy/cloudflare/wrangler.jsonc`, so `wrangler deploy` attaches it and issues the HTTPS certificate. Check it under *Workers & Pages → swk-os → Settings → Domains & Routes*.
 
 **info@swkpropertiesuae.com:** with the domain on Cloudflare, *Email → Email Routing* lets you forward `info@` (and `sales@`) to your inbox for free. Sending mail from the app still needs Resend or SMTP (Administration → Integrations).
