@@ -2,7 +2,7 @@ import { Container, getContainer } from '@cloudflare/containers'
 
 /** Secrets and settings, set with `npx wrangler secret put NAME` (see docs/DEPLOY-CLOUDFLARE.md). */
 interface Env {
-  ELVORA: DurableObjectNamespace<SWK OS>
+  SWK_OS: DurableObjectNamespace<SwkOs>
   DATABASE_URL: string
   APP_SECRET: string
   ADMIN_PASSWORD: string
@@ -14,7 +14,7 @@ interface Env {
 
 const INSTANCE = 'main' // one instance only – the app holds a single database connection and runs its own scheduler
 
-export class SWK OS extends Container<Env> {
+export class SwkOs extends Container<Env> {
   defaultPort = 8080
   // Idle containers sleep; the cron trigger below keeps this one awake, so it is effectively always on.
   sleepAfter = '1h'
@@ -29,7 +29,7 @@ export class SWK OS extends Container<Env> {
       COOKIE_SECURE: 'true',
       APP_TIMEZONE: 'Asia/Dubai',
       DEMO_ENABLED: env.DEMO_ENABLED ?? 'false',
-      PG_SCHEMA: env.PG_SCHEMA ?? 'digitalburj',
+      PG_SCHEMA: env.PG_SCHEMA ?? 'swk',
       DATABASE_URL: env.DATABASE_URL,
       APP_SECRET: env.APP_SECRET,
       ADMIN_PASSWORD: env.ADMIN_PASSWORD,
@@ -43,7 +43,7 @@ export class SWK OS extends Container<Env> {
 async function ensureRunning(env: Env) {
   const missing = ['DATABASE_URL', 'APP_SECRET', 'ADMIN_PASSWORD', 'MANAGER_PASSWORD'].filter(k => !(env as unknown as Record<string, string | undefined>)[k])
   if (missing.length) throw new Error(`Missing secret(s): ${missing.join(', ')}. Set them with "npx wrangler secret put <NAME>".`)
-  const c = getContainer(env.ELVORA, INSTANCE)
+  const c = getContainer(env.SWK_OS, INSTANCE)
   const state = await c.getState()
   if (state.status !== 'healthy') await c.startAndWaitForPorts({ ports: 8080, cancellationOptions: { portReadyTimeoutMS: 240_000 } })
   return c
