@@ -52,9 +52,9 @@ export function assertNoBlockers(fs: Finding[]) {
 }
 
 export function tradeLicenceItem() { return q.get(`SELECT * FROM compliance_items WHERE type = 'Trade licence' AND deleted_at IS NULL ORDER BY expiry_date DESC LIMIT 1`) }
-export function dldBrokerageItem() { return q.get(`SELECT * FROM compliance_items WHERE type = 'DLD Brokerage Licence' AND deleted_at IS NULL ORDER BY expiry_date DESC LIMIT 1`) }
-export function reraRegistrationItem() { return q.get(`SELECT * FROM compliance_items WHERE type = 'RERA Registration' AND deleted_at IS NULL ORDER BY expiry_date DESC LIMIT 1`) }
-export function escrowAccountItem() { return q.get(`SELECT * FROM compliance_items WHERE type = 'Escrow Account' AND deleted_at IS NULL ORDER BY expiry_date DESC LIMIT 1`) }
+export function dldBrokerageItem() { return q.get(`SELECT * FROM compliance_items WHERE type IN ('DLD Brokerage Licence', 'Office registration (ORN)') AND deleted_at IS NULL ORDER BY expiry_date DESC LIMIT 1`) }
+export function reraRegistrationItem() { return q.get(`SELECT * FROM compliance_items WHERE type IN ('RERA Registration', 'Real estate broker registration (RERA)') AND deleted_at IS NULL ORDER BY expiry_date DESC LIMIT 1`) }
+export function escrowAccountItem() { return q.get(`SELECT * FROM compliance_items WHERE type IN ('Escrow Account', 'Property management licence') AND deleted_at IS NULL ORDER BY expiry_date DESC LIMIT 1`) }
 
 function licenceFinding(): Finding | null {
   const it = tradeLicenceItem(), exp = it?.expiry_date || getSetting('licence_expiry_date')
@@ -166,7 +166,6 @@ export function complianceDaily() {
   const today = todayStr()
   q.run(`UPDATE compliance_items SET status = 'Expired', updated_at = ? WHERE status = 'Active' AND expiry_date < ? AND deleted_at IS NULL`, nowIso(), today)
   q.run(`UPDATE compliance_filings SET status = 'Overdue', updated_at = ? WHERE status = 'Upcoming' AND due_date < ? AND deleted_at IS NULL`, nowIso(), today)
-  generateCalendar()
   
   for (const it of q.all(`SELECT id, name, expiry_date, renewal_lead_days FROM compliance_items WHERE deleted_at IS NULL AND status IN ('Active','Expired') AND expiry_date IS NOT NULL`)) {
     const left = daysBetween(today, it.expiry_date)
@@ -193,52 +192,76 @@ export function complianceDaily() {
 export function generateCalendar(): { created: number; updated: number } {
   let created = 0, updated = 0; const now = nowIso()
   const today = todayStr()
-  
-  const dld = dldBrokerageItem()
-  if (dld?.expiry_date) {
-    const due = addDays(dld.expiry_date, -30)
-    if (due > today) {
-      const ex = q.get(`SELECT id FROM compliance_filings WHERE type = ? AND period = ? AND deleted_at IS NULL`, 'DLD Licence Renewal', dld.expiry_date.slice(0, 7))
-      if (ex) { if (ex.due_date !== due) { q.run(`UPDATE compliance_filings SET due_date = ?, updated_at = ? WHERE id = ?`, due, now, ex.id); updated++ } }
-      else { q.run(`INSERT INTO compliance_filings(type, period, due_date, status, auto, basis, created_at, updated_at) VALUES (?,?,?,?,1,?,?,?)`, 'DLD Licence Renewal', dld.expiry_date.slice(0, 7), due, 'Upcoming', `Renew DLD brokerage licence ${dld.expiry_date}`, now, now); created++ }
+  const upsert = (type: string, period: string, due: string, basis: string) => {
+    const ex = q.get(`SELECT id, due_date FROM compliance_filings WHERE type = ? AND period = ? AND deleted_at IS NULL`, type, period)
+    if (ex) {
+      if (ex.due_date !== due) { q.run(`UPDATE compliance_filings SET due_date = ?, basis = ?, updated_at = ? WHERE id = ?`, due, basis, now, ex.id); updated++ }
+    } else {
+      const st = due < today ? 'Overdue' : 'Upcoming'
+      q.run(`INSERT INTO compliance_filings(type, period, due_date, status, auto, basis, created_at, updated_at) VALUES (?,?,?,?,1,?,?,?)`, type, period, due, st, basis, now, now)
+      created++
     }
   }
-  
-  const rera = reraRegistrationItem()
-  if (rera?.expiry_date) {
-    const due = addDays(rera.expiry_date, -30)
-    if (due > today) {
-      const ex = q.get(`SELECT id FROM compliance_filings WHERE type = ? AND period = ? AND deleted_at IS NULL`, 'RERA Registration Renewal', rera.expiry_date.slice(0, 7))
-      if (ex) { if (ex.due_date !== due) { q.run(`UPDATE compliance_filings SET due_date = ?, updated_at = ? WHERE id = ?`, due, now, ex.id); updated++ } }
-      else { q.run(`INSERT INTO compliance_filings(type, period, due_date, status, auto, basis, created_at, updated_at) VALUES (?,?,?,?,1,?,?,?)`, 'RERA Registration Renewal', rera.expiry_date.slice(0, 7), due, 'Upcoming', `Renew RERA registration ${rera.expiry_date}`, now, now); created++ }
+
+  const issue = String(getSetting('licence_issue_date') || '2026-08-17')
+  if (/^\d{4}-\d{2}-\d{2}$/.test(issue)) {
+    const d = new Date(issue + 'T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() + 3)
+    const ctRegDue = d.toISOString().slice(0, 10)
+    upsert('Corporate tax registration', issue.slice(0, 4), ctRegDue, `3 months from licence issue (${issue})`)
+  }
+
+  const fye = String(getSetting('financial_year_end') || '12-31')
+  const yr = Number(today.slice(0, 4))
+  if (/^\d{2}-\d{2}$/.test(fye)) {
+    const fyEnd = `${yr}-${fye}`
+    const d = new Date(fyEnd + 'T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() + 9)
+    // Last day of that 9th month if fye is month-end
+    if (fye.endsWith('-31') || fye === '06-30' || fye === '09-30') {
+      const m = Number(fye.slice(0, 2))
+      const dueYr = m + 9 > 12 ? yr + 1 : yr
+      const dueMo = ((m + 9 - 1) % 12) + 1
+      const lastDay = new Date(Date.UTC(dueYr, dueMo, 0)).toISOString().slice(0, 10)
+      upsert('Corporate tax return', `FY${yr}`, lastDay, `9 months after financial year end (${fyEnd})`)
+    } else {
+      upsert('Corporate tax return', `FY${yr}`, d.toISOString().slice(0, 10), `9 months after financial year end (${fyEnd})`)
     }
   }
-  
-  const escrow = escrowAccountItem()
-  if (escrow?.expiry_date) {
-    const due = addDays(escrow.expiry_date, -30)
-    if (due > today) {
-      const ex = q.get(`SELECT id FROM compliance_filings WHERE type = ? AND period = ? AND deleted_at IS NULL`, 'Escrow Account Renewal', escrow.expiry_date.slice(0, 7))
-      if (ex) { if (ex.due_date !== due) { q.run(`UPDATE compliance_filings SET due_date = ?, updated_at = ? WHERE id = ?`, due, now, ex.id); updated++ } }
-      else { q.run(`INSERT INTO compliance_filings(type, period, due_date, status, auto, basis, created_at, updated_at) VALUES (?,?,?,?,1,?,?,?)`, 'Escrow Account Renewal', escrow.expiry_date.slice(0, 7), due, 'Upcoming', `Renew escrow account approval ${escrow.expiry_date}`, now, now); created++ }
-    }
+
+  // Quarterly VAT returns (28th of month following quarter end)
+  const quarters = [
+    { p: `${yr}-Q1`, due: `${yr}-04-28`, basis: '28 days after Q1 end (31 Mar)' },
+    { p: `${yr}-Q2`, due: `${yr}-07-28`, basis: '28 days after Q2 end (30 Jun)' },
+    { p: `${yr}-Q3`, due: `${yr}-10-28`, basis: '28 days after Q3 end (30 Sep)' },
+    { p: `${yr}-Q4`, due: `${yr + 1}-01-28`, basis: '28 days after Q4 end (31 Dec)' },
+  ]
+  for (const qtr of quarters) upsert('VAT return', qtr.p, qtr.due, qtr.basis)
+
+  // UAE E-Invoicing rollout milestones
+  const over50m = !!getSetting('einv_revenue_over_50m')
+  upsert('E-invoicing ASP appointment', over50m ? 'Phase 1 (>=50M)' : 'Phase 2 (<50M)', over50m ? '2026-07-31' : '2027-03-31', 'UAE MoF e-invoicing accredited service provider appointment')
+  upsert('E-invoicing go-live', over50m ? 'Phase 1 (>=50M)' : 'Phase 2 (<50M)', over50m ? '2027-01-01' : '2027-07-01', 'UAE MoF mandatory e-invoicing go-live')
+
+  // Licences & registrations from register
+  for (const it of q.all(`SELECT id, name, type, reference_no, expiry_date FROM compliance_items WHERE deleted_at IS NULL AND expiry_date IS NOT NULL AND status <> 'Not applicable'`)) {
+    upsert('Licence renewal', `${it.type} (${it.reference_no || it.id})`, it.expiry_date, `Renewal of ${it.name}`)
   }
-  
+
   for (const a of q.all(`SELECT id, name, dld_broker_id, dld_expiry FROM agents WHERE deleted_at IS NULL AND status = 'Active' AND dld_expiry IS NOT NULL`)) {
     const due = addDays(a.dld_expiry, -30)
     if (due > today) {
-      const ex = q.get(`SELECT id FROM compliance_filings WHERE type = ? AND period = ? AND deleted_at IS NULL`, 'Agent DLD Renewal', `${a.dld_broker_id}-${a.dld_expiry.slice(0, 7)}`)
-      if (ex) { if (ex.due_date !== due) { q.run(`UPDATE compliance_filings SET due_date = ?, updated_at = ? WHERE id = ?`, due, now, ex.id); updated++ } }
-      else { q.run(`INSERT INTO compliance_filings(type, period, due_date, status, auto, basis, created_at, updated_at) VALUES (?,?,?,?,1,?,?,?)`, 'Agent DLD Renewal', `${a.dld_broker_id}-${a.dld_expiry.slice(0, 7)}`, due, 'Upcoming', `Agent ${a.name} (RERA ${a.dld_broker_id}) DLD renewal ${a.dld_expiry}`, now, now); created++ }
+      upsert('Agent DLD Renewal', `${a.dld_broker_id}-${a.dld_expiry.slice(0, 7)}`, due, `Agent ${a.name} (RERA ${a.dld_broker_id}) DLD renewal ${a.dld_expiry}`)
     }
   }
-  
+
   return { created, updated }
 }
 
 const TRN_RE = /^1[0-9]{14}$/
 function companyTrnFor(branchId: number | null | undefined) {
-  if (branchId) { const b = q.get(`SELECT trn FROM legal_entities WHERE branch_id = ? AND deleted_at IS NULL ORDER BY id LIMIT 1`, branchId); if (b?.trn) return b.trn }
+  if (branchId) {
+    const b = q.get(`SELECT le.trn FROM branches br JOIN legal_entities le ON le.id = br.legal_entity_id WHERE br.id = ? AND br.deleted_at IS NULL AND le.deleted_at IS NULL LIMIT 1`, branchId)
+    if (b?.trn) return b.trn
+  }
   return getSetting('company_trn')
 }
 
@@ -313,6 +336,32 @@ export function overview() {
   
   const scored = checks.filter(c => c.status !== 'info')
   const score = scored.length ? Math.round(100 * scored.reduce((s, c) => s + (c.status === 'ok' ? 1 : c.status === 'warn' ? 0.5 : 0), 0) / scored.length) : 100
-  
-  return { checks, score, generated_at: nowIso() }
+
+  const jobCounts = q.all<{ deal_type: string; n: number }>(`SELECT deal_type, COUNT(*) n FROM jobs WHERE deleted_at IS NULL AND job_status <> 'Cancelled' GROUP BY deal_type`)
+  const scope = SERVICES.map(s => {
+    const matchingDeals = jobCounts.filter(j => DEAL_TYPE_SERVICE[j.deal_type] === s.code).reduce((sum, j) => sum + Number(j.n), 0)
+    return { code: s.code, label: s.label, covered: missingFor(s.code).length === 0, jobs: matchingDeals, note: s.note }
+  })
+
+  const deadlines = q.all(`SELECT id, type, period, due_date, status FROM compliance_filings WHERE deleted_at IS NULL AND status IN ('Upcoming','Overdue') ORDER BY due_date LIMIT 30`).map((f: any) => ({ ...f, days: daysBetween(today, f.due_date) }))
+  const expiring = q.all(`SELECT id, name, type, expiry_date, status FROM compliance_items WHERE deleted_at IS NULL AND expiry_date IS NOT NULL AND expiry_date <= ? AND status <> 'Not applicable' ORDER BY expiry_date LIMIT 30`, addDays(today, 90)).map((i: any) => ({ ...i, days: daysBetween(today, i.expiry_date) }))
+
+  return {
+    identity: {
+      name: getSetting('company_name') || 'SWK Properties L.L.C.',
+      name_ar: getSetting('company_name_ar') || '',
+      licence_no: getSetting('company_trade_license') || '',
+      authority: getSetting('licence_authority') || 'Dubai Department of Economy & Tourism (DET)',
+    },
+    mode: {
+      compliance: getSetting('compliance_mode') || 'enforce',
+      scope: getSetting('activity_scope_mode') || 'warn',
+    },
+    checks,
+    score,
+    scope,
+    deadlines,
+    expiring,
+    generated_at: nowIso(),
+  }
 }

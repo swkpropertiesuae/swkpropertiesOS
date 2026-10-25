@@ -9,7 +9,7 @@ import {
 import { get, put } from '../../lib/api'
 import { fmtDate } from '../../lib/format'
 import {
-  Bar, CHART, Card, ModuleHeader, Pill, ProgressRing, Reveal, SWK, Segmented, StatTile, aed, num,
+  Bar, CHART, Card, EmptyState, ModuleHeader, Pill, ProgressRing, Reveal, SWK, Segmented, StatTile, aed, num,
 } from '../../swk/ui'
 
 type ChequeStatus = 'In Vault' | 'Due Soon' | 'Deposited' | 'Cleared' | 'Bounced'
@@ -23,20 +23,10 @@ type ChequeItem = {
   dueDate: string
   amount: number
   status: ChequeStatus
-  isSample?: boolean
   realId?: number
 }
 
 const UAE_BANKS = ['Emirates NBD', 'First Abu Dhabi Bank (FAB)', 'ADCB', 'Dubai Islamic Bank', 'Mashreq Bank', 'RAKBANK']
-
-const SAMPLE_CHEQUES: ChequeItem[] = [
-  { id: 901, chequeNo: 'CHQ-884120', bank: 'Emirates NBD', tenant: 'Horizon Investments LLC', unit: 'Marina Crown 2BR · 1001', dueDate: '2026-10-28', amount: 42500, status: 'Due Soon', isSample: true },
-  { id: 902, chequeNo: 'CHQ-552910', bank: 'First Abu Dhabi Bank (FAB)', tenant: 'Elena Rostova', unit: 'Downtown Address 1BR · 1804', dueDate: '2026-11-05', amount: 82500, status: 'In Vault', isSample: true },
-  { id: 903, chequeNo: 'CHQ-331044', bank: 'ADCB', tenant: 'Tariq Al Suwaidi', unit: 'Dubai Hills Park Heights · 402', dueDate: '2026-10-15', amount: 80000, status: 'Cleared', isSample: true },
-  { id: 904, chequeNo: 'CHQ-771209', bank: 'Dubai Islamic Bank', tenant: 'Meridian Trading DMCC', unit: 'Business Bay Executive · 1205', dueDate: '2026-10-19', amount: 48750, status: 'Deposited', isSample: true },
-  { id: 905, chequeNo: 'CHQ-119832', bank: 'Mashreq Bank', tenant: 'Karan Malhotra', unit: 'JVC Boulevard Studio · 309', dueDate: '2026-10-10', amount: 17000, status: 'Bounced', isSample: true },
-  { id: 906, chequeNo: 'CHQ-994512', bank: 'Emirates NBD', tenant: 'Claire Beaumont', unit: 'Palm Frond G Villa · G-14', dueDate: '2026-12-01', amount: 225000, status: 'In Vault', isSample: true },
-]
 
 export default function PdcVault() {
   const qc = useQueryClient()
@@ -54,7 +44,7 @@ export default function PdcVault() {
       let mapped: ChequeStatus = 'In Vault'
       if (/paid|cleared|collected/i.test(rawStatus)) mapped = 'Cleared'
       else if (/overdue|bounced/i.test(rawStatus)) mapped = 'Bounced'
-      else if (/deposit/i.test(rawStatus)) mapped = 'Deposited'
+      else if (/deposit/i.test(rawStatus) || /deposit/i.test(String(r.notes || ''))) mapped = 'Deposited'
       else {
         const days = (new Date(r.due_date || Date.now()).getTime() - Date.now()) / 86400000
         if (days <= 14 && days >= -3) mapped = 'Due Soon'
@@ -64,16 +54,15 @@ export default function PdcVault() {
         realId: Number(r.id),
         leaseId: Number(r.lease_id) || undefined,
         chequeNo: r.cheque_no || `CHQ-${740100 + Number(r.id)}`,
-        bank: r.bank_name || constUAE_BANKS[idx % constUAE_BANKS.length]!,
+        bank: r._labels?.bank_id || r.bank_name || UAE_BANKS[idx % UAE_BANKS.length]!,
         tenant: lease?._labels?.tenant_id || r._labels?.lease_id || 'SWK Tenant',
-        unit: lease?._labels?.unit_id || lease?._labels?.property_id || 'Managed Unit',
-        dueDate: r.due_date || '2026-11-01',
+        unit: lease?._labels?.unit_id || lease?._labels?.property_id || lease?.unit_title || 'Managed Unit',
+        dueDate: r.due_date || new Date().toISOString().slice(0, 10),
         amount: Number(r.total_amount ?? r.amount ?? 0),
         status: localOverrides[Number(r.id)] ?? mapped,
       }
     })
-    const merged = [...real, ...SAMPLE_CHEQUES.map(s => ({ ...s, status: localOverrides[s.id] ?? s.status }))]
-    return merged.sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+    return real.sort((a, b) => a.dueDate.localeCompare(b.dueDate))
   }, [schedQ.data, leasesQ.data, localOverrides])
 
   const filtered = filter === 'All' ? cheques : cheques.filter(c => c.status === filter)
@@ -162,70 +151,77 @@ export default function PdcVault() {
             />
           }
         >
-          <div className="overflow-x-auto">
-            <table className="swk-table">
-              <thead>
-                <tr>
-                  <th>Cheque no.</th>
-                  <th>Drawer bank</th>
-                  <th>Tenant & unit</th>
-                  <th>Maturity date</th>
-                  <th className="num">Amount</th>
-                  <th>Status</th>
-                  <th>Vault action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(c => (
-                  <tr key={c.id}>
-                    <td className="font-semibold">
-                      <span className="inline-flex items-center gap-1.5">
-                        <CreditCard size={14} className="text-[#9a7a42]" />
-                        {c.chequeNo}
-                        {c.isSample && <Pill tone="grey">Sample</Pill>}
-                      </span>
-                    </td>
-                    <td>{c.bank}</td>
-                    <td>
-                      <div className="font-medium text-ink">{c.tenant}</div>
-                      <div className="text-xs text-muted">{c.unit}</div>
-                    </td>
-                    <td className="whitespace-nowrap">{fmtDate(c.dueDate)}</td>
-                    <td className="num font-semibold">{aed(c.amount)}</td>
-                    <td>
-                      <Pill tone={c.status === 'Cleared' ? 'oasis' : c.status === 'Bounced' ? 'dune' : c.status === 'Due Soon' ? 'champ' : 'navy'}>
-                        {c.status}
-                      </Pill>
-                    </td>
-                    <td>
-                      <div className="flex items-center gap-1.5">
-                        {(c.status === 'In Vault' || c.status === 'Due Soon') && (
-                          <button type="button" className="swk-btn swk-btn-ghost" style={{ height: 30, padding: '0 10px', fontSize: 12 }} onClick={() => void updateChequeStatus(c, 'Deposited')}>
-                            Deposit
-                          </button>
-                        )}
-                        {c.status === 'Deposited' && (
-                          <>
-                            <button type="button" className="swk-btn swk-btn-gold" style={{ height: 30, padding: '0 10px', fontSize: 12 }} onClick={() => void updateChequeStatus(c, 'Cleared')}>
-                              Mark cleared
-                            </button>
-                            <button type="button" className="swk-btn swk-btn-ghost" style={{ height: 30, padding: '0 10px', fontSize: 12 }} onClick={() => void updateChequeStatus(c, 'Bounced')}>
-                              Bounced
-                            </button>
-                          </>
-                        )}
-                        {c.status === 'Bounced' && (
-                          <button type="button" className="swk-btn swk-btn-primary" style={{ height: 30, padding: '0 10px', fontSize: 12 }} onClick={() => void updateChequeStatus(c, 'Cleared')}>
-                            <RefreshCw size={12} />Replaced
-                          </button>
-                        )}
-                      </div>
-                    </td>
+          {filtered.length === 0 ? (
+            <EmptyState
+              title="No cheques in this view"
+              hint={cheques.length === 0 ? "Create an Ejari lease or log rent schedule instalments to track post-dated cheques in the SWK Vault." : "No cheques match the selected status filter."}
+              action={cheques.length === 0 ? <div className="flex gap-2 justify-center"><Link to="/e/leases?new=1" className="swk-btn swk-btn-primary"><Plus size={15} /> New Ejari lease</Link><Link to="/e/rent_schedules?new=1" className="swk-btn swk-btn-ghost">Log rent schedule</Link></div> : undefined}
+            />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="swk-table">
+                <thead>
+                  <tr>
+                    <th>Cheque no.</th>
+                    <th>Drawer bank</th>
+                    <th>Tenant & unit</th>
+                    <th>Maturity date</th>
+                    <th className="num">Amount</th>
+                    <th>Status</th>
+                    <th>Vault action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {filtered.map(c => (
+                    <tr key={c.id}>
+                      <td className="font-semibold">
+                        <span className="inline-flex items-center gap-1.5">
+                          <CreditCard size={14} className="text-[#9a7a42]" />
+                          {c.chequeNo}
+                        </span>
+                      </td>
+                      <td>{c.bank}</td>
+                      <td>
+                        <div className="font-medium text-ink">{c.tenant}</div>
+                        <div className="text-xs text-muted">{c.unit}</div>
+                      </td>
+                      <td className="whitespace-nowrap">{fmtDate(c.dueDate)}</td>
+                      <td className="num font-semibold">{aed(c.amount)}</td>
+                      <td>
+                        <Pill tone={c.status === 'Cleared' ? 'oasis' : c.status === 'Bounced' ? 'dune' : c.status === 'Due Soon' ? 'champ' : 'navy'}>
+                          {c.status}
+                        </Pill>
+                      </td>
+                      <td>
+                        <div className="flex items-center gap-1.5">
+                          {(c.status === 'In Vault' || c.status === 'Due Soon') && (
+                            <button type="button" className="swk-btn swk-btn-ghost" style={{ height: 30, padding: '0 10px', fontSize: 12 }} onClick={() => void updateChequeStatus(c, 'Deposited')}>
+                              Deposit
+                            </button>
+                          )}
+                          {c.status === 'Deposited' && (
+                            <>
+                              <button type="button" className="swk-btn swk-btn-gold" style={{ height: 30, padding: '0 10px', fontSize: 12 }} onClick={() => void updateChequeStatus(c, 'Cleared')}>
+                                Mark cleared
+                              </button>
+                              <button type="button" className="swk-btn swk-btn-ghost" style={{ height: 30, padding: '0 10px', fontSize: 12 }} onClick={() => void updateChequeStatus(c, 'Bounced')}>
+                                Bounced
+                              </button>
+                            </>
+                          )}
+                          {c.status === 'Bounced' && (
+                            <button type="button" className="swk-btn swk-btn-primary" style={{ height: 30, padding: '0 10px', fontSize: 12 }} onClick={() => void updateChequeStatus(c, 'Cleared')}>
+                              <RefreshCw size={12} />Replaced
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </Card>
 
         <div className="xl:col-span-4 grid gap-4 content-start">

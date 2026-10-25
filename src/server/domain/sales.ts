@@ -12,7 +12,7 @@ const vatPct = (id: number | null | undefined) => (id ? q.val<number>(`SELECT ra
 // ---------------------------------------------------------------- parties
 export const partyHooks: Hooks = {
   beforeSave({ rec, old, isNew }) {
-    if (!rec.is_customer && !rec.is_vendor && !rec.is_shipper && !rec.is_consignee && !rec.is_notify && !rec.is_agent && !rec.is_transporter && !rec.is_broker) throw bad('Tick at least one role (customer, vendor, agent …)')
+    if (!rec.is_customer && !rec.is_vendor && !rec.is_landlord && !rec.is_tenant && !rec.is_notify && !rec.is_agent && !rec.is_custodian && !rec.is_broker) throw bad('Tick at least one role (customer, landlord, tenant, vendor, agent …)')
     const dup = q.get(`SELECT code FROM parties WHERE lower(name) = lower(?) AND deleted_at IS NULL AND id <> ? LIMIT 1`, rec.name, rec.id ?? 0)
     if (dup) throw bad(`A party with this name already exists (${dup.code})`)
     if (rec.trn && !/^\d{15}$/.test(String(rec.trn).replace(/\s/g, ''))) throw bad('UAE TRN must be 15 digits (leave blank for non-UAE parties)')

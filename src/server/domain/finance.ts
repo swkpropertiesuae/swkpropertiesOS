@@ -17,7 +17,7 @@ function computeLines(rows: Rec[], side: 'income' | 'cost', docCurrency?: string
     const cc = chargeCode(l.charge_code_id)
     if (cc) {
       if (!l.description) l.description = cc.name
-      if (!l.vat_code_id && cc.vat_code_id) l.vat_code_id = cc.vat_code_id
+      if (!l.vat_code_id && l.vat_pct === undefined && cc.vat_code_id) l.vat_code_id = cc.vat_code_id
       if (!l.account_id) l.account_id = side === 'income' ? cc.income_account_id : cc.cost_account_id
       if ((l.rate === undefined || l.rate === null) && side === 'income' && cc.default_rate) l.rate = cc.default_rate / 100
     }
@@ -113,16 +113,15 @@ export function setNextInvoiceNumber(next: number, date = todayStr()) {
 
 /** Copy deal facts from the linked job into blank invoice fields so the printed document carries them. Anything typed on the document wins. */
 function fillShipmentFromJob(rec: Rec) {
-  const j = q.get(`SELECT j.deal_name, j.deal_type, j.job_status, j.deal_value, j.commission_amount,
-      (SELECT name FROM properties WHERE id = j.property_id) property, (SELECT name FROM units WHERE id = j.unit_id) unit
+  const j = q.get(`SELECT j.job_no, j.deal_name, j.deal_type, j.job_status, j.deal_value, j.commission_amount,
+      (SELECT title FROM properties WHERE id = j.property_id) property, (SELECT unit_no FROM units WHERE id = j.unit_id) unit
     FROM jobs j WHERE j.id = ?`, rec.job_id)
   if (!j) return
   const set = (k: string, v: any) => { if ((rec[k] === undefined || rec[k] === null || rec[k] === '') && v !== undefined && v !== null && v !== '') rec[k] = v }
-  const facts = [j.property, j.unit].filter(Boolean).join(' / ')
-  set('ship_receipt', facts)
-  set('ship_pol', facts); set('ship_pod', '')
-  set('ship_cargo', [j.deal_name, j.deal_type].filter(Boolean).join(' – '))
-  set('ship_weight', j.deal_value ? `${Number(j.deal_value).toLocaleString('en-US', { maximumFractionDigits: 2 })} AED` : '')
+  const facts = [j.job_no, j.deal_name, j.property, j.unit].filter(Boolean).join(' · ')
+  set('reference', facts)
+  if (j.property_id) set('property_id', j.property_id)
+  if (j.unit_id) set('unit_id', j.unit_id)
 }
 
 export const invoiceHooks: Hooks = {

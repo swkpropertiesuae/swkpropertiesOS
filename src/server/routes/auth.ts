@@ -74,7 +74,7 @@ export default async function (app: FastifyInstance) {
     const secret = newTotpSecret()
     const pending = { secret: encryptSecret(secret), session: req.sessionHash, expires: Date.now() + 10 * 60_000 }
     q.run(`INSERT INTO settings(key, value, updated_at) VALUES (?,?,?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`, `totp-pending:${req.user!.id}`, JSON.stringify(pending), nowIso())
-    const issuer = 'DigitalBurj OS'
+    const issuer = 'SWK OS'
     return { secret, uri: `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(req.user!.email)}?secret=${secret}&issuer=${encodeURIComponent(issuer)}&digits=6&period=30` }
   })
   app.post('/api/auth/totp/enable', totpLimit, async (req) => {

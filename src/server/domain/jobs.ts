@@ -17,7 +17,7 @@ function computeCharges(rows: Rec[], jobId: number | undefined) {
     const cc = r.charge_code_id ? q.get(`SELECT * FROM charge_codes WHERE id = ?`, r.charge_code_id) : null
     if (cc) {
       if (!r.description) r.description = cc.name
-      if (!r.vat_code_id && cc.vat_code_id) r.vat_code_id = cc.vat_code_id
+      if (!r.vat_code_id && r.vat_pct === undefined && cc.vat_code_id) r.vat_code_id = cc.vat_code_id
       if ((r.rate === undefined || r.rate === null) && r.kind !== 'Cost' && cc.default_rate) r.rate = cc.default_rate / 100
     }
     r.qty = Number(r.qty ?? 1); r.rate = Number(r.rate ?? 0)
@@ -80,8 +80,8 @@ export function generateInvoicesFromJob(jobId: number, opts: { docType?: string;
   if (!job.children?.charges?.length) throw bad('No charges to invoice')
   const charges = job.children.charges.filter((c: any) => !opts.chargeIds || opts.chargeIds.includes(c.id))
   if (!charges.length) throw bad('Selected charges not found')
-  const revenue = charges.filter((c: any) => c.kind === 'Revenue')
-  if (!revenue.length) throw bad('No revenue charges to invoice')
+  const revenue = charges.filter((c: any) => c.kind === 'Revenue' && c.status === 'Unbilled')
+  if (!revenue.length) throw bad('No unbilled revenue charges to invoice')
   const groupBy: Record<string, any[]> = {}
   for (const c of revenue) {
     const key = `${c.currency}|${c.party_id ?? ''}`
@@ -91,15 +91,15 @@ export function generateInvoicesFromJob(jobId: number, opts: { docType?: string;
   for (const [, cs] of Object.entries(groupBy)) {
     const first = cs[0]
     const inv = createRecord(getDef('invoices'), {
-      doc_type: opts.docType || 'Tax Invoice', party_id: first.party_id, property_id: job.property_id, unit_id: job.unit_id, branch_id: job.branch_id,
+      doc_type: opts.docType || 'Tax Invoice', party_id: first.party_id || job.client_id, property_id: job.property_id, unit_id: job.unit_id, branch_id: job.branch_id,
       invoice_date: todayStr(), currency: first.currency, ex_rate: first.ex_rate, job_id: jobId,
+      children: {
+        lines: cs.map((c: any) => ({
+          job_charge_id: c.id, charge_code_id: c.charge_code_id, description: c.description, qty: c.qty, rate: c.rate,
+          vat_code_id: c.vat_code_id, property_id: job.property_id, unit_id: job.unit_id,
+        })),
+      },
     }, ctx)
-    for (const c of cs) {
-      insertRow(getDef('invoice_lines'), {
-        invoice_id: inv.id, charge_code_id: c.charge_code_id, description: c.description, qty: c.qty, rate: c.rate,
-        currency: c.currency, ex_rate: c.ex_rate, vat_code_id: c.vat_code_id, property_id: job.property_id, unit_id: job.unit_id,
-      })
-    }
     invs.push(inv)
   }
   return invs
@@ -126,11 +126,31 @@ export function convertProforma(invoiceId: number, ctx: Ctx) {
   return patchRecord(getDef('invoices'), invoiceId, { doc_type: 'Tax Invoice', invoice_no: null }, ctx)
 }
 
+export function generateBillFromJobCosts(jobId: number, opts: { vendor_id: number; vendor_invoice_no: string; charge_ids?: number[] }, ctx: Ctx) {
+  const job = getRecord(getDef('jobs'), jobId, ctx, { children: { charges: true } })
+  const costs = (job.children?.charges ?? []).filter((c: any) => c.kind === 'Cost' && c.status === 'Unbilled' && (!opts.charge_ids || opts.charge_ids.includes(c.id)) && (!c.party_id || c.party_id === opts.vendor_id))
+  if (!costs.length) throw bad('No unbilled cost charges found for this vendor')
+  const first = costs[0]
+  return createRecord(getDef('bills'), {
+    vendor_id: opts.vendor_id, vendor_invoice_no: opts.vendor_invoice_no, job_id: jobId,
+    property_id: job.property_id, unit_id: job.unit_id, branch_id: job.branch_id,
+    bill_date: todayStr(), currency: first.currency || BASE(), ex_rate: first.ex_rate || 1,
+    children: {
+      lines: costs.map((c: any) => ({
+        job_charge_id: c.id, charge_code_id: c.charge_code_id, description: c.description,
+        qty: c.qty, rate: c.rate, vat_code_id: c.vat_code_id, vat_pct: c.vat_pct,
+        property_id: job.property_id, unit_id: job.unit_id,
+      })),
+    },
+  }, ctx)
+}
+
 export function jobKpi(jobId: number) {
   const j = q.get(`SELECT * FROM jobs WHERE id = ?`, jobId)
-  const rev = q.val<number>(`SELECT COALESCE(SUM(base_amount),0) FROM job_charges WHERE job_id = ? AND kind = 'Revenue' AND deleted_at IS NULL`, jobId) ?? 0
-  const cost = q.val<number>(`SELECT COALESCE(SUM(base_amount),0) FROM job_charges WHERE job_id = ? AND kind = 'Cost' AND deleted_at IS NULL`, jobId) ?? 0
-  const unbilled = q.val<number>(`SELECT COALESCE(SUM(base_amount),0) FROM job_charges WHERE job_id = ? AND kind = 'Revenue' AND status = 'Unbilled' AND deleted_at IS NULL`, jobId) ?? 0
-  const invoiced = q.val<number>(`SELECT COALESCE(SUM(base_amount),0) FROM job_charges WHERE job_id = ? AND kind = 'Revenue' AND status <> 'Unbilled' AND deleted_at IS NULL`, jobId) ?? 0
-  return { revenue: rev, cost, profit: rev - cost, unbilled, invoiced, marginPct: rev ? ((rev - cost) / rev) * 100 : 0, dealValue: j?.deal_value ?? 0, commission: j?.deal_value && j?.commission_pct ? r2(j.deal_value * j.commission_pct / 100) : 0 }
+  const rev = r2((q.val<number>(`SELECT COALESCE(SUM(base_amount),0) FROM job_charges WHERE job_id = ? AND kind = 'Revenue' AND deleted_at IS NULL`, jobId) ?? 0) / 100)
+  const cost = r2((q.val<number>(`SELECT COALESCE(SUM(base_amount),0) FROM job_charges WHERE job_id = ? AND kind = 'Cost' AND deleted_at IS NULL`, jobId) ?? 0) / 100)
+  const unbilled = r2((q.val<number>(`SELECT COALESCE(SUM(base_amount),0) FROM job_charges WHERE job_id = ? AND kind = 'Revenue' AND status = 'Unbilled' AND deleted_at IS NULL`, jobId) ?? 0) / 100)
+  const invoiced = r2((q.val<number>(`SELECT COALESCE(SUM(base_amount),0) FROM job_charges WHERE job_id = ? AND kind = 'Revenue' AND status <> 'Unbilled' AND deleted_at IS NULL`, jobId) ?? 0) / 100)
+  const dealValue = r2((j?.deal_value ?? 0) / 100)
+  return { revenue: rev, cost, profit: r2(rev - cost), unbilled, invoiced, marginPct: rev ? ((rev - cost) / rev) * 100 : 0, dealValue, commission: dealValue && j?.commission_pct ? r2(dealValue * j.commission_pct / 100) : 0 }
 }

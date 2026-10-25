@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 const passwords = new Map<string, string>()
 export async function signInReady(base: string, body: { email: string; password: string; totp?: string }) {
   const key = base + ':' + body.email + ':' + body.password
-  const headers = { 'content-type': 'application/json', 'x-digitalburj-client': 'web' }
+  const headers = { 'content-type': 'application/json', 'x-swk-client': 'web' }
   const current = passwords.get(key) ?? body.password
   const r = await fetch(base + '/api/auth/login', { method: 'POST', headers, body: JSON.stringify({ ...body, password: current }) })
   if (r.ok && (await r.clone().json() as any).mustChangePassword) {

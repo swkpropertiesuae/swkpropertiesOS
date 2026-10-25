@@ -180,7 +180,7 @@ export default async function (app: FastifyInstance) {
       const rows = q.all(`SELECT id FROM "${s.entity}" WHERE deleted_at IS NULL AND (${s.cols.map(c => `"${c}" LIKE ? ESCAPE '\\'`).join(' OR ')}) ORDER BY id DESC LIMIT 5`, ...s.cols.map(() => pat))
       if (!rows.length) continue
       const labels = labelsFor(s.entity, rows.map(r => r.id))
-      for (const r of rows) out.push({ group: s.group, id: r.id, entity: s.entity, label: labels.get(r.id) ?? `#${r.id}`, link: s.entity === 'jobs' ? `/jobs/${r.id}` : `/e/${s.entity}/${r.id}`, icon: def.icon })
+      for (const r of rows) out.push({ group: s.group, id: r.id, entity: s.entity, label: labels.get(r.id) ?? `#${r.id}`, link: `/e/${s.entity}/${r.id}`, icon: def.icon })
     }
     return out
   })

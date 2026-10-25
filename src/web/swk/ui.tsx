@@ -47,8 +47,9 @@ export function AnimatedNumber({ value, format = v => num(v), duration = 1.2, cl
 }
 
 /** Staggered entrance container + item. */
+const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1]
 export const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.06, delayChildren: 0.05 } } }
-export const rise = { hidden: { opacity: 0, y: 14, filter: 'blur(4px)' }, show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.55, ease: [0.16, 1, 0.3, 1] } } }
+export const rise = { hidden: { opacity: 0, y: 14, filter: 'blur(4px)' }, show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.55, ease: EASE } } }
 export function Reveal({ children, className, as = 'div', ...rest }: { children: ReactNode; className?: string; as?: 'div' | 'section' | 'ul' } & HTMLMotionProps<'div'>) {
   const C: any = as === 'section' ? motion.section : as === 'ul' ? motion.ul : motion.div
   return <C variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true, margin: '-30px' }} className={className} {...rest}>{children}</C>

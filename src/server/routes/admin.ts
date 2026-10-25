@@ -178,7 +178,7 @@ export default async function (app: FastifyInstance) {
   })
   app.post('/api/admin/business-data/reset', async (req) => {
     need(req, 'admin', 'delete')
-    const b = z.object({ confirm: z.string(), load_starter: z.boolean().default(true) }).parse(req.body ?? {})
+    const b = z.object({ confirm: z.string(), load_starter: z.boolean().default(false) }).parse(req.body ?? {})
     if (b.confirm !== RESET_PHRASE) throw bad(`Type ${RESET_PHRASE} exactly to confirm`)
     const { resetBusinessData, loadSwkStarterData, declineStarter, clearStarterDeclined } = await import('../domain/business-data')
     const r = await resetBusinessData(req.ctx)

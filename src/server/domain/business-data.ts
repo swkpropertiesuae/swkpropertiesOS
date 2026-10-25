@@ -10,7 +10,7 @@ import { postInvoice, setNextInvoiceNumber } from './finance'
 
 export const BUSINESS_ENTITIES: { group: string; keys: string[] }[] = [
   { group: 'Customers, CRM and sales', keys: ['parties', 'contacts', 'campaigns', 'leads', 'opportunities', 'activities', 'whatsapp_messages', 'quotations', 'contracts'] },
-  { group: 'Properties, deals and mandates', keys: ['properties', 'units', 'communities', 'developers', 'mandates', 'viewings', 'offers', 'jobs', 'sales_contracts', 'escrow_accounts', 'escrow_transactions', 'leases', 'rent_schedules', 'rent_receipts', 'service_charges', 'maintenance', 'inspections', 'handovers', 'snagging_items', 'property_visits'] },
+  { group: 'Properties, deals and mandates', keys: ['properties', 'units', 'mandates', 'viewings', 'offers', 'jobs', 'sales_contracts', 'escrow_accounts', 'escrow_transactions', 'leases', 'rent_schedules', 'rent_receipts', 'service_charges', 'maintenance', 'inspections', 'handovers', 'snagging_items', 'property_visits'] },
   { group: 'Invoices, bills and banking', keys: ['invoices', 'bills', 'receipts', 'payments', 'bank_transactions', 'expenses', 'purchase_orders', 'owner_statements', 'agent_commissions'] },
   { group: 'People and HR', keys: ['employees', 'agents', 'leave_requests', 'attendance', 'payslips'] },
   { group: 'Support, work and AI', keys: ['tickets', 'claims', 'tasks', 'work_items', 'ai_runs', 'ai_actions', 'workflow_runs', 'email_outbox'] },
@@ -110,13 +110,8 @@ export const declineStarter = () => q.run(`INSERT INTO settings(key, value, upda
 export const clearStarterDeclined = () => q.run(`DELETE FROM settings WHERE key = ?`, STARTER_DECLINED)
 
 
-export async function loadSwkStarterData(ctx: Ctx = SYSTEM_CTX): Promise<{ loaded: boolean; reason?: string }> {
+export async function loadSwkStarterData(_ctx: Ctx = SYSTEM_CTX): Promise<{ loaded: boolean; reason?: string }> {
   if (inDemo()) return { loaded: false, reason: 'demo workspace' }
   if (starterLoaded()) return { loaded: false, reason: 'already loaded' }
-  
-  const { seedDemoScenarios } = await import("../seed/demo")
-  await seedDemoScenarios()
-  
-  q.run(`INSERT INTO settings(key, value, updated_at) VALUES (?, '1', ?) ON CONFLICT(key) DO NOTHING`, MARK, nowIso())
-  return { loaded: true }
+  return { loaded: false, reason: 'production workspace starts clean without sample data' }
 }

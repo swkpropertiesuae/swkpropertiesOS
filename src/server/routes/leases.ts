@@ -1,11 +1,9 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import { q, tx } from '../db'
-import { assertCan, createRecord, deleteRecord, getDef, getRecord, listRecords, patchRecord, SYSTEM_CTX, audit } from '../engine'
-import { bad, notFound, nowLocal, todayStr } from '../util'
-import { body, idOf, need } from './helpers'
-import { queueEmail } from '../mailer'
-import { getSetting } from '../settings'
+import { q } from '../db'
+import { assertCan, createRecord, getDef, getRecord, listRecords, patchRecord } from '../engine'
+import { bad, todayStr } from '../util'
+import { idOf, need } from './helpers'
 
 export default async function (app: FastifyInstance) {
   const leaseDef = () => getDef('leases')
@@ -22,147 +20,263 @@ export default async function (app: FastifyInstance) {
     return { id, lease: getRecord(leaseDef(), id, req.ctx, { children: true }) }
   }
 
-  const loadRentSchedule = (req: any, edit = false) => {
-    const id = idOf(req.params.id)
-    if (edit) assertCan(req.ctx, 'leases', 'edit')
-    return { id, schedule: getRecord(rentScheduleDef(), id, req.ctx, { children: false }) }
-  }
-
-  const loadRentReceipt = (req: any, edit = false) => {
-    const id = idOf(req.params.id)
-    if (edit) assertCan(req.ctx, 'leases', 'edit')
-    return { id, receipt: getRecord(rentReceiptDef(), id, req.ctx, { children: false }) }
-  }
-
   // Lease status transitions
   app.post('/api/leases/:id/activate', async (req) => {
     const { id, lease } = loadLease(req, true)
-    if (lease.status !== 'Draft') throw bad('Only draft leases can be activated')
-    return patchRecord(leaseDef(), id, { status: 'Active', last_activity: nowLocal() }, req.ctx)
+    if (!['Draft', 'Pending Ejari', 'Ejari Registered'].includes(lease.status)) throw bad('Only draft or pending leases can be activated')
+    return patchRecord(leaseDef(), id, { status: 'Active' }, req.ctx)
+  })
+
+  app.post('/api/leases/:id/register-ejari', async (req) => {
+    const { id } = loadLease(req, true)
+    const b = z.object({ ejari_no: z.string().min(1), ejari_date: z.string().date().optional() }).parse(req.body)
+    return patchRecord(leaseDef(), id, { status: 'Ejari Registered', ejari_no: b.ejari_no, ejari_date: b.ejari_date ?? todayStr() }, req.ctx)
   })
 
   app.post('/api/leases/:id/terminate', async (req) => {
     const { id, lease } = loadLease(req, true)
-    if (!['Active', 'Vacant'].includes(lease.status)) throw bad('Only active or vacant leases can be terminated')
-    const b = z.object({ termination_date: z.string().date(), reason: z.string().min(10).max(1000) }).parse(req.body)
-    return patchRecord(leaseDef(), id, { status: 'Terminated', termination_date: b.termination_date, reason: b.reason }, req.ctx)
+    if (!['Active', 'Ejari Registered', 'Notice Served', 'Expiring'].includes(lease.status)) throw bad('Only active leases can be terminated')
+    const b = z.object({ notice_date: z.string().date().optional(), reason: z.string().min(5).max(1000) }).parse(req.body)
+    const notes = [lease.notes, `Terminated (${b.notice_date ?? todayStr()}): ${b.reason}`].filter(Boolean).join('\n')
+    return patchRecord(leaseDef(), id, { status: 'Terminated', notice_date: b.notice_date ?? todayStr(), notes }, req.ctx)
   })
 
   app.post('/api/leases/:id/renew', async (req) => {
     const { id, lease } = loadLease(req, true)
-    if (lease.status !== 'Active') throw bad('Only active leases can be renewed')
-    const b = z.object({ new_term_end: z.string().date(), new_rent_amount: z.number().positive().optional(), new_rent_frequency: z.enum(['Monthly', 'Quarterly', 'Semi-Annual', 'Annual']).optional() }).parse(req.body)
-    return patchRecord(leaseDef(), id, { status: 'Renewed', last_activity: nowLocal(), new_term_end: b.new_term_end, new_rent_amount: b.new_rent_amount ?? lease.rent_amount, new_rent_frequency: b.new_rent_frequency ?? lease.rent_frequency }, req.ctx)
-  })
-
-  app.post('/api/leases/:id/cancel', async (req) => {
-    const { id, lease } = loadLease(req, true)
-    const b = z.object({ reason: z.string().min(10).max(1000) }).parse(req.body)
-    if (['Completed', 'Cancelled'].includes(lease.status)) throw bad('Lease cannot be cancelled in its current state')
-    return patchRecord(leaseDef(), id, { status: 'Cancelled' }, req.ctx)
+    if (!['Active', 'Ejari Registered', 'Notice Served', 'Expiring', 'Expired'].includes(lease.status)) throw bad('Lease cannot be renewed from current status')
+    const b = z.object({
+      new_term_end: z.string().date(),
+      new_rent_amount: z.number().positive().optional(),
+      new_rent_frequency: z.enum(['Monthly', 'Quarterly', 'Semi-Annual', 'Annual', 'Post-Dated Cheques', 'Custom']).optional(),
+    }).parse(req.body)
+    return patchRecord(
+      leaseDef(),
+      id,
+      {
+        status: 'Renewed',
+        end_date: b.new_term_end,
+        annual_rent: b.new_rent_amount ?? lease.annual_rent,
+        payment_frequency: b.new_rent_frequency ?? lease.payment_frequency,
+      },
+      req.ctx,
+    )
   })
 
   // Rent Schedule management
   app.post('/api/leases/:id/rent-schedules', async (req) => {
-    const { id } = loadLease(req, true)
-    const b = z.object({ rent_amount: z.number().positive(), rent_frequency: z.enum(['Monthly', 'Quarterly', 'Semi-Annual', 'Annual']).default('Monthly'), effective_date: z.string().min(1), notes: z.string().max(500).optional() }).parse(req.body)
-    const schedule = createRecord(rentScheduleDef(), { lease_id: id, rent_amount: b.rent_amount, rent_frequency: b.rent_frequency, effective_date: b.effective_date, notes: b.notes }, req.ctx)
-    return schedule
-  })
-
-  app.post('/api/leases/:id/rent-schedules/:sid/activate', async (req) => {
-    const { id } = loadLease(req, true)
-    const sid = idOf((req.params as any).sid)
-    const schedules = q.all('SELECT * FROM rent_schedules WHERE lease_id = ? AND deleted_at IS NULL', id)
-    const schedule = schedules.find((s: any) => s.id === sid)
-    if (!schedule) throw bad('Rent schedule not found')
-    if (schedule.status !== 'Pending') throw bad('Only pending rent schedules can be activated')
-    return patchRecord(rentScheduleDef(), sid, { status: 'Active' }, req.ctx)
-  })
-
-  app.post('/api/leases/:id/rent-schedules/:sid/close', async (req) => {
-    const { id } = loadLease(req, true)
-    const sid = idOf((req.params as any).sid)
-    const schedules = q.all('SELECT * FROM rent_schedules WHERE lease_id = ? AND deleted_at IS NULL', id)
-    const schedule = schedules.find((s: any) => s.id === sid)
-    if (!schedule) throw bad('Rent schedule not found')
-    return patchRecord(rentScheduleDef(), sid, { status: 'Closed' }, req.ctx)
+    const { id, lease } = loadLease(req, true)
+    const b = z.object({
+      due_date: z.string().date(),
+      amount: z.number().positive(),
+      vat_amount: z.number().min(0).optional(),
+      cheque_no: z.string().optional(),
+      cheque_date: z.string().date().optional(),
+      bank_id: z.number().int().optional(),
+      is_pdc: z.boolean().optional(),
+      notes: z.string().max(500).optional(),
+    }).parse(req.body)
+    return createRecord(
+      rentScheduleDef(),
+      {
+        lease_id: id,
+        lease_no: lease.lease_no,
+        due_date: b.due_date,
+        amount: b.amount,
+        vat_amount: b.vat_amount ?? 0,
+        total_amount: b.amount + (b.vat_amount ?? 0),
+        cheque_no: b.cheque_no,
+        cheque_date: b.cheque_date ?? b.due_date,
+        bank_id: b.bank_id,
+        is_pdc: b.is_pdc ?? Boolean(b.cheque_no),
+        notes: b.notes,
+      },
+      req.ctx,
+    )
   })
 
   // Rent Receipt management
   app.post('/api/leases/:id/rent-receipts', async (req) => {
-    const { id } = loadLease(req, true)
-    const b = z.object({ receipt_date: z.string().min(1), amount: z.number().positive(), paid_by_party_id: z.number().int(), payment_method: z.enum(['Cash', 'Bank Transfer', 'Cheque', 'Online', 'WPS']).default('Bank Transfer'), reference: z.string().max(200).optional(), notes: z.string().max(500).optional() }).parse(req.body)
-    const receipt = createRecord(rentReceiptDef(), { lease_id: id, receipt_date: b.receipt_date, amount: b.amount, paid_by_party_id: b.paid_by_party_id, payment_method: b.payment_method, reference: b.reference, notes: b.notes }, req.ctx)
-    return receipt
+    const { id, lease } = loadLease(req, true)
+    const b = z.object({
+      receipt_date: z.string().date().optional(),
+      amount: z.number().positive(),
+      vat_amount: z.number().min(0).optional(),
+      rent_schedule_id: z.number().int().optional(),
+      tenant_id: z.number().int().optional(),
+      payment_method: z.enum(['Bank Transfer', 'Cheque', 'Cash', 'Card', 'PDC', 'Online']).default('Bank Transfer'),
+      cheque_no: z.string().optional(),
+      cheque_date: z.string().date().optional(),
+      reference: z.string().max(200).optional(),
+      notes: z.string().max(500).optional(),
+    }).parse(req.body)
+    return createRecord(
+      rentReceiptDef(),
+      {
+        lease_id: id,
+        rent_schedule_id: b.rent_schedule_id,
+        tenant_id: b.tenant_id ?? lease.tenant_id,
+        receipt_date: b.receipt_date ?? todayStr(),
+        amount: b.amount,
+        vat_amount: b.vat_amount ?? 0,
+        total_amount: b.amount + (b.vat_amount ?? 0),
+        payment_method: b.payment_method,
+        cheque_no: b.cheque_no,
+        cheque_date: b.cheque_date,
+        reference: b.reference,
+        notes: b.notes,
+      },
+      req.ctx,
+    )
   })
 
-  app.post('/api/leases/:id/rent-receipts/:rid/mark-paid', async (req) => {
-    const { id } = loadLease(req, true)
+  app.post('/api/leases/:id/rent-receipts/:rid/mark-cleared', async (req) => {
+    loadLease(req, true)
     const rid = idOf((req.params as any).rid)
-    return patchRecord(rentReceiptDef(), rid, { status: 'Paid' }, req.ctx)
+    return patchRecord(rentReceiptDef(), rid, { status: 'Cleared' }, req.ctx)
   })
 
   // Service Charges management
   app.post('/api/leases/:id/service-charges', async (req) => {
-    const { id } = loadLease(req, true)
-    const b = z.object({ charge_date: z.string().min(1), amount: z.number().positive(), charge_type: z.enum(['Service Charge', 'Maintenance Fee', 'Security Fee', 'Amenity Fee', 'Other']).default('Service Charge'), description: z.string().max(500).optional(), associated_with: z.enum(['Common Areas', 'Building Facilities', 'Landscaping', 'Utilities', 'Other']).default('Common Areas') }).parse(req.body)
-    const sc = createRecord(serviceChargeDef(), { lease_id: id, charge_date: b.charge_date, amount: b.amount, charge_type: b.charge_type, description: b.description, associated_with: b.associated_with }, req.ctx)
-    return sc
+    const { id, lease } = loadLease(req, true)
+    const b = z.object({
+      period_from: z.string().date(),
+      period_to: z.string().date(),
+      amount: z.number().positive(),
+      vat_amount: z.number().min(0).optional(),
+      due_date: z.string().date().optional(),
+      breakdown: z.string().max(1000).optional(),
+      notes: z.string().max(500).optional(),
+    }).parse(req.body)
+    return createRecord(
+      serviceChargeDef(),
+      {
+        lease_id: id,
+        lease_no: lease.lease_no,
+        period_from: b.period_from,
+        period_to: b.period_to,
+        amount: b.amount,
+        vat_amount: b.vat_amount ?? 0,
+        total_amount: b.amount + (b.vat_amount ?? 0),
+        due_date: b.due_date,
+        breakdown: b.breakdown,
+        notes: b.notes,
+      },
+      req.ctx,
+    )
   })
 
   app.get('/api/leases/:id/service-charges', async (req) => {
     const { id } = loadLease(req)
-    const rows = q.all('SELECT * FROM service_charges WHERE lease_id = ? AND deleted_at IS NULL ORDER BY charge_date DESC, id DESC LIMIT 200', id)
-    return rows
+    return q.all('SELECT * FROM service_charges WHERE lease_id = ? AND deleted_at IS NULL ORDER BY period_from DESC, id DESC LIMIT 200', id)
   })
 
   // Maintenance management
   app.post('/api/leases/:id/maintenance', async (req) => {
-    const { id } = loadLease(req, true)
-    const b = z.object({ title: z.string().min(1), description: z.string().max(1000).optional(), priority: z.enum(['Low', 'Medium', 'High', 'Urgent']).default('Medium'), scheduled_at: z.string().optional(), estimated_cost: z.number().positive().optional(), responsible_party: z.string().max(200).optional() }).parse(req.body)
-    const maintenance = createRecord(maintenanceDef(), { lease_id: id, title: b.title, description: b.description, priority: b.priority, scheduled_at: b.scheduled_at, estimated_cost: b.estimated_cost, responsible_party: b.responsible_party }, req.ctx)
-    return maintenance
+    const { id, lease } = loadLease(req, true)
+    const b = z.object({
+      category: z.enum(['Plumbing', 'Electrical', 'HVAC', 'Appliances', 'Carpentry', 'Painting', 'Cleaning', 'Pest Control', 'Structural', 'Security', 'Common Area', 'Other']).default('Other'),
+      description: z.string().min(1).max(1000),
+      priority: z.enum(['Low', 'Medium', 'High', 'Urgent', 'Emergency']).default('Medium'),
+      scheduled_at: z.string().optional(),
+      estimated_cost: z.number().positive().optional(),
+      cost_responsibility: z.enum(['Landlord', 'Tenant', 'Shared', 'Warranty', 'Insurance', 'Service Charge']).optional(),
+    }).parse(req.body)
+    return createRecord(
+      maintenanceDef(),
+      {
+        lease_id: id,
+        unit_id: lease.unit_id,
+        unit_title: lease.unit_title,
+        tenant_id: lease.tenant_id,
+        landlord_id: lease.landlord_id,
+        category: b.category,
+        description: b.description,
+        priority: b.priority,
+        scheduled_at: b.scheduled_at,
+        estimated_cost: b.estimated_cost,
+        cost_responsibility: b.cost_responsibility ?? 'Landlord',
+      },
+      req.ctx,
+    )
   })
 
   app.get('/api/leases/:id/maintenance', async (req) => {
     const { id } = loadLease(req)
-    const rows = q.all('SELECT * FROM maintenance WHERE lease_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 200', id)
-    return rows
+    return q.all('SELECT * FROM maintenance WHERE lease_id = ? AND deleted_at IS NULL ORDER BY reported_at DESC, id DESC LIMIT 200', id)
   })
 
   // Inspection management
   app.post('/api/leases/:id/inspections', async (req) => {
-    const { id } = loadLease(req, true)
-    const b = z.object({ inspected_at: z.string().min(1), inspector_id: z.number().int(), status: z.enum(['Pass', 'Fail', 'Needs Attention']).default('Pass'), notes: z.string().max(1000).optional(), photos: z.string().optional() }).parse(req.body)
-    const inspection = createRecord(inspectionDef(), { lease_id: id, inspected_at: b.inspected_at, inspector_id: b.inspector_id, status: b.status, notes: b.notes, photos: b.photos }, req.ctx)
-    return inspection
+    const { id, lease } = loadLease(req, true)
+    const b = z.object({
+      inspection_type: z.enum(['Move-In', 'Move-Out', 'Periodic', 'Snagging', 'Compliance', 'Insurance']).default('Periodic'),
+      scheduled_at: z.string().min(1),
+      inspector_id: z.number().int().optional(),
+      status: z.enum(['Scheduled', 'In Progress', 'Completed', 'Cancelled', 'Requires Action']).default('Scheduled'),
+      findings: z.string().max(1000).optional(),
+      notes: z.string().max(1000).optional(),
+    }).parse(req.body)
+    return createRecord(
+      inspectionDef(),
+      {
+        lease_id: id,
+        unit_id: lease.unit_id,
+        unit_title: lease.unit_title,
+        inspection_type: b.inspection_type,
+        scheduled_at: b.scheduled_at,
+        inspector_id: b.inspector_id,
+        status: b.status,
+        findings: b.findings,
+        notes: b.notes,
+      },
+      req.ctx,
+    )
   })
 
   app.get('/api/leases/:id/inspections', async (req) => {
     const { id } = loadLease(req)
-    const rows = q.all('SELECT * FROM inspections WHERE lease_id = ? AND deleted_at IS NULL ORDER BY inspected_at DESC LIMIT 200', id)
-    return rows
+    return q.all('SELECT * FROM inspections WHERE lease_id = ? AND deleted_at IS NULL ORDER BY scheduled_at DESC, id DESC LIMIT 200', id)
   })
 
   // Handover management
   app.post('/api/leases/:id/handovers', async (req) => {
-    const { id } = loadLease(req, true)
-    const b = z.object({ handover_date: z.string().min(1), handed_over_by: z.string().max(200), status: z.enum(['Scheduled', 'In Progress', 'Completed', 'Pending Documentation']).default('Scheduled'), snagging_report_url: z.string().url().optional(), keys_returned: z.boolean().default(false), possession_returned: z.boolean().default(false) }).parse(req.body)
-    const handover = createRecord(handoverDef(), { lease_id: id, handover_date: b.handover_date, handed_over_by: b.handed_over_by, status: b.status, snagging_report_url: b.snagging_report_url, keys_returned: b.keys_returned, possession_returned: b.possession_returned }, req.ctx)
-    return handover
+    const { id, lease } = loadLease(req, true)
+    const b = z.object({
+      handover_type: z.enum(['Move-In', 'Move-Out', 'Snagging Inspection', 'Pre-Handover', 'Post-Handover']).default('Move-In'),
+      scheduled_at: z.string().min(1),
+      inspector_id: z.number().int().optional(),
+      status: z.enum(['Scheduled', 'In Progress', 'Completed', 'Cancelled', 'Requires Re-Inspection']).default('Scheduled'),
+      condition_report: z.string().optional(),
+      keys_handed_over: z.string().optional(),
+      defects_noted: z.string().optional(),
+    }).parse(req.body)
+    return createRecord(
+      handoverDef(),
+      {
+        lease_id: id,
+        unit_id: lease.unit_id,
+        unit_title: lease.unit_title,
+        handover_type: b.handover_type,
+        scheduled_at: b.scheduled_at,
+        inspector_id: b.inspector_id,
+        status: b.status,
+        condition_report: b.condition_report,
+        keys_handed_over: b.keys_handed_over,
+        defects_noted: b.defects_noted,
+      },
+      req.ctx,
+    )
   })
 
   app.get('/api/leases/:id/handovers', async (req) => {
     const { id } = loadLease(req)
-    const rows = q.all('SELECT * FROM handovers WHERE lease_id = ? AND deleted_at IS NULL ORDER BY handover_date DESC LIMIT 200', id)
-    return rows
+    return q.all('SELECT * FROM handovers WHERE lease_id = ? AND deleted_at IS NULL ORDER BY scheduled_at DESC, id DESC LIMIT 200', id)
   })
 
   app.post('/api/leases/:id/handovers/:hid/complete', async (req) => {
-    const { id } = loadLease(req, true)
+    loadLease(req, true)
     const hid = idOf((req.params as any).hid)
-    return patchRecord(handoverDef(), hid, { status: 'Completed', completed_at: nowLocal(), handover_acknowledged: true }, req.ctx)
+    return patchRecord(handoverDef(), hid, { status: 'Completed', completed_date: todayStr() }, req.ctx)
   })
 
   // Lease search
@@ -176,23 +290,39 @@ export default async function (app: FastifyInstance) {
       property: { entity: 'leases', field: 'property_id' },
       tenant: { entity: 'leases', field: 'tenant_id' },
       landlord: { entity: 'leases', field: 'landlord_id' },
-      status: { entity: 'leases', field: 'status' }
+      status: { entity: 'leases', field: 'status' },
     }
     const m = map[type]
     if (!m) throw bad('Unknown search type')
     const opSql = op === 'equals' ? 'eq' : op === 'starts with' ? 'starts' : op === 'ends with' ? 'ends' : op
     const filters = [{ field: m.field, op: opSql, value }]
     const res = listRecords(leaseDef(), { filters, pageSize: 200, sort: 'start_date', dir: 'desc' }, req.ctx)
-    return { total: res.total, rows: res.rows.map(r => ({ id: r.id, lease_no: r.lease_no, property: r._labels.property_id ?? '', tenant: r._labels.tenant_id ?? '', landlord: r._labels.landlord_id ?? '', status: r.status, start_date: r.start_date, end_date: r.end_date, rent_amount: r.rent_amount })) }
+    return {
+      total: res.total,
+      rows: res.rows.map(r => ({
+        id: r.id,
+        lease_no: r.lease_no,
+        property: r._labels.property_id ?? '',
+        tenant: r._labels.tenant_id ?? '',
+        landlord: r._labels.landlord_id ?? '',
+        status: r.status,
+        start_date: r.start_date,
+        end_date: r.end_date,
+        annual_rent: r.annual_rent,
+      })),
+    }
   })
 
   // Unit search for leases
   app.get('/api/search/units-for-lease', async (req) => {
-    need(req, 'units', 'view')
+    need(req, 'properties', 'view')
     const qs = req.query as any
     const value = String(qs.value ?? '').trim()
     if (!value) throw bad('Enter a value to search for')
-    const rows = q.all('SELECT id, unit_no, property_id FROM units WHERE deleted_at IS NULL AND (unit_no LIKE ? OR property_id IN (SELECT id FROM properties WHERE deleted_at IS NULL AND name LIKE ?)) ORDER BY unit_no LIMIT 100', '%' + value + '%', '%' + value + '%')
-    return rows
+    return q.all(
+      'SELECT id, unit_no, property_id, property_title, status, rent_annual FROM units WHERE deleted_at IS NULL AND (unit_no LIKE ? OR property_id IN (SELECT id FROM properties WHERE deleted_at IS NULL AND title LIKE ?)) ORDER BY unit_no LIMIT 100',
+      '%' + value + '%',
+      '%' + value + '%',
+    )
   })
 }

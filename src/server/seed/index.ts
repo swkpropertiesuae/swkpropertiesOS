@@ -21,12 +21,12 @@ export async function seedReference(opts: { users?: boolean; demo?: boolean } = 
     mark('branches')
   }
   if (!done('legal_entity')) {
-    const id = mk('legal_entities', { code: 'ELV', name: 'SWK Properties L.L.C.', base_currency: config.baseCurrency, is_default: true, active: true }).id
+    const id = mk('legal_entities', { code: 'SWK', name: 'SWK Properties L.L.C.', base_currency: config.baseCurrency, is_default: true, active: true }).id
     q.run(`UPDATE branches SET legal_entity_id = ? WHERE legal_entity_id IS NULL`, id)
     mark('legal_entity')
   }
   if (!done('departments')) {
-    for (const [code, name] of [['OPS', 'Operations'], ['SAL', 'Sales & Business Development'], ['ACC', 'Accounts & Finance'], ['DOC', 'Documentation & Customs'], ['WHS', 'Warehouse & Transport'], ['HR', 'Human Resources'], ['MGT', 'Management']]) mk('departments', { code, name })
+    for (const [code, name] of [['OPS', 'Operations'], ['SAL', 'Sales & Business Development'], ['LEA', 'Leasing'], ['PM', 'Property Management'], ['ACC', 'Accounts & Finance'], ['DOC', 'Documentation & Conveyancing'], ['HR', 'Human Resources'], ['MGT', 'Management']]) mk('departments', { code, name })
     mark('departments')
   }
   if (!done('roles')) {
@@ -90,6 +90,40 @@ export async function seedReference(opts: { users?: boolean; demo?: boolean } = 
     mk('bank_accounts', { name: 'Cash in hand', type: 'Cash', currency: 'AED', gl_account_id: idOf('accounts', 'code', '1000'), active: true })
     mk('bank_accounts', { name: 'Petty cash', type: 'Petty cash', currency: 'AED', gl_account_id: idOf('accounts', 'code', '1010'), active: true })
     mark('banks')
+  }
+  if (!done('communities')) {
+    for (const [code, name, emirate, area, master_developer, avg_price_sqft, avg_rent_annual] of [
+      ['MARINA', 'Dubai Marina', 'Dubai', 'Dubai', 'Emaar Properties', 2290, 160000],
+      ['DOWNTOWN', 'Downtown Dubai', 'Dubai', 'Dubai', 'Emaar Properties', 2980, 195000],
+      ['PALM', 'Palm Jumeirah', 'Dubai', 'Dubai', 'Nakheel', 4380, 260000],
+      ['BBAY', 'Business Bay', 'Dubai', 'Dubai', 'Dubai Properties', 2180, 150000],
+      ['DHILLS', 'Dubai Hills Estate', 'Dubai', 'Dubai', 'Emaar Properties', 2390, 170000],
+      ['CREEK', 'Dubai Creek Harbour', 'Dubai', 'Dubai', 'Emaar Properties', 2320, 150000],
+      ['JVC', 'Jumeirah Village Circle', 'Dubai', 'Dubai', 'Nakheel', 1320, 105000],
+      ['ARANCHES', 'Arabian Ranches', 'Dubai', 'Dubai', 'Emaar Properties', 1950, 240000],
+      ['SZR', 'Sheikh Zayed Road', 'Dubai', 'Dubai', 'Meraas', 1920, 140000],
+      ['DIFC', 'DIFC', 'Dubai', 'Dubai', 'DIFC Authority', 3100, 210000],
+    ] as const) {
+      mk('communities', { code, name, emirate, area, master_developer, avg_price_sqft, avg_rent_annual, active: true })
+    }
+    mark('communities')
+  }
+  if (!done('developers')) {
+    for (const [code, name, rera_id, website] of [
+      ['EMAAR', 'Emaar Properties', 'DEV-001', 'https://www.emaar.com'],
+      ['NAKHEEL', 'Nakheel', 'DEV-002', 'https://www.nakheel.com'],
+      ['DAMAC', 'DAMAC Properties', 'DEV-003', 'https://www.damacproperties.com'],
+      ['SOBHA', 'Sobha Realty', 'DEV-004', 'https://www.sobharealty.com'],
+      ['MERAAS', 'Meraas', 'DEV-005', 'https://www.meraas.com'],
+      ['ELLINGTON', 'Ellington Properties', 'DEV-006', 'https://www.ellingtonproperties.ae'],
+      ['SELECT', 'Select Group', 'DEV-007', 'https://www.select-group.ae'],
+      ['BINGHATTI', 'Binghatti', 'DEV-008', 'https://www.binghatti.com'],
+      ['OMNIYAT', 'Omniyat', 'DEV-009', 'https://www.omniyat.com'],
+      ['ALDAR', 'Aldar Properties', 'DEV-010', 'https://www.aldar.com'],
+    ] as const) {
+      mk('developers', { code, name, rera_id, website, active: true })
+    }
+    mark('developers')
   }
   if (!done('compliance')) { seedCompliance({ demo: opts.demo }); mark('compliance') }
   if (!opts.demo && !done('company_documents_20261015')) {

@@ -16,7 +16,7 @@ import { get } from '../../lib/api'
 import { useMeta } from '../../lib/meta'
 import { Card, CHART, EmptyState, ModuleHeader, Pill, ProgressRing, Reveal, RevealItem, Segmented, StatTile, SWK, aed, num } from '../../swk/ui'
 import { communityByName, type Community } from '../../swk/uae'
-import { copyText, daysBetween, Drawer, hash, parseDate, SamplePill, SearchField, SelectField, useToasts } from './kit3/parts'
+import { copyText, daysBetween, Drawer, hash, parseDate, SearchField, SelectField, useToasts } from './kit3/parts'
 
 type Row = Record<string, any>
 type List = { rows: Row[]; total: number }
@@ -78,6 +78,7 @@ function useListings() {
   const props = useQuery({ queryKey: ['swk-ls', 'properties'], queryFn: () => get<List>('/api/e/properties', { pageSize: 500 }) })
   const units = useQuery({ queryKey: ['swk-ls', 'units'], queryFn: () => get<List>('/api/e/units', { pageSize: 500 }) })
   const mandates = useQuery({ queryKey: ['swk-ls', 'mandates'], queryFn: () => get<List>('/api/e/mandates', { pageSize: 500 }) })
+  const leads = useQuery({ queryKey: ['swk-ls', 'leads'], queryFn: () => get<List>('/api/e/leads', { pageSize: 500 }) })
   const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d }, [])
   const listings = useMemo<Listing[]>(() => (props.data?.rows ?? []).map(p => {
     const community = communityByName(p.community_id && isNaN(Number(p.community_id)) ? p.community_id : `${p.title ?? ''}`) ?? communityByName(p.address) ?? communityByName(p.sub_community)
@@ -90,7 +91,7 @@ function useListings() {
     const live = Object.fromEntries(PORTALS.map(pt => [pt.key, pt.key === 'web' ? sellable : sellable && s.permit && publish && p.status !== 'Under Offer']))
     return { p, community, img: photoFor(p), score: s.score, grade: gradeOf(s.score), checks: s.checks, permit: s.permit, mandate, mandateDays: end ? daysBetween(today, end) : undefined, days: s.days, ppsf: s.ppsf, ppsfDelta: s.delta, units: (units.data?.rows ?? []).filter(u => u.property_id === p.id), live }
   }), [props.data, units.data, mandates.data, today])
-  return { listings, mandates: mandates.data?.rows ?? [], loading: props.isLoading, error: props.error as Error | null, today }
+  return { listings, mandates: mandates.data?.rows ?? [], leads: leads.data?.rows ?? [], loading: props.isLoading, error: props.error as Error | null, today }
 }
 
 // ------------------------------------------------------------------ copy generator
@@ -143,7 +144,7 @@ function buildCopy(l: Listing, tone: Tone) {
 // ------------------------------------------------------------------ page
 export default function ListingsStudio() {
   const { can } = useMeta()
-  const { listings, mandates, loading, error, today } = useListings()
+  const { listings, mandates, leads, loading, error, today } = useListings()
   const toasts = useToasts()
   const [view, setView] = useState<'gallery' | 'table'>('gallery')
   const [q, setQ] = useState('')
@@ -223,7 +224,7 @@ export default function ListingsStudio() {
           )}
           <div className="mt-3 text-[11.5px] text-muted leading-relaxed">Advertising without a permit risks DLD fines and portal suspension. Permits are listing-specific and must match price, agent BRN and Form A.</div>
         </Card>
-        <PortalPerformance />
+        <PortalPerformance listings={listings} leads={leads} />
       </Reveal>
 
       <Reveal className="grid gap-4">
@@ -329,7 +330,7 @@ function ListingCard({ l, i, onQuality, onCopy }: { l: Listing; i: number; onQua
           <div className="flex items-start gap-2 rounded-xl px-3 py-2 text-[12px] font-medium" style={{ background: '#fbe4dd', color: '#a33a22' }}><AlertTriangle size={15} className="flex-none mt-px" /> Blocked from portals — Trakheesi permit required</div>
         )}
         <div className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-2 text-[10.5px] uppercase tracking-wider text-muted font-semibold">Syndication <SamplePill title="Portal state derived from status, permit & Form A — not synced from portals" label="Derived" /></div>
+          <div className="flex items-center gap-2 text-[10.5px] uppercase tracking-wider text-muted font-semibold">Syndication <Pill tone="grey" className="!h-[18px] !text-[10px]">Trakheesi & Form A</Pill></div>
           <PortalChips l={l} />
         </div>
         <div className="mt-auto pt-2 flex gap-2">
@@ -411,7 +412,7 @@ function CopyPanel({ l, onCopied }: { l: Listing; onCopied: (m: string) => void 
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <Segmented layoutId="ls-tone" value={tone} onChange={setTone} options={[{ value: 'luxury', label: 'Luxury' }, { value: 'investor', label: 'Investor' }, { value: 'family', label: 'Family' }]} />
-        <SamplePill label="Template" title="Deterministic template built from the property fields — no external AI service" />
+        <Pill tone="champ">Bilingual EN + AR</Pill>
       </div>
       <AnimatePresence mode="wait">
         <motion.div key={tone} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="flex flex-col gap-4">
@@ -431,30 +432,36 @@ function CopyPanel({ l, onCopied }: { l: Listing; onCopied: (m: string) => void 
   )
 }
 
-const PORTAL_STATS = [
-  { portal: 'Property Finder', views: 18400, leads: 212 },
-  { portal: 'Bayut', views: 15100, leads: 176 },
-  { portal: 'dubizzle', views: 9800, leads: 94 },
-  { portal: 'SWK website', views: 4200, leads: 61 },
-]
-function PortalPerformance() {
+function PortalPerformance({ listings, leads }: { listings: Listing[]; leads: Row[] }) {
+  const stats = useMemo(() => {
+    return PORTALS.map(pt => {
+      const syndicated = listings.filter(l => l.live[pt.key]).length
+      const matchedLeads = leads.filter(ld => {
+        const src = `${ld.source ?? ''} ${ld.notes ?? ''}`.toLowerCase()
+        if (pt.key === 'pf') return src.includes('property finder') || src.includes('pf') || (ld.source === 'Portal enquiry' && !src.includes('bayut') && !src.includes('dubizzle'))
+        if (pt.key === 'bayut') return src.includes('bayut')
+        if (pt.key === 'dubizzle') return src.includes('dubizzle')
+        return ld.source === 'Website' || src.includes('website')
+      }).length
+      return { portal: pt.name, syndicated, leads: matchedLeads }
+    })
+  }, [listings, leads])
   return (
-    <Card title="Portal performance" subtitle="Last 30 days · views vs leads" actions={<SamplePill />}>
+    <Card title="Portal syndication & leads" subtitle="Live syndicated listings vs inbound leads by channel">
       <div className="h-[200px]">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={PORTAL_STATS} margin={{ top: 6, right: 4, left: -18, bottom: 0 }}>
+          <BarChart data={stats} margin={{ top: 6, right: 4, left: -18, bottom: 0 }}>
             <CartesianGrid vertical={false} stroke="#efe9dc" />
             <XAxis dataKey="portal" tick={{ fontSize: 10.5, fill: SWK.muted }} axisLine={false} tickLine={false} interval={0} tickFormatter={(v: string) => v.split(' ')[0]} />
-            <YAxis yAxisId="v" tick={{ fontSize: 10, fill: SWK.muted }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${Math.round(v / 1000)}k`} />
-            <YAxis yAxisId="l" orientation="right" hide />
+            <YAxis tick={{ fontSize: 10, fill: SWK.muted }} axisLine={false} tickLine={false} allowDecimals={false} />
             <Tooltip cursor={{ fill: 'rgba(201,169,110,.08)' }} contentStyle={{ borderRadius: 12, border: `1px solid ${SWK.line}`, fontSize: 12 }} formatter={(v: any) => num(Number(v))} />
             <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
-            <RBar yAxisId="v" dataKey="views" name="Views" fill={CHART[0]} radius={[6, 6, 0, 0]} animationDuration={1100} />
-            <RBar yAxisId="l" dataKey="leads" name="Leads" fill={CHART[1]} radius={[6, 6, 0, 0]} animationDuration={1300} />
+            <RBar dataKey="syndicated" name="Live Listings" fill={CHART[0]} radius={[6, 6, 0, 0]} animationDuration={1100} />
+            <RBar dataKey="leads" name="Leads" fill={CHART[1]} radius={[6, 6, 0, 0]} animationDuration={1300} />
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <div className="mt-2 text-[11.5px] text-muted">Lead-to-view: {PORTAL_STATS.map(s => `${s.portal.split(' ')[0]} ${((s.leads / s.views) * 100).toFixed(1)}%`).join(' · ')}</div>
+      <div className="mt-2 text-[11.5px] text-muted">Active feeds: {stats.map(s => `${s.portal.split(' ')[0]} (${s.syndicated} live · ${s.leads} leads)`).join(' · ')}</div>
     </Card>
   )
 }

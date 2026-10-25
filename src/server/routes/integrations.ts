@@ -101,6 +101,7 @@ export default async function (app: FastifyInstance) {
   app.post('/api/finance/year-end/:id/reopen', async (req) => { need(req, 'finance', 'approve'); return reopenYear(idOf((req.params as any).id), req.ctx) })
 
   app.post('/api/finance/bank/auto-match', async (req) => { need(req, 'finance', 'edit'); return { matched: autoMatch((req.body as any)?.bank_account_id) } })
+  void parseStatement
 
   app.get('/api/invoices/:id/einvoice.xml', async (req, reply) => {
     const id = idOf((req.params as any).id); getRecord(getDef('invoices'), id, req.ctx, { children: false }); need(req, 'finance', 'export')
@@ -125,5 +126,85 @@ export default async function (app: FastifyInstance) {
     reply.header('content-type', 'text/plain; charset=utf-8').header('content-disposition', `attachment; filename="${b.file_name}"`); return safeJson<string>(b.content, '')
   })
 
+  // =================================================================== PDF rendering
+  app.get('/api/pdf/status', async () => ({ available: pdfAvailable() }))
+  app.get('/api/pdf/:entity/:id', async (req, reply) => {
+    const p = req.params as any, qs = req.query as any
+    const def = getDef(p.entity)
+    const rec = getRecord(def, idOf(p.id), req.ctx, { children: false })
+    const rawCookie = req.cookies?.[COOKIE]
+    if (!rawCookie) throw forbidden('PDF generation requires a browser session')
+    const seal = qs.seal !== undefined ? `?seal=${encodeURIComponent(String(qs.seal))}` : ''
+    const buf = await renderPrintPdf(`/print/${def.key}/${rec.id}${seal}`, { name: COOKIE, value: rawCookie })
+    const disp = qs.download === '1' ? 'attachment' : 'inline'
+    reply.header('content-type', 'application/pdf').header('content-disposition', `${disp}; filename="${def.key}-${rec.id}.pdf"`)
+    return buf
+  })
+
+  // =================================================================== WhatsApp inbox
+  app.get('/api/whatsapp/threads', async (req) => {
+    need(req, 'crm', 'view')
+    const rows = q.all(`SELECT m.wa_id, m.contact_name, m.party_id, p.name AS party_name, m.direction, m.body, m.at FROM whatsapp_messages m LEFT JOIN parties p ON p.id = m.party_id WHERE m.deleted_at IS NULL AND m.id IN (SELECT MAX(id) FROM whatsapp_messages WHERE deleted_at IS NULL GROUP BY wa_id) ORDER BY m.id DESC LIMIT 100`)
+    return {
+      configured: waConfigured(),
+      webhook: `${origin(req)}/api/public/whatsapp`,
+      threads: rows.map(r => ({ wa_id: r.wa_id, name: r.contact_name || r.party_name || '', party: r.party_name || '', direction: r.direction, last: r.body, at: r.at })),
+    }
+  })
+  app.get('/api/whatsapp/thread/:waId', async (req) => {
+    need(req, 'crm', 'view')
+    const waId = normalizePhone(String((req.params as any).waId ?? ''))
+    return q.all(`SELECT id, direction, body, status, origin, error, at FROM whatsapp_messages WHERE wa_id = ? AND deleted_at IS NULL ORDER BY id ASC LIMIT 200`, waId)
+  })
+  app.post('/api/whatsapp/send', async (req) => {
+    need(req, 'crm', 'edit')
+    const b = z.object({ to: z.string().min(5), text: z.string().min(1).max(4096) }).parse(req.body)
+    return sendWhatsApp(b.to, b.text, { origin: req.user!.name })
+  })
+
+  // =================================================================== AI employees
+  app.get('/api/ai/status', async (req) => {
+    need(req, 'ai', 'view')
+    ensureAgents()
+    const agents = q.all(`SELECT id, name, title, avatar, active, schedule, run_hour, autonomy, deliver_to, last_run_at, last_status, role_key, instructions, tools FROM ai_agents WHERE deleted_at IS NULL ORDER BY id`).map(a => ({ ...a, active: !!a.active }))
+    const pending = q.val<number>(`SELECT COUNT(*) FROM ai_actions WHERE status = 'Pending' AND deleted_at IS NULL`) ?? 0
+    return {
+      configured: aiConfigured(),
+      pending,
+      agents,
+      templates: AGENT_TEMPLATES.map(t => ({ key: t.key, name: t.name, title: t.title, avatar: t.avatar, blurb: (t as any).blurb ?? t.description })),
+      tools: TOOLS.map(t => ({ name: t.name, risk: t.risk, description: t.description })),
+    }
+  })
+  app.get('/api/ai/brief', async (req) => {
+    need(req, 'ai', 'view')
+    return latestBrief()
+  })
+  app.post('/api/ai/chat', async (req) => {
+    need(req, 'ai', 'view')
+    const b = z.object({ agent_id: z.number().int().positive(), message: z.string().min(1).max(4000), history: z.array(z.object({ role: z.enum(['user', 'assistant']), content: z.string() })).optional() }).parse(req.body)
+    const reply = await chatWithAgent(b.agent_id, b.message, { channel: 'chat', history: b.history })
+    return { reply }
+  })
+  app.post('/api/ai/agents/:id/run', async (req) => {
+    need(req, 'ai', 'edit')
+    const id = idOf((req.params as any).id)
+    const task = (req.body as any)?.task ? String((req.body as any).task) : undefined
+    return runAgent(id, task, 'manual')
+  })
+  app.post('/api/ai/agents/hire', async (req) => {
+    need(req, 'ai', 'create')
+    const { template } = z.object({ template: z.string().min(1) }).parse(req.body)
+    const t = AGENT_TEMPLATES.find(x => x.key === template)
+    if (!t) throw bad('Unknown template')
+    return createRecord(getDef('ai_agents'), { name: t.name, title: t.title, avatar: t.avatar, instructions: t.instructions, autonomy: t.autonomy, schedule: t.schedule, run_hour: t.run_hour, deliver_to: t.deliver_to, tools: t.tools, active: false, role_key: t.key }, req.ctx)
+  })
+  app.post('/api/ai/actions/:id/:decision', async (req) => {
+    need(req, 'ai', 'approve')
+    const id = idOf((req.params as any).id)
+    const dec = String((req.params as any).decision)
+    if (dec !== 'approve' && dec !== 'reject') throw bad('Invalid decision')
+    return decideAction(id, dec === 'approve', req.user!.id)
+  })
+  void ENTITIES; void assertCan; void can
 }
-  // =================================================================== operations

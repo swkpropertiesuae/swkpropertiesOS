@@ -37,14 +37,8 @@ function seriesFor(c: Community, m: Metric) {
 }
 
 function matchCommunity(p: Prop) {
-  return communityByName(p._labels?.community_ref) || communityByName(p.address) || communityByName(p.title) || communityByName(p._labels?.community_id)
+  return communityByName(p._labels?.community_ref) || communityByName(p.community_id) || communityByName(p.address) || communityByName(p.title) || communityByName(p._labels?.community_id)
 }
-
-const SAMPLE_PROPS: Prop[] = [
-  { id: -1, title: 'Sample · Marina Gate 2BR', price: 2_650_000, area_sqft: 1_240, address: 'Dubai Marina' },
-  { id: -2, title: 'Sample · Burj Vista 1BR', price: 2_150_000, area_sqft: 780, address: 'Downtown Dubai' },
-  { id: -3, title: 'Sample · Bloom Towers Studio', price: 560_000, area_sqft: 455, address: 'JVC' },
-]
 
 export default function MarketPage() {
   const { data, isLoading } = useQuery({ queryKey: ['market-props'], queryFn: () => get<{ rows: Prop[] }>('/api/e/properties?pageSize=500') })
@@ -261,9 +255,7 @@ function ScatterCard({ onPick }: { onPick: (c: Community) => void }) {
 // ---------------------------------------------------------------- portfolio vs market (CMA-lite)
 function PortfolioCard({ props, loading }: { props: Prop[]; loading: boolean }) {
   const real = props.filter(p => Number(p.price) > 0 && Number(p.area_sqft) > 0)
-  const sample = !loading && real.length < 3
-  const list = sample ? [...real, ...SAMPLE_PROPS] : real
-  const rows = list.map(p => {
+  const rows = real.map(p => {
     const c = matchCommunity(p)
     const ppsf = Number(p.price_per_sqft) || Number(p.price) / Number(p.area_sqft)
     const diff = c ? (ppsf / c.ppsf - 1) * 100 : null
@@ -274,8 +266,8 @@ function PortfolioCard({ props, loading }: { props: Prop[]; loading: boolean }) 
   return (
     <Reveal>
       <Card title="SWK portfolio vs market" subtitle="Each listing's AED/sq ft against its community average — a CMA-lite pricing check before you advise the seller (Form A)."
-        actions={<>{sample && <Pill tone="champ">Includes sample rows</Pill>}<Link to="/e/properties" className="swk-icon-link" aria-label="Open properties"><ArrowUpRight size={16} /></Link></>}>
-        {loading ? <div className="h-40 grid place-items-center text-muted text-sm">Loading SWK inventory…</div> : rows.length === 0 ? <EmptyState title="No priced listings yet" hint="Add price and area to properties to benchmark them." /> : (
+        actions={<Link to="/e/properties" className="swk-icon-link" aria-label="Open properties"><ArrowUpRight size={16} /></Link>}>
+        {loading ? <div className="h-40 grid place-items-center text-muted text-sm">Loading SWK inventory…</div> : rows.length === 0 ? <EmptyState title="No priced listings yet" hint="Add price and area to properties to benchmark them against DLD community medians." action={<Link to="/e/properties?new=1" className="swk-btn swk-btn-primary">Add property</Link>} /> : (
           <>
             <div className="grid grid-cols-3 gap-3 mb-4">
               {(['Below market', 'At market', 'Premium'] as const).map(k => {
@@ -297,10 +289,10 @@ function PortfolioCard({ props, loading }: { props: Prop[]; loading: boolean }) 
                     return (
                       <motion.tr key={p.id} initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.04 }}>
                         <td className="max-w-[240px]">
-                          {p.id > 0 ? <Link to={`/e/properties/${p.id}`} className="font-semibold text-ink hover:underline block truncate">{p.title ?? p._title}</Link> : <span className="font-semibold text-ink block truncate">{p.title}</span>}
-                          <span className="text-[11.5px] text-muted">{num(p.area_sqft)} sq ft{p.id < 0 && <> · <Pill tone="champ" className="!h-[18px] !text-[10px]">Sample</Pill></>}</span>
+                          <Link to={`/e/properties/${p.id}`} className="font-semibold text-ink hover:underline block truncate">{p.title ?? p._title}</Link>
+                          <span className="text-[11.5px] text-muted">{num(p.area_sqft)} sq ft</span>
                         </td>
-                        <td>{c ? c.name : <span className="text-muted">{p.address?.split(',').pop()?.trim() || '—'}</span>}</td>
+                        <td>{c ? c.name : <span className="text-muted">{p.community_id || p.address?.split(',').pop()?.trim() || '—'}</span>}</td>
                         <td className="num">{aed(p.price, { compact: true })}</td>
                         <td className="num font-semibold">{num(ppsf)}</td>
                         <td className="num text-muted">{c ? num(c.ppsf) : '—'}</td>

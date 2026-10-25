@@ -1,60 +1,45 @@
-# Client handover guide
+# Client Handover Guide — SWK Properties OS
 
-## The three accounts
+## Production Accounts
 
 | Purpose | E-mail | Initial password | Data |
 |---|---|---|---|
-| **Administrator** – all features | admin@swkpropertiesuae.com | SWK OS@Admin2026 | Production workspace, **empty** |
-| **Manager** – all features | manager@swkpropertiesuae.com | SWK OS@Manager2026 | Production workspace, **empty** |
-| **Demo presenter** – all features | demo@swkpropertiesuae.com | Demo@SWK OS2026 | Isolated demo workspace |
+| **Administrator** – all features | admin@swkpropertiesuae.com | SWK@Admin2026 | Production workspace, **clean (zero mock data)** |
+| **Manager** – all features | manager@swkpropertiesuae.com | SWK@Manager2026 | Production workspace, **clean (zero mock data)** |
 
-* Administrator and Manager have full access to every module. The only difference is naming; both can administer users, roles and integrations.
-* On first sign-in each is forced to choose a personal password; nothing else in the application is reachable until they do. Rotate the initial passwords by setting `ADMIN_PASSWORD` / `MANAGER_PASSWORD` before the very first start if you prefer not to hand over known defaults.
-* The production workspace contains **only configuration**: chart of accounts, VAT codes, currencies, countries, ports, carriers, charge codes, container types, roles, departments, the head-office branch, one legal entity, and seven AI employees (all switched off). It contains no customers, jobs, invoices, users (other than the two above), announcements or documents.
+* Administrator and Manager have full access to every module. Both can administer users, roles, settings, compliance, and integrations.
+* On first sign-in each account is required to set a personal password before any business APIs can be accessed. Rotate initial passwords by setting `ADMIN_PASSWORD` / `MANAGER_PASSWORD` in `.env` before the first start if desired.
+* The production workspace contains **only reference & statutory configuration**:
+  - Chart of accounts (UAE real estate & IFRS aligned), VAT codes (5% Standard, Zero-Rated, Exempt, Out of Scope), currencies, countries
+  - UAE master communities & developers
+  - Service charge & brokerage fee codes
+  - Roles, departments (`Sales`, `Leasing`, `Property Management`, `Finance`, `HR`, `Operations`), Dubai head-office branch (`DXB`), and default legal entity (`SWK` — SWK Properties L.L.C.)
+  - DET Trade Licence (`1645802`), RERA ORN (`51517`), DCCI (`697774`), and FTA compliance items
+  - 7 AI employees (all switched off by default until enabled by an administrator)
+* It contains **zero mock/sample business records** (no fictional clients, properties, units, deals, mandates, leases, cheques, or invoices).
 
-## The demo workspace
+## Enterprise Real Estate Modules Included
 
-* **Separate database file** (`data/demo/demo.db`). Demo sessions are routed to it per request, so demo and production data can never mix: records created in the demo are invisible to production and vice-versa (verified by `tests/handover.ts`).
-* **No outbound traffic**: e-mail, WhatsApp, e-invoice, EDI, tracking, Supabase, R2, SFTP and real AI calls are blocked while a demo session is active. Jarvis answers with a scripted assistant that really queries the demo data.
-* **Rebuilt every night (03:00 Dubai)** so dates stay relative to today, and on every restart. The presenter can also press **Reset demo now** in the blue banner.
-* Dates, amounts and company names are fictional (`.example` domains, dummy TRNs/IBANs).
-* Turn it off completely with `DEMO_ENABLED=false`. The login page shows an **Explore the demo workspace** button only while it is enabled.
-
-### Scenarios included in the demo
-
-| Area | What you can show |
+| Area | Features Ready for Production |
 |---|---|
-| Sales & CRM | Leads from several sources (including a WhatsApp enquiry), opportunities by stage, campaign, calls/activities, quotations in every state (draft, sent, awaiting margin approval, accepted→job, rejected, expired), rate cards, contract nearing renewal |
-| Operations | Jobs in every status – open, in progress, on hold (customs query), delivered-not-invoiced, closed, cancelled; delayed vessel with rolled booking; dangerous goods; temperature-controlled air export; container free-time risk; sub-jobs, bookings with cut-offs, delivery order, trip with signed POD; public tracking link; EDI/tracking history |
-| Customs | Cleared export declaration, import declaration with a raised query |
-| Finance | Posted, partly paid, paid, void, draft, pro-forma and credit-note invoices; foreign-currency invoice; on-account receipt; receivables ageing in every bucket; vendor bills due soon, overdue, partly paid, pending approval; expense claims in each state; bank statement with matched and unmatched lines; e-invoice statuses; **previous year closed and locked**; **second legal entity and branch** |
-| People | Employees with expiring visas/IDs, leave requests, attendance, payroll for last month, generated **WPS salary file** |
-| Warehouse & transport | Low stock, near-expiry lots, posted and draft receipts, dispatch, vehicles with expiring registration, drivers |
-| Support & risk | Tickets in every state, cargo claims (investigating, with insurer), insurance certificate |
-| Work | Project with a Kanban of tasks (including blocked and overdue), reminders |
-| AI & automation | Active AI employees, a briefing on the dashboard, runs, **pending approvals** to approve live, automation rules, a webhook |
-| Platform | Documents with expiries (real viewable files), announcements, notifications, WhatsApp inbox, integration log, audit trail, custom field, Arabic/RTL toggle |
+| **Executive Desk (`/`)** | Live KPIs, sales & leasing pipeline funnel, commission & revenue trend, portfolio occupancy ring, RERA/DLD compliance watch, upcoming viewings/transfers/renewals |
+| **Deal Pipeline (`/pipeline`)** | Interactive 7-stage Kanban (`Inquiry` → `Viewing` → `Offer` → `Negotiation` → `Contract (Form F)` → `DLD Trustee` → `Handover`), one-click stage progression, + New Deal modal |
+| **Listing Studio (`/listings`)** | RERA Trakheesi permit verification, 100-point listing quality score, live Property Finder / Bayut / Dubizzle syndication metrics |
+| **Off-Plan Desk (`/offplan`)** | Live off-plan project inventory (`is_off_plan`), milestone payment plan simulator, DLD 4% + Oqood fee breakdown, one-click Reservation & EOI generator |
+| **Market Pulse (`/market`)** | Dubai community price/sqft benchmarks, yield vs appreciation matrix, live valuation against your listed portfolio |
+| **Deal Toolkit (`/toolkit`)** | DLD 4% transfer & mortgage fee sheet, UAE expat/national mortgage calculator, RERA Decree 43/2013 rent increase calculator, net yield & 10-year Golden Visa checker |
+| **Leases, Ejari & PDC Vault (`/pdc`, `/e/leases`)** | Post-dated cheque vault (`Pending`, `Cleared`, `Overdue`, `Bounced`), one-click clear/bounce recording, 90-day Ejari renewal alerts, maintenance & snagging workflows |
+| **Owner 360 (`/owners`)** | Landlord portfolio valuations, net yield after Mollak service charges, RERA renewal uplift signals, live maintenance quote approvals, Golden Visa status |
+| **Agent Leaderboard (`/agents`)** | Live broker GCI rankings, commission slab calculator, RERA BRN expiry tracker, 90-day activity heatmap |
+| **RERA & Compliance Centre (`/rera`, `/compliance`)** | Form A / Form B / Form F / NOC / Ejari status, live AML/KYC & goAML DNFBP screening queue with one-click verification, UAE VAT & Corporate Tax filing calendar |
+| **Finance & Accounting (`/e/invoices`, `/reports`)** | Full double-entry general ledger, FTA tax invoices & credit notes, escrow accounts, AR/AP ageing, Trial Balance, P&L, Balance Sheet, UAE VAT 201 return |
+| **HR, Payroll & WPS (`/e/employees`, `/e/payslips`)** | Employee visa/Emirates ID expiry tracking, leave management, UAE Gratuity calculator, MOHRE WPS `.SIF` batch generation |
+| **Document Studio (`/studio`)** | 82 corporate templates (`SWK-001` to `SWK-082`) with live PDF/HTML preview, company seal support, and print/email dispatch |
 
-### Suggested 20-minute walkthrough
-1. Dashboard & Jarvis briefing → alerts → drill into an overdue invoice.
-2. Quotation awaiting approval → approve → convert to job.
-3. Delayed job: timeline, tracking page, customs query, WhatsApp milestone.
-4. Invoice from job → post → PDF → e-invoice XML → receipt → bank reconciliation.
-5. AI Team → approve Collections Agent's e-mail → Activity.
-6. Payroll → WPS file. Year-end close history. Entity filter on trial balance.
-7. Switch language to Arabic.
-
-## Go-live checklist (production)
-1. Set `APP_SECRET`, `PUBLIC_URL`, `TRUST_PROXY`, `COOKIE_SECURE`, and (optionally) initial passwords in `.env`; run behind HTTPS.
-2. Sign in as Administrator, set your own password, enable 2-step verification.
-3. Company Settings (including the new *UAE compliance* tab): legal name, address, TRN, licence, bank details, document terms. Then follow the checklist in [UAE-COMPLIANCE.md](UAE-COMPLIANCE.md#4-go-live-checklist). Branches: confirm DXB details. Legal entities: edit the default entity.
-4. Create real users and roles. (Customer-portal users are tied to a customer.)
-5. Integrations: connect Resend, R2, Supabase, WhatsApp, AI provider as needed; press *Test connection* for each.
-6. Import customers/opening balances; set the accounting lock date after opening balances are checked.
-7. Enable nightly R2 backup; test a restore.
-8. Switch on the AI employees you want, starting with approval-required autonomy.
-9. Decide whether to keep `DEMO_ENABLED=true` on this server (recommended only for sales demonstrations).
-
-## Ownership and support materials
-* Source: this repository (React + Fastify + SQLite/PostgreSQL). `docs/` holds features, integrations, AI team, deployment and this guide; `corporate-templates/` holds the 82 document templates, 16 e-mails and marketing collateral.
-* Automated checks: `npm run typecheck`, `npm test` (134), `npm run test:integrations` (83), `npm run test:handover` (48). A CI workflow runs them on every push.
+## Go-Live Checklist (Production)
+1. Set `APP_SECRET`, `PUBLIC_URL`, `TRUST_PROXY`, `COOKIE_SECURE`, `STARTER_DATA=false`, `DEMO_ENABLED=false`, and initial passwords in `.env`; run behind HTTPS.
+2. Sign in as Administrator (`admin@swkpropertiesuae.com`), set your personal password, and enable 2-step verification (TOTP).
+3. Open **Administration → Company Settings** (including the **UAE compliance** tab): verify your 15-digit FTA TRN, bank IBAN details, and upload your official company seal.
+4. Create staff accounts and RERA broker profiles under **Users** and **Agents**.
+5. Connect SMTP / Resend, Cloudflare R2, Supabase, WhatsApp, and AI provider keys under **Integrations** as needed.
+6. Enable nightly backups under **Administration → Backup & Data**.

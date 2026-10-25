@@ -7,7 +7,7 @@ import { put } from '../../lib/api'
 import { useMeta } from '../../lib/meta'
 import { aed, Card, ModuleHeader, Pill, ProgressRing, Reveal, Segmented, StatTile, SWK, pct } from '../../swk/ui'
 import { RERA_FORMS, UAE } from '../../swk/uae'
-import { addDays, Avatar, cleanLabel, daysSince, daysUntil, Drawer, fmtD, MUTED, INK, SamplePill, SearchBox, useRows, type Row } from './brokerage/common'
+import { Avatar, cleanLabel, daysSince, daysUntil, Drawer, fmtD, MUTED, INK, SearchBox, useRows, type Row } from './brokerage/common'
 
 // ------------------------------------------------------------------ stages (UAE sales journey)
 const STAGES = [
@@ -30,26 +30,10 @@ const typeTone = (t: DType) => t === 'Sale' ? 'navy' : t === 'Lease' ? 'oasis' :
 
 type Deal = {
   id: string; recId?: number; jobNo?: string; name: string; client: string; property: string; value: number; pct: number; type: DType
-  stage: StageKey; agent: string; stageSince?: string; dealDate?: string; targetClose?: string; actualClose?: string; cancelled?: boolean; sample: boolean
+  stage: StageKey; agent: string; stageSince?: string; dealDate?: string; targetClose?: string; actualClose?: string; cancelled?: boolean
 }
 const commission = (d: Deal) => d.value * (d.pct / 100) * (1 + UAE.vat)
 const gciNet = (d: Deal) => d.value * (d.pct / 100)
-
-// ------------------------------------------------------------------ indicative sample deals (labelled in UI)
-const SAMPLE: Omit<Deal, 'id' | 'sample'>[] = [
-  { name: 'Emaar Beachfront 2BR resale', client: 'Mr. Rajesh Menon', property: 'Beach Vista T2 · 1804', value: 3_450_000, pct: 2, type: 'Sale', stage: 'Inquiry', agent: 'Sarah Williams', stageSince: addDays(-3), dealDate: addDays(-3), targetClose: addDays(75) },
-  { name: 'JVC studio investor', client: 'Ms. Elena Petrova', property: 'Binghatti Corner · 412', value: 720_000, pct: 2, type: 'Sale', stage: 'Inquiry', agent: 'Omar Khalid', stageSince: addDays(-6), dealDate: addDays(-6), targetClose: addDays(60) },
-  { name: 'Dubai Hills villa lease', client: 'The Carter Family', property: 'Sidra 3 · Villa 27', value: 340_000, pct: 5, type: 'Lease', stage: 'Viewing', agent: 'Fatima Al Hashimi', stageSince: addDays(-4), dealDate: addDays(-9), targetClose: addDays(18) },
-  { name: 'Creek Harbour off-plan 1BR', client: 'Mr. Wei Zhang', property: 'Creek Waters 2 · 2207', value: 1_680_000, pct: 4, type: 'Off-plan', stage: 'Viewing', agent: 'Mohammed Al Qubaisi', stageSince: addDays(-2), dealDate: addDays(-5), targetClose: addDays(30) },
-  { name: 'Business Bay office lease', client: 'Nova Fintech FZ-LLC', property: 'Bay Square 11 · Office 604', value: 260_000, pct: 5, type: 'Lease', stage: 'Offer', agent: 'Omar Khalid', stageSince: addDays(-5), dealDate: addDays(-20), targetClose: addDays(14) },
-  { name: 'Palm Jumeirah signature villa', client: 'Al Falasi Family Office', property: 'Frond N · Villa 12', value: 28_500_000, pct: 2, type: 'Sale', stage: 'Negotiation', agent: 'Ahmed Al Mansoori', stageSince: addDays(-11), dealDate: addDays(-41), targetClose: addDays(40) },
-  { name: 'Sobha Hartland II 3BR', client: 'Dr. Priya Nair', property: 'Sobha Orbis · 1502', value: 4_150_000, pct: 4, type: 'Off-plan', stage: 'Contract', agent: 'Sarah Williams', stageSince: addDays(-7), dealDate: addDays(-35), targetClose: addDays(21) },
-  { name: 'Marina Gate 2BR transfer', client: 'Mr. James O’Connor', property: 'Marina Gate 1 · 3304', value: 3_100_000, pct: 2, type: 'Sale', stage: 'DLD Process', agent: 'Ahmed Al Mansoori', stageSince: addDays(-9), dealDate: addDays(-52), targetClose: addDays(6) },
-  { name: 'Downtown 1BR mortgage buyer', client: 'Ms. Aisha Rahman', property: 'Burj Royale · 2011', value: 2_050_000, pct: 2, type: 'Sale', stage: 'Handover', agent: 'Fatima Al Hashimi', stageSince: addDays(-2), dealDate: addDays(-58), targetClose: addDays(3) },
-  { name: 'Arabian Ranches 4BR sale', client: 'Mr. & Mrs. Schneider', property: 'Saheel · Villa 88', value: 6_200_000, pct: 2, type: 'Sale', stage: 'Closed', agent: 'Mohammed Al Qubaisi', stageSince: addDays(-6), dealDate: addDays(-64), targetClose: addDays(-8), actualClose: addDays(-6) },
-  { name: 'JLT 1BR annual lease', client: 'Mr. Karan Shah', property: 'Lake City Tower · 905', value: 92_000, pct: 5, type: 'Lease', stage: 'Closed', agent: 'Omar Khalid', stageSince: addDays(-12), dealDate: addDays(-30), targetClose: addDays(-14), actualClose: addDays(-12) },
-  { name: 'City Walk 2BR (buyer withdrew)', client: 'Mr. Lucas Moreau', property: 'City Walk B8 · 402', value: 3_300_000, pct: 2, type: 'Sale', stage: 'Negotiation', agent: 'Sarah Williams', dealDate: addDays(-50), cancelled: true },
-]
 
 // ------------------------------------------------------------------ transfer checklists
 type CheckItem = { key: string; label: string; at: number; form?: string }
@@ -111,8 +95,6 @@ export default function PipelinePage() {
   const [type, setType] = useState<'All' | DType>('All')
   const [agent, setAgent] = useState('all')
   const [q, setQ] = useState('')
-  const [showSample, setShowSample] = useState(true)
-  const [sampleStages, setSampleStages] = useState<Record<string, StageKey>>({})
   const [openId, setOpenId] = useState<string | null>(null)
   const [overCol, setOverCol] = useState<string | null>(null)
   const [toast, setToast] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
@@ -124,11 +106,10 @@ export default function PipelinePage() {
     return {
       id: `job-${r.id}`, recId: r.id, jobNo: r.job_no, name: r.deal_name || r._title || `Deal ${r.id}`, client: r._labels?.client_id ?? '—', property: r._labels?.property_id ?? '—',
       value: Number(r.deal_value) || 0, pct: Number(r.commission_pct) || (t === 'Lease' ? 5 : 2), type: t, stage: st, agent: cleanLabel(r._labels?.agent_id) || 'Unassigned',
-      stageSince: r.updated_at, dealDate: r.deal_date, targetClose: r.target_close, actualClose: r.actual_close, cancelled: r.job_status === 'Cancelled', sample: false,
+      stageSince: r.updated_at, dealDate: r.deal_date, targetClose: r.target_close, actualClose: r.actual_close, cancelled: r.job_status === 'Cancelled',
     }
   }), [jobsQ.data])
-  const sampleDeals: Deal[] = useMemo(() => SAMPLE.map((s, i) => ({ ...s, id: `sample-${i}`, sample: true, stage: sampleStages[`sample-${i}`] ?? s.stage })), [sampleStages])
-  const all = useMemo(() => [...realDeals, ...(showSample ? sampleDeals : [])].filter(d => !d.cancelled), [realDeals, sampleDeals, showSample])
+  const all = useMemo(() => realDeals.filter(d => !d.cancelled), [realDeals])
   const agents = useMemo(() => [...new Set(all.map(d => d.agent))].sort(), [all])
   const filtered = useMemo(() => all.filter(d =>
     (type === 'All' || d.type === type) && (agent === 'all' || d.agent === agent) &&
@@ -141,7 +122,7 @@ export default function PipelinePage() {
   const weightedGci = open.reduce((s, d) => s + gciNet(d) * STAGES[stageIdx(d.stage)].prob, 0)
   const cycle = closed.map(d => d.actualClose && d.dealDate ? (new Date(d.actualClose).getTime() - new Date(d.dealDate).getTime()) / 864e5 : null).filter((x): x is number => x !== null && x >= 0)
   const avgDays = cycle.length ? cycle.reduce((a, b) => a + b, 0) / cycle.length : 0
-  const cancelledCount = [...realDeals, ...(showSample ? sampleDeals : [])].filter(d => d.cancelled && (type === 'All' || d.type === type) && (agent === 'all' || d.agent === agent)).length
+  const cancelledCount = realDeals.filter(d => d.cancelled && (type === 'All' || d.type === type) && (agent === 'all' || d.agent === agent)).length
   // won ÷ (won + cancelled + stale deals > 30 days past target close)
   const lost = cancelledCount + open.filter(d => (daysUntil(d.targetClose) ?? 1) < -30).length
   const winRate = closed.length + lost ? (closed.length / (closed.length + lost)) * 100 : 0
@@ -164,7 +145,6 @@ export default function PipelinePage() {
   })
   const move = useCallback((id: string, stage: StageKey) => {
     const d = all.find(x => x.id === id); if (!d || d.stage === stage) return
-    if (d.sample) { setSampleStages(s => ({ ...s, [id]: stage })); return }
     if (!VALID.has(stage)) return
     if (!canEdit) { setToast({ tone: 'err', text: 'You do not have permission to edit deal files.' }); return }
     mut.mutate({ recId: d.recId!, stage })
@@ -178,7 +158,8 @@ export default function PipelinePage() {
       <ModuleHeader eyebrow="Sales · Deal Pipeline" icon={<KanbanSquare size={22} />} title="Deal Pipeline"
         subtitle="Every live deal file on the Dubai sales journey — from enquiry to DLD transfer. Drag cards between stages; changes save to the deal file instantly."
         actions={<>
-          <label className="swk-toggle"><input type="checkbox" checked={showSample} onChange={e => setShowSample(e.target.checked)} />Blend sample deals</label>
+          <Link to="/e/viewings?new=1" className="swk-btn swk-btn-ghost"><Eye size={15} />Book viewing</Link>
+          <Link to="/e/offers?new=1" className="swk-btn swk-btn-ghost"><HandCoins size={15} />Log offer</Link>
           <Link to="/e/jobs/new" className="swk-btn swk-btn-gold"><FileSignature size={15} />New deal file</Link>
         </>} />
 
@@ -198,7 +179,7 @@ export default function PipelinePage() {
           </select>
         </label>
         <SearchBox value={q} onChange={setQ} placeholder="Search deal, client, property…" label="Search deals" />
-        <span className="text-[12.5px] ml-auto" style={{ color: MUTED }}>{jobsQ.isLoading ? 'Loading deal files…' : `${realDeals.length} deal files from the database${showSample ? ` · ${sampleDeals.length} sample` : ''}`}</span>
+        <span className="text-[12.5px] ml-auto" style={{ color: MUTED }}>{jobsQ.isLoading ? 'Loading deal files…' : `${realDeals.length} deal file${realDeals.length === 1 ? '' : 's'} in database`}</span>
       </div>
 
       <LayoutGroup>
@@ -275,7 +256,7 @@ function DealCard({ d, onOpen, onMove }: { d: Deal; onOpen: () => void; onMove: 
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 flex-wrap mb-1">
               <Pill tone={typeTone(d.type) as any}>{d.type}</Pill>
-              {d.sample ? <SamplePill /> : d.jobNo && <span className="text-[10.5px] font-semibold" style={{ color: MUTED }}>{d.jobNo}</span>}
+              {d.jobNo && <span className="text-[10.5px] font-semibold" style={{ color: MUTED }}>{d.jobNo}</span>}
             </div>
             <div className="font-semibold text-[13.5px] leading-snug" style={{ color: INK }}>{d.name}</div>
             <div className="text-[11.5px] truncate" style={{ color: MUTED }}>{d.client} · {d.property}</div>
@@ -318,7 +299,6 @@ function TransferDrawer({ deal, onClose, onMove }: { deal: Deal | null; onClose:
               <div className="text-[11px] uppercase tracking-[.18em]" style={{ color: SWK.champ }}>Transfer checklist</div>
               <div className="font-display text-[20px] font-semibold text-white">{aed(deal.value)}</div>
               <div className="text-[12px]">Commission {aed(commission(deal))} incl. VAT · {deal.agent}</div>
-              {deal.sample && <div className="mt-1"><SamplePill /></div>}
             </div>
           </div>
 
@@ -360,8 +340,7 @@ function TransferDrawer({ deal, onClose, onMove }: { deal: Deal | null; onClose:
             <p className="text-[11px] mt-2" style={{ color: MUTED }}>Checklist ticks are kept on this device. Target close {fmtD(deal.targetClose)}.</p>
           </div>
 
-          {deal.recId ? <Link to={`/e/jobs/${deal.recId}`} className="swk-btn swk-btn-primary"><ArrowUpRight size={15} />Open deal file {deal.jobNo}</Link>
-            : <div className="text-[12px] rounded-xl p-3" style={{ background: '#f3ead8', color: '#7d5f2c' }}>This is a sample deal used to demonstrate the pipeline — it has no deal file.</div>}
+          {deal.recId && <Link to={`/e/jobs/${deal.recId}`} className="swk-btn swk-btn-primary"><ArrowUpRight size={15} />Open deal file {deal.jobNo}</Link>}
         </div>
       )}
     </Drawer>

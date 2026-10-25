@@ -32,7 +32,7 @@ export const finance: EntityDef[] = [
   {
     key: 'journal_lines', label: 'Journal line', plural: 'Journal lines', module: 'finance', icon: 'List', title: ['id'], child: true,
     fields: [
-      R('entry_id', 'Entry', 'journal_entries', { hidden: true }), R('account_id', 'Account', 'accounts', { required: true, list: true }), R('party_id', 'Party', 'parties'), R('property_id', 'Property', 'properties'), R('unit_id', 'Unit', 'units'), R('lease_id', 'Lease', 'leases'),
+      R('entry_id', 'Entry', 'journal_entries', { hidden: true }), R('account_id', 'Account', 'accounts', { required: true, list: true }), R('party_id', 'Party', 'parties'), R('job_id', 'Deal File', 'jobs'), R('property_id', 'Property', 'properties'), R('unit_id', 'Unit', 'units'), R('lease_id', 'Lease', 'leases'),
       T('description', 'Description'), M('debit', 'Debit', { list: true }), M('credit', 'Credit', { list: true }),
     ],
   },
@@ -42,7 +42,7 @@ export const finance: EntityDef[] = [
     children: [{ key: 'lines', label: 'Invoice lines', entity: 'invoice_lines', fk: 'invoice_id', columns: ['charge_code_id', 'description', 'qty', 'rate', 'line_ccy', 'line_roe', 'vat_code_id', 'amount'] }],
     fields: [
       T('invoice_no', 'Document no.', { readonly: true, list: true, search: true, section: 'Document' }), S('doc_type', 'Document type', ['Tax Invoice', 'Proforma Invoice', 'Debit Note', 'Credit Note'], { required: true, default: 'Tax Invoice', list: true }),
-      R('party_id', 'Customer', 'parties', { required: true, refFilter: { is_customer: 1 }, list: true }), R('property_id', 'Property', 'properties', { list: true }), R('unit_id', 'Unit', 'units', { list: true }), R('lease_id', 'Lease', 'leases', { list: true }),
+      R('party_id', 'Customer', 'parties', { required: true, refFilter: { is_customer: 1 }, list: true }), R('job_id', 'Deal File', 'jobs', { list: true }), R('property_id', 'Property', 'properties', { list: true }), R('unit_id', 'Unit', 'units', { list: true }), R('lease_id', 'Lease', 'leases', { list: true }),
       D('invoice_date', 'Invoice date', { required: true, default: 'today', list: true }), D('supply_date', 'Date of supply', { help: 'If different from the invoice date. A tax invoice must be issued within 14 days of supply.' }), D('due_date', 'Due date', { list: true }), R('payment_term_id', 'Payment term', 'payment_terms'), R('branch_id', 'Branch', 'branches', { list: true }),
       S('currency', 'Currency', CUR, { default: 'AED', required: true, list: true }), N('ex_rate', 'Exchange rate to AED', { default: 1 }), T('reference', 'Customer reference / PO'), T('credit_reason', 'Reason for credit / debit note', { help: 'Required on credit notes' }), R('original_invoice_id', 'Against invoice', 'invoices', { help: 'For credit / debit notes' }),
       S('status', 'Status', ['Draft', 'Posted', 'Partially paid', 'Paid', 'Void'], { default: 'Draft', list: true, readonly: true }),
@@ -61,7 +61,7 @@ export const finance: EntityDef[] = [
       R('invoice_id', 'Invoice', 'invoices', { hidden: true }), R('charge_code_id', 'Charge', 'charge_codes'), T('description', 'Description'), T('unit', 'Unit'), N('qty', 'Qty', { default: 1 }), M('rate', 'Rate'),
       S('line_ccy', 'Priced in', ['', ...CUR], { help: 'Leave blank when the rate is already in the invoice currency. Choose USD (for example) to price this line in USD and bill it in the invoice currency at the rate of exchange.' }), N('line_roe', 'ROE', { help: 'Rate of exchange to the invoice currency, up to 6 decimals (for example 3.685).' }),
       R('vat_code_id', 'Tax', 'vat_codes'), P('vat_pct', 'VAT %', { hidden: true }), M('amount', 'Amount', { computed: true }), M('vat_amount', 'VAT', { computed: true, hidden: true }), M('line_total', 'Total', { computed: true, hidden: true }),
-      R('account_id', 'Revenue account', 'accounts', { hidden: true }), R('property_id', 'Property', 'properties', { hidden: true }), R('unit_id', 'Unit', 'units', { hidden: true }), R('lease_id', 'Lease', 'leases', { hidden: true }),
+      R('account_id', 'Revenue account', 'accounts', { hidden: true }), R('job_charge_id', 'Deal Charge', 'job_charges', { hidden: true }), R('property_id', 'Property', 'properties', { hidden: true }), R('unit_id', 'Unit', 'units', { hidden: true }), R('lease_id', 'Lease', 'leases', { hidden: true }),
     ],
   },
   {
@@ -70,7 +70,7 @@ export const finance: EntityDef[] = [
     children: [{ key: 'lines', label: 'Bill lines', entity: 'bill_lines', fk: 'bill_id', columns: ['charge_code_id', 'description', 'qty', 'rate', 'vat_code_id', 'amount'] }],
     fields: [
       T('bill_no', 'Bill no.', { readonly: true, list: true, search: true, section: 'Bill' }), R('vendor_id', 'Vendor', 'parties', { required: true, refFilter: { is_vendor: 1 }, list: true }), T('vendor_invoice_no', 'Vendor invoice no.', { required: true, list: true, search: true }),
-      R('property_id', 'Property', 'properties', { list: true }), R('unit_id', 'Unit', 'units', { list: true }), R('lease_id', 'Lease', 'leases', { list: true }),
+      R('job_id', 'Deal File', 'jobs', { list: true }), R('property_id', 'Property', 'properties', { list: true }), R('unit_id', 'Unit', 'units', { list: true }), R('lease_id', 'Lease', 'leases', { list: true }),
       D('bill_date', 'Bill date', { required: true, default: 'today', list: true }), D('due_date', 'Due date', { list: true }), R('payment_term_id', 'Payment term', 'payment_terms'),
       S('currency', 'Currency', CUR, { default: 'AED', required: true, list: true }), N('ex_rate', 'Exchange rate to AED', { default: 1 }), R('branch_id', 'Branch', 'branches', { list: true }),
       S('status', 'Status', ['Draft', 'Posted', 'Partially paid', 'Paid', 'Void'], { default: 'Draft', list: true, readonly: true }),
@@ -85,7 +85,7 @@ export const finance: EntityDef[] = [
     fields: [
       R('bill_id', 'Bill', 'bills', { hidden: true }), R('charge_code_id', 'Charge', 'charge_codes'), T('description', 'Description'), N('qty', 'Qty', { default: 1 }), M('rate', 'Rate'),
       R('vat_code_id', 'Tax', 'vat_codes'), P('vat_pct', 'VAT %', { hidden: true }), M('amount', 'Amount', { computed: true }), M('vat_amount', 'VAT', { computed: true, hidden: true }), M('line_total', 'Total', { computed: true, hidden: true }),
-      R('account_id', 'Expense account', 'accounts', { hidden: false }), R('property_id', 'Property', 'properties', { hidden: true }), R('unit_id', 'Unit', 'units', { hidden: true }), R('lease_id', 'Lease', 'leases', { hidden: true }),
+      R('account_id', 'Expense account', 'accounts', { hidden: false }), R('job_charge_id', 'Deal Charge', 'job_charges', { hidden: true }), R('property_id', 'Property', 'properties', { hidden: true }), R('unit_id', 'Unit', 'units', { hidden: true }), R('lease_id', 'Lease', 'leases', { hidden: true }),
     ],
   },
   {
@@ -145,7 +145,7 @@ export const finance: EntityDef[] = [
     fields: [
       T('expense_no', 'Claim no.', { readonly: true, list: true, search: true, section: 'Expense' }), R('employee_id', 'Employee', 'employees', { required: true, list: true }), D('expense_date', 'Date', { required: true, default: 'today', list: true }),
       S('category', 'Category', ['Travel', 'Fuel', 'Client entertainment', 'Meals', 'Communication', 'Office supplies', 'Accommodation', 'Marketing', 'Training', 'Other'], { required: true, list: true }),
-      T('description', 'Description', { list: true, span: 2 }), M('amount', 'Amount', { required: true, list: true }), M('vat_amount', 'VAT included'), R('property_id', 'Property', 'properties'), R('unit_id', 'Unit', 'units'),
+      T('description', 'Description', { list: true, span: 2 }), M('amount', 'Amount', { required: true, list: true }), M('vat_amount', 'VAT included'), R('job_id', 'Deal File', 'jobs'), R('property_id', 'Property', 'properties'), R('unit_id', 'Unit', 'units'),
       R('account_id', 'Expense account', 'accounts'), S('status', 'Status', ['Draft', 'Submitted', 'Approved', 'Rejected', 'Paid'], { default: 'Draft', list: true, readonly: true }), R('approver_id', 'Approver', 'users', { readonly: true }),
       R('paid_from_id', 'Paid from', 'bank_accounts', { readonly: true }), D('paid_on', 'Paid on', { readonly: true }), R('journal_id', 'Journal', 'journal_entries', { readonly: true }), TA('notes', 'Notes'),
     ],

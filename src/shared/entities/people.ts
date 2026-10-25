@@ -23,7 +23,7 @@ export const people: EntityDef[] = [
     numbering: { field: 'agent_no', pattern: 'AGT{seq:4}' },
     fields: [
       T('agent_no', 'Agent No.', { readonly: true, list: true, search: true, section: 'Agent' }),
-      R('employee_id', 'Employee Record', 'employees', { required: true, list: true, help: 'Link to HR employee record for payroll' }),
+      R('employee_id', 'Employee Record', 'employees', { list: true, help: 'Link to HR employee record for payroll' }),
       T('name', 'Full Name', { required: true, list: true, search: true, span: 2 }),
       T('dld_broker_id', 'DLD Broker ID (RERA No.)', { required: true, unique: true, list: true, search: true, section: 'DLD Registration' }),
       T('rera_card_no', 'RERA Card No.', { list: true }),
@@ -79,11 +79,12 @@ export const people: EntityDef[] = [
     numbering: { field: 'ticket_no', pattern: 'TKT{YY}{seq:5}' },
     fields: [
       T('ticket_no', 'Ticket no.', { readonly: true, list: true, search: true, section: 'Ticket' }), T('subject', 'Subject', { required: true, list: true, search: true, span: 2 }),
-      S('type', 'Type', ['Maintenance', 'Tenant Complaint', 'Landlord Complaint', 'Service Request', 'Billing Query', 'Contract Dispute', 'Ejari Issue', 'Handover Issue', 'Other'], { default: 'Service request', list: true }),
+      S('type', 'Type', ['Maintenance', 'Tenant Complaint', 'Landlord Complaint', 'Service Request', 'Billing Query', 'Contract Dispute', 'Ejari Issue', 'Handover Issue', 'Other'], { default: 'Service Request', list: true }),
       S('priority', 'Priority', ['Low', 'Medium', 'High', 'Urgent'], { default: 'Medium', list: true }),
       S('status', 'Status', ['Open', 'In progress', 'Waiting on customer', 'Waiting on vendor', 'Resolved', 'Closed'], { default: 'Open', list: true }),
       R('property_id', 'Property', 'properties', { list: true }), R('unit_id', 'Unit', 'units', { list: true }),
       R('lease_id', 'Lease', 'leases', { list: true }), R('customer_id', 'Customer', 'parties', { list: true }),
+      T('link_entity', 'Linked record type', { hidden: true }), I('link_id', 'Linked record id', { hidden: true }), T('link_label', 'Linked record', { readonly: true, list: true }),
       R('assigned_to', 'Assigned to', 'users', { list: true }), DT('due_at', 'SLA due', { list: true }), DT('resolved_at', 'Resolved at', { readonly: true }),
       TA('description', 'Description'), TA('resolution', 'Resolution / root cause'),
     ],

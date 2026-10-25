@@ -86,7 +86,7 @@ export const transactions: EntityDef[] = [
   },
   {
     key: 'escrow_transactions', label: 'Escrow Transaction', plural: 'Escrow Transactions', module: 'transactions', icon: 'ArrowLeftRight',
-    title: ['id'], child: true,
+    title: ['id'],
     fields: [
       R('escrow_account_id', 'Escrow Account', 'escrow_accounts', { hidden: true, required: true }),
       S('type', 'Type', ['Deposit', 'Withdrawal', 'Fee', 'Interest', 'DLD Payment', 'Agent Commission', 'Seller Payout'], { required: true, list: true }),

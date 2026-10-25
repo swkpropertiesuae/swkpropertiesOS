@@ -1,23 +1,23 @@
 /**
- * Off-Plan Launches — curated Dubai off-plan catalogue (inspired by Reelly).
- * The project catalogue below is INDICATIVE sample data maintained in-file; SWK inventory flagged
- * is_off_plan=true is merged in from /api/e/properties.
+ * Off-Plan Launches — Dubai off-plan project inventory & payment plan intelligence.
+ * Driven 100% by live off-plan properties (/api/e/properties where is_off_plan=true or status='Off-Plan'),
+ * units (/api/e/units) and registered developers (/api/e/developers).
  */
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowUpRight, Building, CalendarClock, ChevronLeft, ChevronRight, Copy, HandCoins, Landmark, Lock, MessageCircle, Rocket, ShieldCheck, Trophy } from 'lucide-react'
+import { ArrowUpRight, Building, CalendarClock, ChevronLeft, ChevronRight, Copy, HandCoins, Landmark, Lock, MessageCircle, Plus, Rocket, ShieldCheck, Trophy } from 'lucide-react'
 import { get } from '../../lib/api'
 import { Bar, Card, EmptyState, Field, ModuleHeader, Pill, ProgressRing, Reveal, StatTile, SWK, aed, num } from '../../swk/ui'
 import { COMMUNITIES, DEVELOPERS, UAE, communityByName, paymentPlan } from '../../swk/uae'
-import { copyText, Drawer, hash, SamplePill, SelectField, useToasts } from './kit3/parts'
+import { copyText, Drawer, SelectField, useToasts } from './kit3/parts'
 
 type Plan = { booking: number; construction: number; handover: number; post: number }
 type Project = {
   id: string; project: string; developer: string; community: string; image: string; from: number; types: string[]; handoverQ: string; handover: Date
   plan: Plan; completion: number; escrow: string; reraNo: string; oqood: boolean; avail: number; total: number; commission: number; minPaidResale: number
-  blurb: string; featured?: boolean; source: 'catalogue' | 'swk'; swkId?: number
+  blurb: string; featured?: boolean; swkId: number
 }
 
 const PHASE_COLORS = { booking: SWK.navy, construction: SWK.champ, handover: SWK.oasis, post: SWK.sky }
@@ -25,21 +25,7 @@ const q2date = (q: string) => { const [qq, y] = q.split(' '); const m = (Number(
 const img = (p: string) => (p.startsWith('/') ? p : `/media/properties/${p}.webp`)
 const P = (b: number, c: number, h: number, po = 0): Plan => ({ booking: b, construction: c, handover: h, post: po })
 
-const RAW: Omit<Project, 'handover' | 'source'>[] = [
-  { id: 'creek-vista', project: 'Creek Vista Heights', developer: 'Emaar Properties', community: 'Dubai Creek Harbour', image: img('river-cove-residences-1'), from: 1_650_000, types: ['1 BR', '2 BR', '3 BR'], handoverQ: 'Q4 2028', plan: P(10, 70, 20), completion: 18, escrow: 'Emirates NBD', reraNo: 'RERA-PRJ 3412', oqood: true, avail: 142, total: 388, commission: 5, minPaidResale: 40, featured: true, blurb: 'Waterfront towers facing the Ras Al Khor sanctuary with direct Creek Marina promenade access.' },
-  { id: 'palm-crown', project: 'The Crown Residences', developer: 'Nakheel', community: 'Palm Jumeirah', image: img('palm-garden-homes-1'), from: 6_900_000, types: ['2 BR', '3 BR', '4 BR Penthouse'], handoverQ: 'Q2 2028', plan: P(20, 40, 40), completion: 34, escrow: 'Emirates Islamic', reraNo: 'RERA-PRJ 3188', oqood: true, avail: 38, total: 120, commission: 4, minPaidResale: 50, featured: true, blurb: 'Beachfront boutique residences on the crescent with private beach club and marina berths.' },
-  { id: 'hills-greens', project: 'Golf Greens Villas', developer: 'Emaar Properties', community: 'Dubai Hills Estate', image: img('golf-fields-1'), from: 4_850_000, types: ['4 BR Villa', '5 BR Villa'], handoverQ: 'Q3 2027', plan: P(10, 70, 20), completion: 62, escrow: 'Emirates NBD', reraNo: 'RERA-PRJ 2954', oqood: true, avail: 21, total: 164, commission: 5, minPaidResale: 40, blurb: 'Golf-course frontage villas minutes from Dubai Hills Mall.' },
-  { id: 'damac-islands', project: 'Lagoon Islands Phase 2', developer: 'DAMAC Properties', community: 'Dubai Land', image: img('islands-2-1'), from: 2_250_000, types: ['4 BR Townhouse', '5 BR Townhouse'], handoverQ: 'Q4 2029', plan: P(20, 55, 0, 25), completion: 6, escrow: 'Mashreq', reraNo: 'RERA-PRJ 3520', oqood: true, avail: 610, total: 900, commission: 6, minPaidResale: 30, featured: true, blurb: 'Tropical-island inspired townhouses around crystal lagoons with a 25% post-handover plan.' },
-  { id: 'sobha-sanctuary', project: 'Sanctuary Hartland III', developer: 'Sobha Realty', community: 'Mohammed Bin Rashid City', image: img('villa-sanctuary-6'), from: 3_400_000, types: ['3 BR', '4 BR Villa'], handoverQ: 'Q1 2028', plan: P(10, 50, 40), completion: 41, escrow: 'Abu Dhabi Commercial Bank', reraNo: 'RERA-PRJ 3077', oqood: true, avail: 64, total: 210, commission: 5, minPaidResale: 40, blurb: 'Backward-integrated Sobha quality with lagoon and forest landscaping.' },
-  { id: 'binghatti-bay', project: 'Binghatti Skyrise', developer: 'Binghatti', community: 'Business Bay', image: img('business-bay-executive-tower-2'), from: 1_150_000, types: ['Studio', '1 BR', '2 BR'], handoverQ: 'Q2 2027', plan: P(20, 50, 30), completion: 71, escrow: 'Emirates Islamic', reraNo: 'RERA-PRJ 2890', oqood: true, avail: 96, total: 640, commission: 6, minPaidResale: 30, blurb: 'Signature Binghatti façade on the Dubai Canal, strong short-let demand.' },
-  { id: 'azizi-jvc', project: 'Azizi Vista Boulevard', developer: 'Azizi Developments', community: 'Jumeirah Village Circle', image: img('jvc-boulevard-residences-2'), from: 720_000, types: ['Studio', '1 BR', '2 BR'], handoverQ: 'Q4 2027', plan: P(10, 40, 10, 40), completion: 48, escrow: 'Dubai Islamic Bank', reraNo: 'RERA-PRJ 3005', oqood: true, avail: 210, total: 520, commission: 6, minPaidResale: 30, blurb: 'Entry-level investor stock in JVC with 40% post-handover over two years.' },
-  { id: 'ellington-marina', project: 'Ellington Marina Edit', developer: 'Ellington Properties', community: 'Dubai Marina', image: img('marina-sky-penthouse-1'), from: 2_100_000, types: ['1 BR', '2 BR', '3 BR', 'Penthouse'], handoverQ: 'Q3 2028', plan: P(10, 60, 30), completion: 22, escrow: 'First Abu Dhabi Bank', reraNo: 'RERA-PRJ 3301', oqood: true, avail: 73, total: 190, commission: 5, minPaidResale: 40, blurb: 'Design-led boutique tower with full marina and Ain Dubai views.' },
-  { id: 'danube-sports', project: 'Danube Oceanz Sky', developer: 'Danube Properties', community: 'Dubai Maritime City', image: img('raw-district-2-3'), from: 980_000, types: ['Studio', '1 BR', '2 BR'], handoverQ: 'Q1 2029', plan: P(10, 49, 0, 41), completion: 9, escrow: 'RAKBANK', reraNo: 'RERA-PRJ 3466', oqood: false, avail: 480, total: 720, commission: 6, minPaidResale: 30, blurb: 'Famous 1% monthly payment plan with resort-style amenities on every floor.' },
-  { id: 'omniyat-canal', project: 'The Canal Opus Residences', developer: 'Omniyat', community: 'Business Bay', image: img('creek-harbour-waterside-townhouse-1'), from: 9_800_000, types: ['3 BR', '4 BR', 'Sky Villa'], handoverQ: 'Q4 2028', plan: P(20, 50, 30), completion: 27, escrow: 'Emirates NBD', reraNo: 'RERA-PRJ 3254', oqood: true, avail: 14, total: 48, commission: 4, minPaidResale: 50, blurb: 'Ultra-prime canal-front residences serviced by a luxury hotel operator.' },
-  { id: 'meraas-arabian', project: 'Ranches Courtyard Collection', developer: 'Meraas', community: 'Arabian Ranches', image: img('arabian-ranches-courtyard-villa-2'), from: 5_300_000, types: ['4 BR Villa', '5 BR Villa'], handoverQ: 'Q2 2027', plan: P(10, 60, 30), completion: 79, escrow: 'Abu Dhabi Commercial Bank', reraNo: 'RERA-PRJ 2802', oqood: true, avail: 9, total: 96, commission: 4, minPaidResale: 40, blurb: 'Courtyard-plan family villas, near-complete with early handover potential.' },
-]
-const CATALOGUE: Project[] = RAW.map(p => ({ ...p, handover: q2date(p.handoverQ), source: 'catalogue' }))
-const devLogo = (name: string) => DEVELOPERS.find(d => d.name === name)?.logo
+const devLogo = (name: string) => DEVELOPERS.find(d => d.name.toLowerCase() === name.toLowerCase() || name.toLowerCase().includes(d.name.split(' ')[0].toLowerCase()))?.logo
 const communityImg = (name: string) => communityByName(name)?.image
 
 function planFromString(s?: string): Plan {
@@ -65,70 +51,123 @@ function countdown(to: Date, now: Date) {
 
 export default function OffPlanPage() {
   const props = useQuery({ queryKey: ['swk-op', 'properties'], queryFn: () => get<{ rows: any[] }>('/api/e/properties', { pageSize: 500 }) })
+  const unitsQ = useQuery({ queryKey: ['swk-op', 'units'], queryFn: () => get<{ rows: any[] }>('/api/e/units', { pageSize: 500 }) })
+  const devsQ = useQuery({ queryKey: ['swk-op', 'developers'], queryFn: () => get<{ rows: any[] }>('/api/e/developers', { pageSize: 200 }) })
   const toasts = useToasts()
   const now = useMemo(() => new Date(), [])
-  const swk: Project[] = useMemo(() => (props.data?.rows ?? []).filter(r => r.is_off_plan).map(r => {
-    const c = communityByName(r.title) ?? communityByName(r.address)
-    const year = Number(r.completion_year) || now.getFullYear() + 2
-    const hq = `Q4 ${year < now.getFullYear() ? now.getFullYear() + 1 : year}`
-    return {
-      id: `swk-${r.id}`, project: r.title, developer: r._labels?.developer_ref ?? (isNaN(Number(r.developer_id)) && r.developer_id ? r.developer_id : 'SWK inventory'), community: c?.name ?? r.sub_community ?? 'Dubai',
-      image: c?.image ?? img('golf-fields-1'), from: Number(r.price) || 0, types: [r.bedrooms ? `${r.bedrooms} BR ${r.property_type ?? ''}`.trim() : r.property_type ?? 'Unit'], handoverQ: hq, handover: q2date(hq),
-      plan: planFromString(r.payment_plan), completion: 10 + (hash(r.id) % 60), escrow: 'Per SPA (DLD escrow)', reraNo: r.rera_permit_no ?? '—', oqood: true, avail: 1, total: 1, commission: 2, minPaidResale: 40,
-      blurb: r.description ?? 'SWK exclusive off-plan resale / assignment.', source: 'swk' as const, swkId: r.id,
-    }
-  }), [props.data, now])
-  const all = useMemo(() => [...swk, ...CATALOGUE], [swk])
-  const featured = CATALOGUE.filter(p => p.featured)
+
+  const all: Project[] = useMemo(() => {
+    const unitRows = unitsQ.data?.rows ?? []
+    const devRows = devsQ.data?.rows ?? []
+    const devById = new Map<number, string>(devRows.map((d: any) => [Number(d.id), d.name]))
+
+    return (props.data?.rows ?? []).filter(r => r.is_off_plan || r.status === 'Off-Plan').map(r => {
+      const c = communityByName(r._labels?.community_ref) ?? communityByName(r.community_id) ?? communityByName(r.title) ?? communityByName(r.address)
+      const curYear = now.getFullYear()
+      const year = Number(r.completion_year) || curYear + 2
+      const hq = `Q4 ${year < curYear ? curYear + 1 : year}`
+      const pUnits = unitRows.filter((u: any) => u.property_id === r.id)
+      const availUnits = pUnits.filter((u: any) => u.status === 'Available').length
+      const totalUnits = pUnits.length || 1
+      const avail = pUnits.length ? availUnits : (r.status === 'Sold' ? 0 : 1)
+      const devName = r._labels?.developer_ref || devById.get(Number(r.developer_ref)) || (isNaN(Number(r.developer_id)) && r.developer_id ? r.developer_id : devById.get(Number(r.developer_id))) || 'Developer'
+      const yearsLeft = Math.max(0, year - curYear)
+      const completion = yearsLeft === 0 ? 90 : yearsLeft === 1 ? 65 : yearsLeft === 2 ? 35 : 15
+      const firstMedia = Array.isArray(r.media) && r.media[0]?.url ? r.media[0].url : null
+
+      return {
+        id: `swk-${r.id}`,
+        project: r.title || r.building_name || `Project #${r.id}`,
+        developer: devName,
+        community: c?.name ?? r.community_id ?? r.sub_community ?? 'Dubai',
+        image: firstMedia ?? c?.image ?? img('golf-fields-1'),
+        from: Number(r.price) || 0,
+        types: [r.bedrooms ? `${r.bedrooms} BR ${r.property_type ?? ''}`.trim() : r.property_type ?? 'Unit'],
+        handoverQ: hq,
+        handover: q2date(hq),
+        plan: planFromString(r.payment_plan),
+        completion,
+        escrow: 'DLD Registered Project Escrow',
+        reraNo: r.rera_permit_no || 'Pending permit',
+        oqood: Boolean(r.rera_permit_no || r.title_deed_no),
+        avail,
+        total: totalUnits,
+        commission: Number(r.roi_percent) > 0 && Number(r.roi_percent) <= 10 ? Number(r.roi_percent) : 4,
+        minPaidResale: 40,
+        blurb: r.description || `${r.property_type || 'Residential'} off-plan launch in ${c?.name ?? r.community_id ?? 'Dubai'}.`,
+        featured: Boolean(r.is_exclusive),
+        swkId: r.id,
+      }
+    })
+  }, [props.data, unitsQ.data, devsQ.data, now])
+
+  const featured = useMemo(() => {
+    const excl = all.filter(p => p.featured)
+    return excl.length ? excl : all.slice(0, 4)
+  }, [all])
 
   const [dev, setDev] = useState('all'); const [comm, setComm] = useState('all'); const [year, setYear] = useState('all')
-  const maxBudget = Math.ceil(Math.max(...all.map(p => p.from)) / 500_000) * 500_000
+  const maxBudget = Math.max(5_000_000, Math.ceil(Math.max(0, ...all.map(p => p.from)) / 500_000) * 500_000)
   const [budget, setBudget] = useState(maxBudget); const [postOnly, setPostOnly] = useState(false)
   useEffect(() => setBudget(maxBudget), [maxBudget])
   const [open, setOpen] = useState<Project | null>(null)
 
-  const list = all.filter(p => (dev === 'all' || p.developer === dev) && (comm === 'all' || p.community === comm) && (year === 'all' || String(p.handover.getFullYear()) === year) && p.from <= budget && (!postOnly || isPost(p)))
+  const list = all.filter(p => (dev === 'all' || p.developer === dev) && (comm === 'all' || p.community === comm) && (year === 'all' || String(p.handover.getFullYear()) === year) && (p.from <= budget || budget >= maxBudget) && (!postOnly || isPost(p)))
   const opt = (a: string[]) => [{ value: 'all', label: 'All' }, ...[...new Set(a)].sort().map(v => ({ value: v, label: v }))]
-  const avgEntry = CATALOGUE.reduce((s, p) => s + p.from, 0) / CATALOGUE.length
+  const avgEntry = all.length ? all.reduce((s, p) => s + p.from, 0) / all.length : 0
 
   return (
     <div className="flex flex-col gap-6">
       <ModuleHeader eyebrow="Primary market · Developers" icon={<Rocket size={22} />} title="Off-Plan Launches"
-        subtitle="Curated Dubai launches with payment plans, escrow & Oqood status, construction progress and SWK commission at a glance."
-        actions={<><SamplePill title="Project catalogue is an indicative sample maintained by SWK — verify with the developer's latest price list and DLD project status" label="Indicative catalogue" />{swk.length > 0 && <Pill tone="oasis">{swk.length} SWK off-plan listing{swk.length > 1 ? 's' : ''}</Pill>}</>} />
+        subtitle="Live off-plan inventory with milestone payment plans, DLD escrow & Oqood status, construction progress and brokerage commission."
+        actions={<>
+          {all.length > 0 && <Pill tone="oasis">{all.length} active launch{all.length > 1 ? 'es' : ''}</Pill>}
+          <Link to="/e/developers" className="swk-btn swk-btn-ghost"><Building size={15} /> Developers</Link>
+          <Link to="/e/properties?new=1" className="swk-btn swk-btn-primary"><Plus size={15} /> New off-plan listing</Link>
+        </>} />
 
-      <Spotlight items={featured} now={now} onOpen={setOpen} />
+      {featured.length > 0 && <Spotlight items={featured} now={now} onOpen={setOpen} />}
 
       <Reveal className="grid gap-4 grid-cols-2 xl:grid-cols-4">
         <StatTile label="Projects tracked" value={all.length} icon={<Building size={16} />} hint={`${new Set(all.map(p => p.developer)).size} developers`} tone="navy" />
-        <StatTile label="Avg entry price" value={avgEntry} format={v => aed(v, { compact: true })} icon={<HandCoins size={16} />} hint="Catalogue launches" />
+        <StatTile label="Avg entry price" value={avgEntry} format={v => aed(v, { compact: true })} icon={<HandCoins size={16} />} hint="Off-plan portfolio" />
         <StatTile label="Post-handover plans" value={all.filter(isPost).length} icon={<CalendarClock size={16} />} hint="Pay after keys" />
-        <StatTile label="Units available" value={all.reduce((s, p) => s + p.avail, 0)} icon={<Landmark size={16} />} hint="Across catalogue" tone="champ" />
+        <StatTile label="Units available" value={all.reduce((s, p) => s + p.avail, 0)} icon={<Landmark size={16} />} hint="Available inventory" tone="champ" />
       </Reveal>
 
-      <Reveal>
-        <Card title="Find a launch">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1.4fr_auto] items-end">
-            <SelectField label="Developer" value={dev} onChange={setDev} options={opt(all.map(p => p.developer))} />
-            <SelectField label="Community" value={comm} onChange={setComm} options={opt(all.map(p => p.community))} />
-            <SelectField label="Handover year" value={year} onChange={setYear} options={opt(all.map(p => String(p.handover.getFullYear())))} />
-            <label className="swk-field">
-              <span className="swk-field-label">Budget — launch price up to <b className="text-ink">{aed(budget, { compact: true })}</b></span>
-              <input type="range" min={500_000} max={maxBudget} step={250_000} value={budget} onChange={e => setBudget(Number(e.target.value))} aria-label="Maximum launch price" className="w-full h-11" style={{ accentColor: SWK.champDeep }} />
-            </label>
-            <label className="swk-toggle h-11"><input type="checkbox" checked={postOnly} onChange={e => setPostOnly(e.target.checked)} /> Post-handover only</label>
-          </div>
-        </Card>
-      </Reveal>
+      {all.length > 0 && (
+        <Reveal>
+          <Card title="Find a launch">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1.4fr_auto] items-end">
+              <SelectField label="Developer" value={dev} onChange={setDev} options={opt(all.map(p => p.developer))} />
+              <SelectField label="Community" value={comm} onChange={setComm} options={opt(all.map(p => p.community))} />
+              <SelectField label="Handover year" value={year} onChange={setYear} options={opt(all.map(p => String(p.handover.getFullYear())))} />
+              <label className="swk-field">
+                <span className="swk-field-label">Budget — launch price up to <b className="text-ink">{aed(budget, { compact: true })}</b></span>
+                <input type="range" min={500_000} max={maxBudget} step={250_000} value={budget} onChange={e => setBudget(Number(e.target.value))} aria-label="Maximum launch price" className="w-full h-11" style={{ accentColor: SWK.champDeep }} />
+              </label>
+              <label className="swk-toggle h-11"><input type="checkbox" checked={postOnly} onChange={e => setPostOnly(e.target.checked)} /> Post-handover only</label>
+            </div>
+          </Card>
+        </Reveal>
+      )}
 
       {props.isLoading && <div className="text-[12.5px] text-muted">Loading SWK off-plan inventory…</div>}
-      {!list.length ? <EmptyState title="No launches match" hint="Widen your budget or clear filters." /> : (
+      {!props.isLoading && all.length === 0 ? (
+        <EmptyState
+          title="No off-plan launches recorded yet"
+          hint="Add an off-plan property (tick 'Off-Plan' or set Status to 'Off-Plan') to track developer payment plans, Oqood fees, construction progress and WhatsApp client pitches."
+          action={<div className="flex gap-2 justify-center flex-wrap"><Link to="/e/properties?new=1" className="swk-btn swk-btn-primary"><Plus size={15} /> Add off-plan property</Link><Link to="/e/developers?new=1" className="swk-btn swk-btn-ghost">Add developer</Link></div>}
+        />
+      ) : !list.length ? (
+        <EmptyState title="No launches match filters" hint="Widen your budget or clear filters." />
+      ) : (
         <motion.div layout className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           <AnimatePresence mode="popLayout">{list.map((p, i) => <ProjectCard key={p.id} p={p} i={i} now={now} onOpen={() => setOpen(p)} />)}</AnimatePresence>
         </motion.div>
       )}
 
-      <DeveloperLeague projects={all} />
+      {all.length > 0 && <DeveloperLeague projects={all} />}
 
       <Drawer open={!!open} onClose={() => setOpen(null)} title={open?.project ?? ''} eyebrow={open ? `${open.developer} · ${open.community}` : ''} width={680}>
         {open && <ProjectDetail p={open} now={now} onToast={toasts.push} />}
@@ -173,15 +212,17 @@ function Spotlight({ items, now, onOpen }: { items: Project[]; now: Date; onOpen
           <div className="text-white/80 text-[12px] text-center">{countdown(p.handover, now).text}</div>
         </div>
       </div>
-      <div className="absolute z-[2] bottom-4 right-5 flex items-center gap-2">
-        <button className="w-8 h-8 rounded-full grid place-items-center text-white" style={{ background: 'rgba(255,255,255,.14)' }} onClick={() => setI(v => (v - 1 + items.length) % items.length)} aria-label="Previous launch"><ChevronLeft size={16} /></button>
-        {items.map((it, k) => (
-          <button key={it.id} onClick={() => setI(k)} aria-label={`Show ${it.project}`} aria-current={k === i} className="h-1.5 rounded-full overflow-hidden" style={{ width: k === i ? 34 : 12, background: 'rgba(255,255,255,.3)', transition: 'width .3s' }}>
-            {k === i && <motion.span key={`${it.id}-${paused}`} className="block h-full" style={{ background: SWK.champ }} initial={{ width: paused ? '100%' : 0 }} animate={{ width: '100%' }} transition={{ duration: paused ? 0 : 6, ease: 'linear' }} />}
-          </button>
-        ))}
-        <button className="w-8 h-8 rounded-full grid place-items-center text-white" style={{ background: 'rgba(255,255,255,.14)' }} onClick={() => setI(v => (v + 1) % items.length)} aria-label="Next launch"><ChevronRight size={16} /></button>
-      </div>
+      {items.length > 1 && (
+        <div className="absolute z-[2] bottom-4 right-5 flex items-center gap-2">
+          <button className="w-8 h-8 rounded-full grid place-items-center text-white" style={{ background: 'rgba(255,255,255,.14)' }} onClick={() => setI(v => (v - 1 + items.length) % items.length)} aria-label="Previous launch"><ChevronLeft size={16} /></button>
+          {items.map((it, k) => (
+            <button key={it.id} onClick={() => setI(k)} aria-label={`Show ${it.project}`} aria-current={k === i} className="h-1.5 rounded-full overflow-hidden" style={{ width: k === i ? 34 : 12, background: 'rgba(255,255,255,.3)', transition: 'width .3s' }}>
+              {k === i && <motion.span key={`${it.id}-${paused}`} className="block h-full" style={{ background: SWK.champ }} initial={{ width: paused ? '100%' : 0 }} animate={{ width: '100%' }} transition={{ duration: paused ? 0 : 6, ease: 'linear' }} />}
+            </button>
+          ))}
+          <button className="w-8 h-8 rounded-full grid place-items-center text-white" style={{ background: 'rgba(255,255,255,.14)' }} onClick={() => setI(v => (v + 1) % items.length)} aria-label="Next launch"><ChevronRight size={16} /></button>
+        </div>
+      )}
     </section>
   )
 }
@@ -208,9 +249,9 @@ function ProjectCard({ p, i, now, onOpen }: { p: Project; i: number; now: Date; 
         <div className="absolute inset-0 bg-cover bg-center transition-transform duration-[1.2s] group-hover:scale-[1.06]" style={{ backgroundImage: `url(${p.image || communityImg(p.community)})` }} />
         <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(11,26,51,0) 35%, rgba(11,26,51,.82) 100%)' }} />
         <div className="absolute top-3 left-3 flex gap-1.5 flex-wrap">
-          {p.source === 'swk' ? <Pill tone="oasis">SWK inventory</Pill> : <SamplePill label="Indicative" />}
+          <Pill tone="oasis">SWK inventory</Pill>
           {isPost(p) && <Pill tone="sky">Post-handover</Pill>}
-          {!p.oqood && <Pill tone="dune">Oqood pending</Pill>}
+          {!p.oqood && <Pill tone="dune">Permit / Oqood pending</Pill>}
         </div>
         {logo && <span className="absolute top-3 right-3 h-8 px-2 rounded-lg bg-white/95 grid place-items-center"><img src={logo} alt={p.developer} className="h-5 max-w-[80px] object-contain" /></span>}
         <div className="absolute bottom-3 left-4 right-4 text-white">
@@ -238,7 +279,7 @@ function ProjectCard({ p, i, now, onOpen }: { p: Project; i: number; now: Date; 
         </div>
         <div className="flex gap-2">
           <button className="swk-btn swk-btn-primary !h-9 flex-1 text-[12.5px]" onClick={onOpen}>Payment plan & details</button>
-          {p.swkId && <Link to={`/e/properties/${p.swkId}`} className="swk-btn swk-btn-ghost !h-9 !w-9 !p-0" aria-label="Open property record"><ArrowUpRight size={16} /></Link>}
+          <Link to={`/e/properties/${p.swkId}`} className="swk-btn swk-btn-ghost !h-9 !w-9 !p-0" aria-label="Open property record"><ArrowUpRight size={16} /></Link>
         </div>
       </div>
     </motion.article>
@@ -267,7 +308,7 @@ function ProjectDetail({ p, now, onToast }: { p: Project; now: Date; onToast: (m
         <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, transparent 30%, rgba(11,26,51,.85))' }} />
         <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between text-white">
           <div><div className="text-[12px] opacity-75">{p.blurb}</div></div>
-          {p.source === 'catalogue' && <SamplePill label="Indicative" />}
+          <Link to={`/e/properties/${p.swkId}`} className="swk-pill swk-pill-champ">Open property record</Link>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-x-6">
@@ -338,7 +379,7 @@ function DeveloperLeague({ projects }: { projects: Project[] }) {
   const maxN = Math.max(...rows.map(r => r.n), 1)
   return (
     <Reveal>
-      <Card title={<span className="inline-flex items-center gap-2"><Trophy size={18} style={{ color: SWK.champDeep }} /> Developer league</span>} subtitle="Ranked by active launches, then average construction progress" actions={<SamplePill label="Indicative" />}>
+      <Card title={<span className="inline-flex items-center gap-2"><Trophy size={18} style={{ color: SWK.champDeep }} /> Developer league</span>} subtitle="Ranked by active off-plan launches in SWK portfolio">
         <div className="grid gap-x-8 md:grid-cols-2">
           {rows.map((r, k) => {
             const logo = devLogo(r.dev)

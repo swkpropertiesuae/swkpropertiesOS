@@ -59,17 +59,18 @@ The API runs on port **8081** (configurable via `.env`). The web interface runs 
 Copy `.env.example` to `.env` and adjust:
 
 ```
-NODE_ENV=development
+NODE_ENV=production
 PORT=8081
 DATA_DIR=./data
-PG_SCHEMA=digitalburj
-PUBLIC_URL=http://localhost:8080
+PG_SCHEMA=swk
+PUBLIC_URL=http://localhost:8081
 BASE_CURRENCY=AED
+STARTER_DATA=false
 ADMIN_EMAIL=admin@swkpropertiesuae.com
 ADMIN_PASSWORD=SWK@Admin2026
 MANAGER_EMAIL=manager@swkpropertiesuae.com
 MANAGER_PASSWORD=SWK@Manager2026
-DEMO_ENABLED=true
+DEMO_ENABLED=false
 DEMO_EMAIL=demo@swkpropertiesuae.com
 DEMO_PASSWORD=Demo@SWK2026
 ```
@@ -78,9 +79,8 @@ DEMO_PASSWORD=Demo@SWK2026
 
 | Account | Email | Password | Workspace |
 |---|---|---|---|
-| Administrator (all access) | admin@swkpropertiesuae.com | SWK@Admin2026 | Production – empty, no sample data |
-| Manager (all access) | manager@swkpropertiesuae.com | SWK@Manager2026 | Production – empty, no sample data |
-| Demo presenter (all access) | demo@swkpropertiesuae.com | Demo@SWK OS2026 | Isolated demo – fictional data, resets nightly |
+| Administrator (all access) | admin@swkpropertiesuae.com | SWK@Admin2026 | Production – clean, zero mock data |
+| Manager (all access) | manager@swkpropertiesuae.com | SWK@Manager2026 | Production – clean, zero mock data |
 
 Production accounts must set their own password at first sign-in, or set `ADMIN_PASSWORD` / `MANAGER_PASSWORD` before the first start.
 

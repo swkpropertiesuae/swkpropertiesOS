@@ -20,8 +20,8 @@ export const config = {
   pgSchema: (env.PG_SCHEMA ?? 'swk').replace(/[^a-z0-9_]/gi, '').toLowerCase() || 'swk',
   baseUrl: env.PUBLIC_URL ?? '',
   timezone: env.APP_TIMEZONE ?? 'Asia/Dubai',
-  /** Load the SWK OS starter data (customer, jobs, invoices) into an empty production database at first start. */
-  starterData: bool(env.STARTER_DATA, true),
+  /** Keep production database clean at first start unless STARTER_DATA=true is explicitly set. */
+  starterData: bool(env.STARTER_DATA, false),
   /** Set to a new token (for example a date) to clear all business data once, after taking a backup, on the next start. */
   resetToken: (env.RESET_BUSINESS_DATA_ON_START ?? '').trim(),
   baseCurrency: env.BASE_CURRENCY ?? 'AED',

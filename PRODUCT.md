@@ -1,28 +1,20 @@
-# DigitalBurj OS
+# SWK Properties OS (SWK OS)
 
-## Product and users
+## Product and Users
 
-DigitalBurj OS supports the daily work of SWK Properties L.L.C., a logistics company in Dubai. DigitalBurj Business OS is the product owner and must remain credited in the interface. Daily use should remain practical for a small team.
+SWK Properties OS supports the daily operations of **SWK Properties L.L.C.** (`إس دبليو كي العقارية ش.ذ.م.م`), a RERA-licensed real estate brokerage and property management enterprise in Dubai, UAE (DET Licence `1645802`, RERA ORN `51517`).
 
-Staff manage enquiries and quotations, bookings and shipment jobs, shipment documents and clearance, transport and delivery, customer invoices, supplier costs and payments. Existing warehouse, people, compliance, reporting and administrative features remain available according to permissions. Customers have a separate portal view of their own shipments and balances.
+Staff manage property listings, units, Form A mandates, buyer/tenant leads, viewings, offers, Form F sales contracts, DLD trustee transfers, escrow accounts, Ejari leases, post-dated cheques (PDCs), maintenance requests, property handovers, commission tax invoices, vendor bills, HR/WPS payroll, and UAE statutory compliance. Landlords and clients have a dedicated portal view of their own deals, leases, and statements.
 
-## Current requirements
+## Core Capabilities
 
-- Generated documents identify the recipient first and include a system-generated, no-issuer-signature notice. Invoices explicitly say no signature is required. An administrator can upload the original company seal and set its default; users can include or omit it per print, PDF download or email. Delivery/customer acceptance and carrier-original controls remain applicable. See `docs/DOCUMENTS.md`.
-- The dashboard prioritizes daily work with neutral surfaces, moving workflow guidance, AI briefings and detailed charts into expandable sections.
+- **Zero Mock Data in Production**: Starts with a clean database containing only statutory UAE reference data (Chart of Accounts, VAT codes, Dubai communities, developers, DET/RERA licence items, and 82 corporate document templates).
+- **Document Studio**: Generated documents identify the recipient first and include a system-generated notice. Administrators can upload the official company seal and configure default terms under `docs/DOCUMENTS.md`.
+- **Executive Dashboard & SWK Suite**: Real-time visibility across listings, sales pipeline, viewings, offers, PDC maturities, landlord yields, agent GCI leaderboards, and RERA/AML compliance.
+- **Email & Communications**: Staff can send email from the OS using Sales, Accounts, Info, Contact, or Support at `swkpropertiesuae.com`. Administrators configure authenticated SMTP/Resend connections with full outbox history and retry controls.
 
-- Vendor services and hired containers, trucks and trailers are linked to customer jobs, with separate buying/selling terms, job charges and return tracking. The operational workflow is documented in `docs/VENDOR_SERVICES.md`.
+## Security & Governance
 
-- Sign-in opens the dashboard after any required account setup.
-- The dashboard should help staff identify urgent work and move a shipment from enquiry through payment and job closure. Figures, charts and detailed records must describe their time periods honestly.
-- Sidebar shortcuts explain each workspace and expose its permitted tasks.
-- Content uses simple English, clear action labels and readable professional typography.
-- The existing DigitalBurj website logo/icon and the white circular favicon background remain the identity assets. DigitalBurj attribution remains visible.
-- Staff can send email from the OS using Sales, Accounts, Info, Contact or Support at `swkpropertiesuae.com`. Sales and Accounts are GoDaddy mailboxes; the other addresses are configured through Cloudflare and are already added to Gmail.
-- Adding addresses to Gmail does not supply the OS with sending credentials. Administrators configure authenticated sending connections; outgoing history and retries remain visible. Replies continue to arrive in the existing Gmail setup.
-
-## Execution boundaries
-
-Use existing module permissions and protect customer portal isolation. Credentials are encrypted and excluded from API responses. Demo workspaces cannot send external messages. Provider acceptance is distinct from recipient delivery. No live mail activation or delivery should be claimed before credentials and provider authorisation are configured and a delivery test succeeds.
-
-The incumbent application supplies the visual authority; the dashboard and email changes extend that identity. Dashboard operation is documented in `docs/DASHBOARD.md`; sender setup is documented in `docs/EMAIL.md`.
+- Role-based access control across all modules with strict customer-portal isolation.
+- Encrypted integration credentials excluded from API responses.
+- Enforced UAE VAT (5%), Corporate Tax, RERA BRN/ORN, and AML/DNFBP sanctions screening checks.

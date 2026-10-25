@@ -152,7 +152,7 @@ function Database(props: any) { return <DatabaseBackup {...props} /> }
 function BusinessDataCard() {
   const toast = useToast(); const qc = useQueryClient(); const dlg = useDialogs()
   const q = useQuery({ queryKey: ['business-data'], queryFn: () => get<any>('/api/admin/business-data') })
-  const [open, setOpen] = useState(false), [phrase, setPhrase] = useState(''), [starter, setStarter] = useState(true), [busy, setBusy] = useState(false)
+  const [open, setOpen] = useState(false), [phrase, setPhrase] = useState(''), [starter, setStarter] = useState(false), [busy, setBusy] = useState(false)
   if (!q.data) return null
   const d = q.data
   const groups = [...new Set<string>(d.rows.map((r: any) => r.group))]

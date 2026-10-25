@@ -63,7 +63,7 @@ export const leases: EntityDef[] = [
   },
   {
     key: 'rent_schedules', label: 'Rent Schedule', plural: 'Rent Schedules', module: 'leases', icon: 'CalendarDays',
-    title: ['lease_no', 'due_date'], titleSep: ' – ', child: true,
+    title: ['lease_no', 'due_date'], titleSep: ' – ',
     fields: [
       R('lease_id', 'Lease', 'leases', { hidden: true, required: true }),
       T('lease_no', 'Lease', { readonly: true, list: true }),

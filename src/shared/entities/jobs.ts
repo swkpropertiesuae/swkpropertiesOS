@@ -12,7 +12,7 @@ export const jobs: EntityDef[] = [
     panel: true, statusField: 'job_status', customFields: true, print: 'deal_file',
     children: [
       { key: 'charges', label: 'Charges', entity: 'job_charges', fk: 'job_id', columns: ['kind', 'charge_code_id', 'description', 'party_id', 'qty', 'rate', 'currency', 'ex_rate', 'vat_code_id', 'amount', 'status'] },
-      { key: 'events', label: 'Timeline', entity: 'job_events', fk: 'job_id', columns: ['event_date', 'event_type', 'description', 'user_id'] },
+      { key: 'events', label: 'Timeline', entity: 'job_events', fk: 'job_id', columns: ['event_at', 'event_type', 'description', 'user_id'] },
     ],
     fields: [
       T('job_no', 'Deal No.', { readonly: true, list: true, search: true, section: 'Deal', key: true }),

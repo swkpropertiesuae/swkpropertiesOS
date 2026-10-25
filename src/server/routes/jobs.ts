@@ -1,11 +1,11 @@
 import type { FastifyInstance } from 'fastify'
 import { randomBytes } from 'crypto'
 import { z } from 'zod'
-import { q, tx } from '../db'
+import { inDemo, q, tx } from '../db'
 import { assertCan, createRecord, deleteRecord, getDef, getRecord, listRecords, patchRecord, SYSTEM_CTX, updateRecord, audit } from '../engine'
 import { bad, notFound, nowLocal } from '../util'
 import { body, idOf, need } from './helpers'
-import { addJobEvent, duplicateJob, generateInvoicesFromJob, recomputeJobTotals, convertProforma, jobKpi } from '../domain/jobs'
+import { addJobEvent, duplicateJob, generateInvoicesFromJob, generateBillFromJobCosts, recomputeJobTotals, convertProforma, jobKpi } from '../domain/jobs'
 import { queueEmail } from '../mailer'
 import { getSetting } from '../settings'
 import { postInvoice } from '../domain/finance'
@@ -63,6 +63,13 @@ export default async function (app: FastifyInstance) {
     })
   })
 
+  app.post('/api/jobs/:id/bill-from-costs', async (req) => {
+    const { id } = loadJob(req)
+    need(req, 'finance', 'create')
+    const b = z.object({ vendor_id: z.number().int(), vendor_invoice_no: z.string().min(1).max(80), charge_ids: z.array(z.number().int()).optional() }).parse(req.body ?? {})
+    return tx(() => generateBillFromJobCosts(id, b, req.ctx))
+  })
+
   app.post('/api/invoices/:id/convert-proforma', async (req) => { need(req, 'finance', 'create'); return tx(() => convertProforma(idOf((req.params as any).id), req.ctx)) })
 
   app.post('/api/jobs/bulk-proforma', async (req) => {
@@ -86,14 +93,14 @@ export default async function (app: FastifyInstance) {
       const owner = q.val<number>(`SELECT client_id FROM jobs WHERE id = ? AND deleted_at IS NULL`, id)
       if (owner !== req.user!.party_id) throw bad('You can only share your own deals')
     } else assertCan(req.ctx, 'sales', 'view')
-    const token = randomBytes(16).toString('hex')
+    const token = (inDemo() ? 'demo-' : '') + randomBytes(16).toString('hex')
     q.run(`INSERT INTO job_tracking_tokens (job_id, token, created_at) VALUES (?, ?, ?) ON CONFLICT(job_id) DO UPDATE SET token = excluded.token, created_at = excluded.created_at`, id, token, nowLocal())
     return { token, url: `${req.protocol}://${req.headers.host}/t/${token}` }
   })
 
   // Client-facing deal status (no financials) for /t/<token> links and document QR codes.
   const STAGES = ['Inquiry', 'Viewing', 'Offer', 'Negotiation', 'Contract', 'DLD Process', 'Handover', 'Closed']
-  app.get('/api/public/deal/:token', async (req) => {
+  const getPublicDeal = async (req: any) => {
     const token = String((req.params as any).token)
     if (!token || token.length > 80) throw bad('Tracking link not found')
     const jobId = q.val<number>(`SELECT job_id FROM job_tracking_tokens WHERE token = ?`, token)
@@ -111,7 +118,9 @@ export default async function (app: FastifyInstance) {
       client, property: prop?.title ?? '', community: community ?? '',
       company: getSetting<string>('company_name') || 'SWK Properties L.L.C.', events,
     }
-  })
+  }
+  app.get('/api/public/deal/:token', getPublicDeal)
+  app.get('/api/public/track/:token', getPublicDeal)
 
   // Bulk mail for deal updates
   app.post('/api/jobs/bulk-mail', async (req) => {
