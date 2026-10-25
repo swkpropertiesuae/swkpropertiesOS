@@ -12,7 +12,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y tesseract-ocr tesseract-ocr-eng poppler-utils
       - run: npm run typecheck
       - run: npm run build
-      - name: Check dashboard, email and calendar in desktop and mobile browsers
+      - name: Check launcher, calendar and documents in desktop and mobile browsers
         run: |
           node tests/dashboard-ui.mjs
           node tests/calendar-ui.mjs

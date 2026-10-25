@@ -24,7 +24,7 @@ try {
   await page.locator('input[type=email]').fill(demo.email)
   await page.locator('input[type=password]').fill(demo.password)
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-  await page.waitForURL('**/dashboard')
+  await page.waitForURL('**/home')
   const api = async (url, payload) => {
     const r = payload === undefined ? await context.request.get(base + url) : await context.request.put(base + url, { data: payload, headers: { 'x-digitalburj-client': 'web' } })
     return { status: r.status(), data: await r.json() }
