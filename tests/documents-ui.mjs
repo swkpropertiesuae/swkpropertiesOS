@@ -26,12 +26,12 @@ try {
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await page.waitForURL('**/home')
   const api = async (url, payload) => {
-    const r = payload === undefined ? await context.request.get(base + url) : await context.request.put(base + url, { data: payload, headers: { 'x-digitalburj-client': 'web' } })
+    const r = payload === undefined ? await context.request.get(base + url) : await context.request.put(base + url, { data: payload, headers: { 'x-swk-client': 'web' } })
     return { status: r.status(), data: await r.json() }
   }
   await page.goto(base + '/admin/settings')
   const company = page.getByLabel('Company name', { exact: true })
-  await company.fill('DigitalBurj Shipping')
+  await company.fill('SWK Properties')
   await company.press('End'); await company.pressSequentially(' L.L.C.', { delay: 20 })
   check('settings keep focus and accept continuous typing', await company.inputValue() === 'SWK Properties L.L.C.' && await company.evaluate(el => el === document.activeElement))
   // Test raster, not a reproduction of the company seal.
@@ -49,7 +49,11 @@ try {
   const meta = (await api('/api/meta')).data.settings
   check('seal upload and default saved through settings UI', meta.document_seal === seal && meta.document_seal_default === true)
   const invoice = (await api('/api/e/invoices?pageSize=1')).data.rows[0]
-  const quotation = (await api('/api/e/quotations?pageSize=1')).data.rows[0]
+  let quotation = (await api('/api/e/quotations?pageSize=1')).data.rows[0]
+  if (!quotation) { // the demo workspace ships without quotations
+    const created = await context.request.post(base + '/api/e/quotations', { headers: { 'x-swk-client': 'web' }, data: { customer_id: invoice.party_id, mode: 'Sale commission' } })
+    quotation = await created.json()
+  }
   const record = (await api(`/api/e/invoices/${invoice.id}`)).data
   await page.route(`**/api/print/invoices/${record.id}/parties`, async route => { await new Promise(r => setTimeout(r, 600)); await route.continue() })
   await page.goto(`${base}/print/invoices/${invoice.id}`)
@@ -103,7 +107,7 @@ try {
   check('statement includes recipient, notice and seal', await page.locator('.document-recipient').count() === 1 && await page.locator('.document-seal').count() === 1 && (await page.locator('.document-footer').textContent()).includes('system-generated statement of account'))
   const statementPdf = await context.request.get(`${base}/api/pdf/parties/${record.party_id}?from=2026-02-01&to=2026-03-01&seal=0`)
   check('statement server PDF preserves requested range', statementPdf.status() === 200)
-  const longDocResponse = await context.request.post(base + '/api/studio/documents', { headers: { 'x-digitalburj-client': 'web' }, data: { title: 'Footer pagination acceptance', content: '<h1>Pagination acceptance</h1>' + Array.from({ length: 110 }, (_, i) => `<p>Line ${i + 1}: Shipment document footer pagination acceptance.</p>`).join('') } })
+  const longDocResponse = await context.request.post(base + '/api/studio/documents', { headers: { 'x-swk-client': 'web' }, data: { title: 'Footer pagination acceptance', content: '<h1>Pagination acceptance</h1>' + Array.from({ length: 110 }, (_, i) => `<p>Line ${i + 1}: Shipment document footer pagination acceptance.</p>`).join('') } })
   check('multi-page footer fixture created', longDocResponse.status() === 201)
   const longDoc = await longDocResponse.json()
   const longPdf = await context.request.get(`${base}/api/pdf/studio_documents/${longDoc.id}`)

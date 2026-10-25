@@ -1,10 +1,10 @@
 export const CALENDAR_CATEGORIES = {
-  sales: { label: 'Sales & deals', color: '#c9971f', tint: '#fff8e7' },
+  sales: { label: 'Sales & deals', color: '#8a6410', tint: '#fff8e7' },
   activities: { label: 'Calls & meetings', color: '#025e3d', tint: '#dcf1e6' },
   work: { label: 'Tasks & projects', color: '#493d72', tint: '#e8e3f7' },
   finance: { label: 'Accounts & payments', color: '#8c4329', tint: '#f7ead8' },
   properties: { label: 'Properties', color: '#07090d', tint: '#e8e8e8' },
-  leases: { label: 'Leases & expiries', color: '#e8452c', tint: '#fce8e4' },
+  leases: { label: 'Leases & expiries', color: '#b3321d', tint: '#fce8e4' },
   people: { label: 'People & leave', color: '#493d72', tint: '#e8e3f7' },
   compliance: { label: 'Compliance', color: '#9b1424', tint: '#fbe1e4' },
   other: { label: 'Other records', color: '#3f4f47', tint: '#edf2ee' },
