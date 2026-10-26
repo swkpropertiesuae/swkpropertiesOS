@@ -4,11 +4,19 @@ import { seedReference } from '../src/server/seed'
 import { buildApp } from '../src/server/app'
 import { q, db } from '../src/server/db'
 import { config } from '../src/server/config'
+import { hashPassword } from '../src/server/auth'
 import { resetBusinessData } from '../src/server/domain/business-data'
 
 syncSchema()
 seedReference()
-resetBusinessData({ reseed: false })
+resetBusinessData()
+
+// Ensure admin account is in fresh default state for test reproducibility
+q.run(
+  `UPDATE users SET password_hash = ?, must_change_password = 1, totp_secret = NULL, failed_logins = 0, locked_until = NULL WHERE email = ?`,
+  hashPassword(config.accounts.adminPassword),
+  config.accounts.adminEmail
+)
 
 const app = await buildApp()
 let checks = 0
@@ -211,8 +219,13 @@ try {
   }, token)
   check('Offline queue sync is idempotent and prevents duplicate replay', replayRes.statusCode === 200 && replayRes.json().results[0].status === 'already_synced')
 
-  // Clean up business data at the end so starter-data tests remain pristine
-  resetBusinessData({ reseed: false })
+  // Clean up business data & restore default admin state at the end so starter-data & auth-security tests remain pristine
+  resetBusinessData()
+  q.run(
+    `UPDATE users SET password_hash = ?, must_change_password = 1, totp_secret = NULL, failed_logins = 0, locked_until = NULL WHERE email = ?`,
+    hashPassword(config.accounts.adminPassword),
+    config.accounts.adminEmail
+  )
   console.log(`\nAll ${checks} SWK ONE Android checks passed!`)
 } finally {
   await app.close()
