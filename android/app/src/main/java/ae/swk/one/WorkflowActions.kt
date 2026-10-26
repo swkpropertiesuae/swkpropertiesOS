@@ -35,6 +35,7 @@ private fun workflows(key: String, id: Int): List<Workflow> {
     }
 }
 @Composable fun WorkflowActions(model: WorkspaceModel, entity: JSONObject, record: JSONObject) {
+    val uiState by model.state.collectAsState()
     val actions = workflows(entity.text("key"), record.optInt("id")).filter { model.permitted(entity, it.permission) }
     var selected by remember { mutableStateOf<Workflow?>(null) }
     val values = remember { mutableStateMapOf<String, String>() }
@@ -54,7 +55,7 @@ private fun workflows(key: String, id: Int): List<Workflow> {
             }
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
-    }, confirmButton = { TextButton(enabled = !model.state.value.loading, onClick = {
+    }, confirmButton = { TextButton(enabled = !uiState.loading, onClick = {
         try {
             val body = JSONObject()
             action.inputs.forEach { input -> val value = values[input.key].orEmpty().trim(); require(value.isNotBlank() || input.optional) { "Complete ${input.label}" }; if (value.isNotBlank()) body.put(input.key, if (input.type == "number") value.toDouble() else value) }

@@ -39,8 +39,8 @@ class Vault(context: Context) {
             String(cipher.doFinal(bytes.copyOfRange(12, bytes.size)), Charsets.UTF_8)
         }
     } catch (_: Exception) { remove(name); null }
-    fun remove(name: String) { prefs.edit().remove(name).commit() }
-    fun clear() { prefs.edit().clear().commit() }
+    fun remove(name: String) { check(prefs.edit().remove(name).commit()) }
+    fun clear() { check(prefs.edit().clear().commit()) }
 }
 class ApiException(val status: Int, message: String) : Exception(message)
 class Api(context: Context) {

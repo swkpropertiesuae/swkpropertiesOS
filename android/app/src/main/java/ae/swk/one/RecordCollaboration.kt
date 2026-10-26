@@ -16,6 +16,7 @@ import org.json.JSONObject
 
 @Composable fun RecordCollaboration(model: WorkspaceModel, entity: JSONObject, record: JSONObject) {
     val context = LocalContext.current
+    val uiState by model.state.collectAsState()
     val key = entity.text("key"); val id = record.optInt("id")
     var comments by remember(id, key) { mutableStateOf<List<JSONObject>>(emptyList()) }
     var comment by remember(id, key) { mutableStateOf("") }
@@ -48,7 +49,7 @@ import org.json.JSONObject
         comments.takeLast(10).forEach { c -> Card(modifier = Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { Text(c.text("user_name"), style = MaterialTheme.typography.labelSmall); Text(c.text("body").ifBlank { c.text("text") }); Text(c.text("created_at"), style = MaterialTheme.typography.labelSmall) } } }
         if (model.permitted(entity, "edit")) {
             OutlinedTextField(comment, { comment = it }, label = { Text("Add a follow-up note") }, modifier = Modifier.fillMaxWidth())
-            TextButton(onClick = { model.action { model.api.obj("/api/panel/$key/$id/comments", "POST", JSONObject().put("body", comment)); comment = ""; generation++ } }, enabled = comment.isNotBlank() && !model.state.value.loading) { Text("Save note") }
+            TextButton(onClick = { model.action { model.api.obj("/api/panel/$key/$id/comments", "POST", JSONObject().put("body", comment)); comment = ""; generation++ } }, enabled = comment.isNotBlank() && !uiState.loading) { Text("Save note") }
             OutlinedButton(onClick = { picker.launch(arrayOf("image/*", "application/pdf", "text/plain")) }) { Text("Attach photo or document") }
         }
         files.forEach { f -> TextButton(onClick = { preview = f }) { Text("Preview ${f.text("file_name")}") } }

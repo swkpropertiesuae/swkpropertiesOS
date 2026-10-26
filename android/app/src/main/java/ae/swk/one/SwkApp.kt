@@ -266,11 +266,12 @@ private fun fieldValue(record: JSONObject, field: JSONObject): String = if (fiel
     }
 }
 @Composable private fun PasswordForm(model: WorkspaceModel, required: Boolean) {
+    val uiState by model.state.collectAsState()
     var current by remember { mutableStateOf("") }; var next by remember { mutableStateOf("") }; var repeat by remember { mutableStateOf("") }
     Column(Modifier.padding(24.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Section(if (required) "Set your personal password" else "Change password", "At least 10 characters with upper and lower case letters and a number.")
         listOf(Triple(current, "Current password", { s: String -> current = s }), Triple(next, "New password", { s: String -> next = s }), Triple(repeat, "Confirm password", { s: String -> repeat = s })).forEach { (value, label, change) -> OutlinedTextField(value, change, label = { Text(label) }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(), singleLine = true) }
-        Button(onClick = { model.changePassword(current, next) }, enabled = current.isNotBlank() && next.length >= 10 && next == repeat && !model.state.value.loading) { Text("Save password") }
+        Button(onClick = { model.changePassword(current, next) }, enabled = current.isNotBlank() && next.length >= 10 && next == repeat && !uiState.loading) { Text("Save password") }
     }
 }
 @Composable private fun Empty(title: String, description: String) { Column(Modifier.fillMaxWidth().padding(vertical = 32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) { Icon(Icons.Default.Inbox, null, Modifier.size(44.dp), tint = MaterialTheme.colorScheme.primary); Text(title, fontWeight = FontWeight.Bold); Text(description, style = MaterialTheme.typography.bodySmall) } }

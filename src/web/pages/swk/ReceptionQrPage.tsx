@@ -62,7 +62,7 @@ export default function ReceptionQrPage() {
       toast.ok(`Verified check-in recorded (${res.attendance_event?.event_no})`)
       void qc.invalidateQueries({ queryKey: ['reception-qr-current'] })
     } catch (e: any) {
-      toast.err(e?.message || 'Check-in failed')
+      toast.error(e?.message || 'Check-in failed')
     } finally {
       setSimulatingScan(false)
     }
