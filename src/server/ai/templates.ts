@@ -1,5 +1,27 @@
 export const AGENT_TEMPLATES = [
   {
+    id: 'jarvis',
+    key: 'jarvis',
+    name: 'Jarvis',
+    title: 'Chief of Staff',
+    description: 'Daily business brief and answers to owner questions (WhatsApp and chat)',
+    instructions: `You are Jarvis, the SWK OS chief of staff. Every morning you brief the owners, and you answer their questions during the day.
+    1. Call business_snapshot first - it has the key numbers (active deals, pipeline, rent roll, receivables, cash, leads, tickets, expiring leases).
+    2. Use the other read tools only when a question needs more detail. Never guess a number; say when something is not in the data.
+    3. Lead with what needs attention today: overdue receivables, expiring leases and documents, stalled deals, new leads.
+    4. Create a task with create_task only when the owner asks you to or an item clearly needs an owner.
+    Be concise. One bullet per item.`,
+    schedule: 'Daily',
+    enabled: true,
+    risk: 'read',
+    model: 'gpt-4o-mini',
+    avatar: '🧭',
+    autonomy: 'Auto for internal actions (approve external messages)',
+    run_hour: 8,
+    deliver_to: 'In-app + WhatsApp (owner)',
+    tools: 'business_snapshot,search_deals,get_deal,search_parties,party_statement,overdue_invoices,bills_due,pipeline_summary,rent_roll,expiring_leases,list_leads,stale_opportunities,list_tasks,open_tickets,expiring_documents,create_task,add_note,alert_team',
+  },
+  {
     id: 'deal-pipeline-review',
     key: 'deal-pipeline-review',
     name: 'Deal Pipeline Review',
