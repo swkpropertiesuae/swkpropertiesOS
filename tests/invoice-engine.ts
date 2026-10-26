@@ -17,7 +17,7 @@ async function main() {
   const line = (d: string, rate: number, qty = 1, extra: any = {}) => ({ description: d, qty, rate, vat_code_id: ZR, ...extra })
 
   sec('USD-priced lines billed in AED, with rounding')
-  r = await a.post('/api/e/invoices', { doc_type: 'Tax Invoice', party_id: cust, invoice_date: '2026-09-04', currency: 'AED', round_total: 'Round total to whole amount', children: { lines: [line('Ocean freight', 10454, 2, { line_ccy: 'USD', line_roe: 3.685 }), line('Drop-off charges', 1200, 2, { line_ccy: 'USD', line_roe: 3.685 }), line('PSS charges', 50, 2, { line_ccy: 'USD', line_roe: 3.685 })] } })
+  r = await a.post('/api/e/invoices', { doc_type: 'Tax Invoice', party_id: cust, invoice_date: '2026-09-04', currency: 'AED', round_total: 'Round total to whole amount', children: { lines: [line('Brokerage commission', 10454, 2, { line_ccy: 'USD', line_roe: 3.685 }), line('Admin fee', 1200, 2, { line_ccy: 'USD', line_roe: 3.685 }), line('PSS charges', 50, 2, { line_ccy: 'USD', line_roe: 3.685 })] } })
   ok('standalone draft created', r.status === 201, r.data)
   const inv1 = r.data
   ok('amount = qty × rate × ROE (77,045.98)', inv1.children.lines[0].amount === 77045.98 && inv1.children.lines[0].line_roe === 3.685 && inv1.children.lines[0].line_ccy === 'USD', inv1.children.lines[0])
@@ -29,9 +29,9 @@ async function main() {
   ok('rounding up: 10.71 becomes 11.00 (+0.29)', r.data.subtotal === 10.2 && r.data.vat_total === 0.51 && r.data.rounding === 0.29 && r.data.total === 11, r.data)
   const up = await a.post(`/api/finance/invoices/${r.data.id}/post`); const uj = (await a.get(`/api/e/journal_entries/${up.data.journal_id}`)).data.children.lines
   ok('rounding up is credited to the rounding account and the journal balances', Math.abs(uj.reduce((s: number, l: any) => s + (l.debit ?? 0) - (l.credit ?? 0), 0)) < 0.001 && uj.some((l: any) => l._labels.account_id?.startsWith('7910') && l.credit === 0.29), uj.map((l: any) => [l._labels.account_id, l.debit, l.credit]))
-  r = await a.post('/api/e/invoices', { doc_type: 'Tax Invoice', party_id: cust, invoice_date: '2026-09-05', currency: 'USD', ex_rate: 3.685, children: { lines: [line('Freight', 100, 1, { line_ccy: 'EUR', line_roe: 1.1 })] } }); ok('a USD invoice cannot carry lines priced in another currency', r.status === 400, r.data)
-  r = await a.post('/api/e/invoices', { doc_type: 'Tax Invoice', party_id: cust, invoice_date: '2026-09-05', currency: 'AED', children: { lines: [line('Freight', 100, 1, { line_ccy: 'USD' })] } }); ok('missing ROE falls back to the currency master rate', r.status === 201 && r.data.children.lines[0].line_roe > 3 && r.data.children.lines[0].line_roe < 4, r.data)
-  r = await a.post('/api/e/invoices', { doc_type: 'Tax Invoice', party_id: cust, invoice_date: '2026-09-05', currency: 'AED', children: { lines: [line('Freight', -5)] } }); ok('negative rates are rejected', r.status === 400)
+  r = await a.post('/api/e/invoices', { doc_type: 'Tax Invoice', party_id: cust, invoice_date: '2026-09-05', currency: 'USD', ex_rate: 3.685, children: { lines: [line('Brokerage fee', 100, 1, { line_ccy: 'EUR', line_roe: 1.1 })] } }); ok('a USD invoice cannot carry lines priced in another currency', r.status === 400, r.data)
+  r = await a.post('/api/e/invoices', { doc_type: 'Tax Invoice', party_id: cust, invoice_date: '2026-09-05', currency: 'AED', children: { lines: [line('Brokerage fee', 100, 1, { line_ccy: 'USD' })] } }); ok('missing ROE falls back to the currency master rate', r.status === 201 && r.data.children.lines[0].line_roe > 3 && r.data.children.lines[0].line_roe < 4, r.data)
+  r = await a.post('/api/e/invoices', { doc_type: 'Tax Invoice', party_id: cust, invoice_date: '2026-09-05', currency: 'AED', children: { lines: [line('Brokerage fee', -5)] } }); ok('negative rates are rejected', r.status === 400)
 
   sec('Credit note carries the foreign-priced lines')
   const full = (await a.get(`/api/e/invoices/${inv1.id}`)).data

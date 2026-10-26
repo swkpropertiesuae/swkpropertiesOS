@@ -59,7 +59,7 @@ export const platform: EntityDef[] = [
     key: 'announcements', label: 'Announcement', plural: 'Blog & Announcements', module: 'documents', icon: 'Newspaper', title: ['title'], panel: true,
     fields: [
       T('title', 'Title', { required: true, list: true, search: true, span: 3, section: 'Post' }),
-      S('category', 'Category', ['Announcement', 'Policy', 'Training / SOP', 'Market update', 'Holiday', 'Notice', 'Customs notice'], { list: true, default: 'Announcement' }),
+      S('category', 'Category', ['Announcement', 'Policy', 'Training / SOP', 'Market update', 'Holiday', 'Notice'], { list: true, default: 'Announcement' }),
       B('pinned', 'Pinned', { list: true }), D('publish_date', 'Publish date', { default: 'today', list: true }),
       TA('body', 'Content', { required: true }),
     ],

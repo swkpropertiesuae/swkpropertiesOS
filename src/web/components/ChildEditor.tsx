@@ -24,7 +24,6 @@ export function previewRow(entity: string, row: Row, vat: Record<number, number>
       if (entity === 'job_charges') out.base_amount = r2(out.amount * num(out.ex_rate || 1))
     }
   }
-  if (entity === 'customs_lines') { out.duty_amount = r2(num(out.value) * num(out.duty_pct) / 100); out.vat_amount = r2((num(out.value) + out.duty_amount) * num(out.vat_pct) / 100) }
   void parent
   return out
 }
@@ -38,7 +37,6 @@ export function rowTotals(entity: string, rows: Row[]) {
       const rev = r2(rows.filter(r => r.kind !== 'Cost').reduce((s, r) => s + num(r.base_amount), 0)), cost = r2(rows.filter(r => r.kind === 'Cost').reduce((s, r) => s + num(r.base_amount), 0))
       return [['Revenue (AED)', rev], ['Cost (AED)', cost], ['Profit (AED)', r2(rev - cost)]] as [string, number][]
     }
-    case 'customs_lines': return [['Value', sum('value')], ['Duty', sum('duty_amount')], ['VAT', sum('vat_amount')]] as [string, number][]
     case 'journal_lines': return [['Debit', sum('debit')], ['Credit', sum('credit')], ['Difference', r2(sum('debit') - sum('credit'))]] as [string, number][]
     case 'receipt_allocations': case 'payment_allocations': return [['Allocated', sum('amount')]] as [string, number][]
   }

@@ -48,9 +48,6 @@ export const SETTING_DEFAULTS: Record<string, any> = {
   tracking_provider: 'none', tracking_api_key: '', tracking_webhook_secret: '',
   // --- e-invoicing (UAE PINT AE / Peppol)
   einv_enabled: false, einv_endpoint: '', einv_api_key: '', einv_endpoint_id: '', einv_scheme_id: '0235', einv_auto_submit: false,
-  // --- EDI transmission & customs gateway
-  edi_transport: 'none', edi_http_url: '', edi_http_auth: '', edi_email_to: '', edi_sftp_host: '', edi_sftp_port: 22, edi_sftp_user: '', edi_sftp_pass: '', edi_sftp_dir: '/',
-  customs_gateway_url: '', customs_gateway_key: '',
   // --- bank feed
   bank_webhook_secret: '',
   // --- WPS
@@ -63,7 +60,7 @@ export const SETTING_DEFAULTS: Record<string, any> = {
   ui_lang: 'en',
   seeded: {},
 }
-export const SECRET_SETTINGS = new Set(['mail_accounts', 'smtp_pass', 'resend_api_key', 'r2_secret_access_key', 'supabase_service_key', 'wa_access_token', 'wa_app_secret', 'ai_api_key', 'ai_fallback_api_key', 'tracking_api_key', 'tracking_webhook_secret', 'einv_api_key', 'edi_http_auth', 'edi_sftp_pass', 'customs_gateway_key', 'bank_webhook_secret'])
+export const SECRET_SETTINGS = new Set(['mail_accounts', 'smtp_pass', 'resend_api_key', 'r2_secret_access_key', 'supabase_service_key', 'wa_access_token', 'wa_app_secret', 'ai_api_key', 'ai_fallback_api_key', 'tracking_api_key', 'tracking_webhook_secret', 'einv_api_key', 'bank_webhook_secret'])
 
 const caches = new WeakMap<object, Record<string, any>>()
 export function loadSettings(): Record<string, any> {

@@ -32,7 +32,7 @@ async function main() {
     await get(`/api/e/${e.key}/lookup?q=a`)
     // Numeric titles/revisions must support the same search and filter UI as
     // text titles, on SQLite and PostgreSQL. Exercise actual endpoint results.
-    if (['knowledge_versions', 'freight_document_versions', 'document_originals'].includes(e.key)) {
+    if (['knowledge_versions'].includes(e.key)) {
       const field = e.key === 'document_originals' ? 'original_no' : 'revision'
       for (const op of ['contains', 'starts', 'ends', 'null', 'notnull']) {
         const filters = encodeURIComponent(JSON.stringify([{ field, op, value: '1' }]))

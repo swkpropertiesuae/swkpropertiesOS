@@ -1,6 +1,6 @@
 import type {EntityDef} from '../types'
 import {T,TA,I,R,S,B,DT,J} from '../dsl'
-export const WORK_SOURCES=['jobs','quotations','bookings','shipments','invoices','bills','tickets','leads','tasks','customs_declarations','transport_orders']
+export const WORK_SOURCES=['jobs','quotations','invoices','bills','tickets','leads','tasks']
 export const work:EntityDef[]=[
  {key:'sla_policies',label:'SLA policy',plural:'SLA policies',module:'admin',icon:'Timer',title:['name'],fields:[
   T('name','Policy',{required:true,list:true,search:true}),R('customer_id','Customer','parties'),T('service','Service'),R('department_id','Department','departments'),T('activity','Activity',{required:true,list:true,help:'Quotation, Booking confirmation, Agreement draft, POD, or a custom activity'}),I('minutes','Target (elapsed minutes)',{required:true,list:true,help:'Measured continuously; working-calendar rules are not applied'}),I('priority','Policy priority',{default:0,help:'More specific policies win; priority breaks ties'}),B('pause_waiting','Pause while waiting',{default:false}),R('escalate_to','Escalation owner','users'),B('active','Active',{default:true,list:true})]},

@@ -110,7 +110,7 @@ export function setNextInvoiceNumber(next: number, date = todayStr()) {
 }
 
 /** Copy deal facts from the linked job into blank invoice fields so the printed document carries them. Anything typed on the document wins. */
-function fillShipmentFromJob(rec: Rec) {
+function fillFromDeal(rec: Rec) {
   const j = q.get(`SELECT j.job_no, j.deal_name, j.deal_type, j.job_status, j.deal_value, j.commission_amount,
       (SELECT title FROM properties WHERE id = j.property_id) property, (SELECT unit_no FROM units WHERE id = j.unit_id) unit
     FROM jobs j WHERE j.id = ?`, rec.job_id)
@@ -127,7 +127,7 @@ export const invoiceHooks: Hooks = {
   numberDate: rec => rec.invoice_date,
   beforeSave(a) {
     const { rec, old, children, isNew } = a
-    if (lockCheck(a, ['notes', 'terms', 'reference', 'bank_account_id', 'ship_bl_no', 'ship_vessel', 'ship_receipt', 'ship_pol', 'ship_pod', 'ship_destination', 'ship_containers', 'ship_weight', 'ship_cargo', 'ship_hs_code'], 'invoices')) return
+    if (lockCheck(a, ['notes', 'terms', 'reference', 'bank_account_id'], 'invoices')) return
     rec.ex_rate = fxRate(rec.currency, rec.ex_rate)
     rec.custom_no = String(rec.custom_no ?? '').trim() || null
     if (rec.custom_no) {
@@ -135,7 +135,7 @@ export const invoiceHooks: Hooks = {
       const clash = q.val<number>(`SELECT id FROM invoices WHERE deleted_at IS NULL AND status <> 'Void' AND id <> ? AND (lower(custom_no) = lower(?) OR lower(invoice_no) = lower(?)) LIMIT 1`, rec.id ?? 0, rec.custom_no, rec.custom_no)
       if (clash) throw bad(`Invoice number ${rec.custom_no} is already used by another document`)
     }
-    if (isNew && rec.job_id) fillShipmentFromJob(rec)
+    if (isNew && rec.job_id) fillFromDeal(rec)
     if (['Credit Note', 'Debit Note'].includes(rec.doc_type) && !rec.original_invoice_id && rec.doc_type === 'Credit Note') {
       // a credit note may stand alone (e.g. goodwill) – allowed
     }

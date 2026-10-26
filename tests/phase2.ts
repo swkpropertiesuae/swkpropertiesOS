@@ -70,7 +70,7 @@ async function main() {
     mail_provider: 'resend', resend_api_key: 're_test', resend_from: 'SWK OS <ops@swk.test>',
     ai_enabled: true, ai_provider: 'custom', ai_base_url: MOCK + '/v1', ai_api_key: 'k', ai_model: 'mock',
     wa_enabled: true, wa_phone_number_id: '123', wa_access_token: 'tok', wa_verify_token: 'vt', wa_owner_numbers: '971500000001', wa_auto_leads: true, wa_staff_bot: true, wa_customer_bot: true,
-    company_trn: '100123456700003', einv_enabled: true, einv_endpoint: MOCK + '/asp', einv_api_key: 'asp', edi_transport: 'http', edi_http_url: MOCK + '/edi', edi_email_to: 'edi@partner.test',
+    company_trn: '100123456700003', einv_enabled: true, einv_endpoint: MOCK + '/asp', einv_api_key: 'asp',
     r2_account_id: 'acct', r2_access_key_id: 'ak', r2_secret_access_key: 'sk', r2_bucket: 'swk-test', supabase_url: MOCK, supabase_service_key: 'svc',
     wps_employer_id: '0000012345678', wps_bank_routing: '123456789',
   }); ok('settings saved', r.status === 200, r.data)

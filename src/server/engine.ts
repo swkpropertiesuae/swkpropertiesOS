@@ -364,11 +364,6 @@ export function findOne(entity: string, where: string, ...args: any[]): Rec | nu
   return row ? rowToApi(def, row) : null
 }
 
-function assertOperationalJobOpen(def: EntityDef, rec: Rec) {
-  if (!['shipments','bookings','delivery_orders','customs_declarations','transport_orders'].includes(def.key) || !rec.job_id) return
-  if(q.val(`SELECT job_status FROM jobs WHERE id=?`,rec.job_id)==='CLOSED') throw bad('This job is closed. Reopen it through independent approval before changing operations.')
-}
-
 // ------------------------------------------------------------------ write
 function assertRefs(def: EntityDef, rec: Rec) {
   for (const f of def.fields) {
@@ -526,7 +521,6 @@ export function createRecord(def: EntityDef, payload: Rec, ctx: Ctx): Rec {
   const c2: Ctx = { ...ctx, after }
   const result = tx(() => {
     let rec = applyPayload(def, {}, payload, true, c2)
-    assertOperationalJobOpen(def,rec)
     if(def.key==='purchase_orders' && !ctx.system && rec.status!=='Draft') throw bad('New purchase orders must start as drafts')
     const children = sanitizeChildren(def, payload.children, c2)
     const h = hooksFor(def.key)
@@ -568,7 +562,6 @@ export function updateRecord(def: EntityDef, id: number, payload: Rec, ctx: Ctx)
     const old = { ...oldFull }
     if (payload.version !== undefined && Number(payload.version) !== old.version && !ctx.system) throw conflict('This record was changed by someone else. Reload and try again.')
     const rec = applyPayload(def, old, payload, false, c2)
-    assertOperationalJobOpen(def,old); assertOperationalJobOpen(def,rec)
     if (def.key === 'purchase_orders' && !ctx.system && rec.status === 'Approved' && old.status !== 'Approved') throw bad('Use the independent approval workflow')
     if (['bills','payments','quotations','purchase_orders'].includes(def.key)) {
       const changing = Object.keys(payload).some(k => !['version','approval_status','status'].includes(k) && JSON.stringify(payload[k]) !== JSON.stringify(old[k]))
@@ -635,7 +628,6 @@ export function deleteRecord(def: EntityDef, id: number, ctx: Ctx) {
     const rec = getRecord(def, id, ctx, { children: false })
     const used = referencedBy(def, id)
     if (used.length) throw conflict(`Cannot delete: used by ${used.map(u => `${u.count} ${u.label}`).join(', ')}`)
-    assertOperationalJobOpen(def,rec)
     hooksFor(def.key).beforeDelete?.({ def, rec, ctx })
     const now = nowIso()
     // free unique values so they can be reused

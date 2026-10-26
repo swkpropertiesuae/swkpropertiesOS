@@ -26,7 +26,7 @@ try {
   await request('/api/auth/change-password', 'POST', { current: config.accounts.adminPassword, next: 'Mail-Regression2026!' })
   const account = (email: string) => ({ email, provider: 'resend', host: '', port: 465, secure: true, user: '', password: '', apiKey: 'mock-private-key', enabled: true })
   check('five company addresses are available', (await request('/api/email/senders')).json().length === 5)
-  const message = { from: 'sales@swkpropertiesuae.com', to: 'customer@example.com', cc: 'accounts@example.com', subject: 'Shipment update', body: 'Cargo is ready. <script>not HTML</script>' }
+  const message = { from: 'sales@swkpropertiesuae.com', to: 'customer@example.com', cc: 'accounts@example.com', subject: 'Viewing update', body: 'The unit is ready. <script>not HTML</script>' }
   check('unconnected sender rejected', (await request('/api/email/send', 'POST', message)).statusCode === 400)
   check('configure independent senders', (await request('/api/email/settings', 'PUT', [account(message.from), account('accounts@swkpropertiesuae.com')])).statusCode === 200)
   check('integration status recognises company sender', mailProvider() === 'resend' && (await verifySmtp()).ok)
@@ -35,8 +35,8 @@ try {
   check('credentials masked in general settings', (await request('/api/admin/settings')).json().mail_accounts === '********')
   check('invalid recipients rejected', (await request('/api/email/send', 'POST', { ...message, to: 'invalid' })).statusCode === 400)
   check('unapproved from address rejected', (await request('/api/email/send', 'POST', { ...message, from: 'spoof@example.com' })).statusCode === 400)
-  check('newline in subject rejected', (await request('/api/email/send', 'POST', { ...message, subject: 'Shipment\nInvoice' })).statusCode === 400)
-  check('carriage return in subject rejected', (await request('/api/email/send', 'POST', { ...message, subject: 'Shipment\rInvoice' })).statusCode === 400)
+  check('newline in subject rejected', (await request('/api/email/send', 'POST', { ...message, subject: 'Viewing\nInvoice' })).statusCode === 400)
+  check('carriage return in subject rejected', (await request('/api/email/send', 'POST', { ...message, subject: 'Viewing\rInvoice' })).statusCode === 400)
   check('KPI board date filters bind correctly', (await request('/api/kpi')).statusCode === 200)
   const draft = (await request('/api/email/drafts', 'POST', { ...message, subject: '' })).json()
   check('incomplete emails can be saved as private drafts', draft.id > 0 && (await request('/api/email/drafts')).json()[0].subject === '')

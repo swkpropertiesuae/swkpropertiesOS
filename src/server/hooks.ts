@@ -1,5 +1,5 @@
 import { docTemplateHooks, studioDocumentHooks } from './domain/studio'
-import { rfqHooks, offerHooks, knowledgeHooks, qualificationHooks, skillRuleHooks } from './domain/enterprise'
+import { knowledgeHooks, qualificationHooks, skillRuleHooks } from './domain/enterprise'
 import { slaHooks, workHooks } from './domain/work'
 import { automationRuleHooks } from './automation'
 import type { EntityDef } from '../shared/types'
@@ -22,7 +22,7 @@ export interface Hooks {
 
 const registry: Record<string, () => Hooks> = {
   doc_templates: () => docTemplateHooks, studio_documents: () => studioDocumentHooks,
-  carrier_rfqs: () => rfqHooks, rfq_offers: () => offerHooks, knowledge_articles: () => knowledgeHooks, staff_qualifications: () => qualificationHooks, activity_skill_rules: () => skillRuleHooks,
+  knowledge_articles: () => knowledgeHooks, staff_qualifications: () => qualificationHooks, activity_skill_rules: () => skillRuleHooks,
   automation_rules: () => automationRuleHooks, sla_policies: () => slaHooks, work_items: () => workHooks,
   jobs: () => jobHooks,
   quotations: () => quoteHooks, parties: () => partyHooks, leads: () => leadHooks, opportunities: () => opportunityHooks, contracts: () => contractHooks,
