@@ -1,11 +1,14 @@
 import { q } from '../db'
-import { addDays, daysBetween, todayStr, fromCents, r2, nowLocal } from '../util'
+import { addDays, daysBetween, todayStr, fromCents, toCents, r2, nowLocal } from '../util'
 import { createRecord, getDef, SYSTEM_CTX } from '../engine'
 import { businessSnapshot } from '../integrations/snapshot'
 import { queueEmail } from '../mailer'
-import { sendWhatsApp, messageOwners, phonesForParty } from '../integrations/whatsapp'
+import { sendWhatsApp, messageOwners, phonesForParty, normalizePhone, findPartyByPhone } from '../integrations/whatsapp'
 import { notifyRole } from '../notify'
 import { addJobEvent } from '../domain/jobs'
+import { getSetting } from '../settings'
+import { MODES } from '../../shared/entities/crm'
+import { currentCall, setOutcome } from './voice-context'
 
 export type Risk = 'read' | 'internal' | 'external'
 export interface Tool { name: string; description: string; risk: Risk; parameters: any; run: (a: any, ctx: { agent: string }) => Promise<any> | any; summarize?: (a: any) => string }
@@ -18,6 +21,35 @@ const lim = (a: any, d = 15) => Math.min(Math.max(Number(a?.limit) || d, 1), 40)
 const adminId = () => q.val<number>(`SELECT u.id FROM users u JOIN roles r ON r.id = u.role_id WHERE r.name = 'Admin' AND u.deleted_at IS NULL ORDER BY u.id LIMIT 1`) ?? 1
 const dealByNo = (no: string) => q.get(`SELECT * FROM jobs WHERE deleted_at IS NULL AND job_no = ? LIMIT 1`, String(no).trim().toUpperCase())
 const partyByName = (s: string) => q.get(`SELECT * FROM parties WHERE deleted_at IS NULL AND (code = ? OR name LIKE ?) ORDER BY (name = ?) DESC, id LIMIT 1`, s, `%${s}%`, s)
+
+// ---------------------------------------------------------------- helpers for the phone receptionist
+const digits9 = (s: string) => String(s ?? '').replace(/\D/g, '').slice(-9)
+const clip = (v: unknown, n = 300) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, n)
+export const leadByPhone = (phone: string): { id: number; lead_no: string; company: string } | null => (digits9(phone).length >= 7 ? (q.get(`SELECT id, lead_no, company FROM leads WHERE deleted_at IS NULL AND status NOT IN ('Converted','Unqualified') AND replace(replace(replace(phone,'+',''),' ',''),'-','') LIKE ? ORDER BY id DESC LIMIT 1`, `%${digits9(phone)}`) as any) ?? null : null)
+const commentOn = (entity: string, id: number, text: string, agent: string) => q.run(`INSERT INTO comments(entity, record_id, user_id, body, created_at) VALUES (?,?,?,?,?)`, entity, id, adminId(), `[AI · ${agent}] ${text.slice(0, 2000)}`, new Date().toISOString())
+/** The caller's number comes from the telephone network (caller ID); a number the model typed is used only when none is available. */
+const callerPhone = (typed?: unknown) => normalizePhone(currentCall()?.from || String(typed ?? ''))
+
+/** Find the open lead for this number or register a new one, so repeat callers never create duplicates. */
+function ensureLead(a: { name?: string; phone?: string; interest?: string; notes?: string }, agent: string): { id: number; lead_no: string; created: boolean } {
+  const phone = callerPhone(a.phone), name = clip(a.name, 80), notes = clip(a.notes, 1500)
+  const call = currentCall()
+  const existing = phone ? leadByPhone(phone) : null
+  if (existing) {
+    if (notes) commentOn('leads', existing.id, `Phone call: ${notes}`, agent)
+    if (call) call.leadId = existing.id
+    return { id: existing.id, lead_no: existing.lead_no, created: false }
+  }
+  const interest = MODES.includes(String(a.interest)) ? a.interest : null
+  const r = createRecord(getDef('leads'), { company: name || (phone ? `Caller +${phone}` : 'Unknown caller'), contact_name: name || null, phone: phone ? '+' + phone : null, source: 'Inbound call', status: 'New', interest, notes: notes ? `Phone call: ${notes}` : 'Phone call to the AI receptionist' }, SYSTEM_CTX)
+  const row = q.get(`SELECT lead_no FROM leads WHERE id = ?`, r.id)
+  if (call) call.leadId = r.id
+  notifyRole('crm', `New phone lead: ${name || phone || 'unknown caller'}`, notes.slice(0, 160), `/e/leads/${r.id}`, 'info')
+  return { id: r.id, lead_no: row?.lead_no ?? String(r.id), created: true }
+}
+
+const staffTask = (title: string, details: string, priority: 'Medium' | 'High' | 'Urgent', lead?: { id: number; lead_no: string }) =>
+  createRecord(getDef('tasks'), { title: clip(title, 200), description: details.slice(0, 2000), due_date: todayStr(), priority, kind: 'Follow-up', link_entity: lead ? 'leads' : null, link_id: lead?.id ?? null, link_label: lead?.lead_no ?? null, assignee_id: adminId() }, SYSTEM_CTX)
 
 export const TOOLS: Tool[] = [
   { name: 'business_snapshot', risk: 'read', description: 'Key numbers: active deals, pipeline value, rent roll, receivables, overdue, payables, cash, leads, tickets, tasks, expiring leases.', parameters: obj({}), run: () => businessSnapshot().data },
@@ -49,6 +81,8 @@ export const TOOLS: Tool[] = [
     run: a => q.all(`SELECT l.lease_no, u.unit_no, p.title property, t.name tenant, l.annual_rent, l.start_date, l.end_date, l.status, l.ejari_no FROM leases l JOIN units u ON u.id = l.unit_id JOIN properties p ON p.id = l.property_id JOIN parties t ON t.id = l.tenant_id WHERE l.deleted_at IS NULL AND l.status IN ('Active','Ejari Registered') ORDER BY l.end_date LIMIT ${lim(a, 30)}`).map(r => ({ ...r, annual_rent: money(r.annual_rent) })) },
   { name: 'expiring_leases', risk: 'read', description: 'Leases expiring within N days.', parameters: obj({ days: Nn('days ahead (default 90)') }),
     run: a => q.all(`SELECT l.lease_no, u.unit_no, t.name tenant, l.end_date, l.annual_rent, l.ejari_no FROM leases l JOIN units u ON u.id = l.unit_id JOIN parties t ON t.id = l.tenant_id WHERE l.deleted_at IS NULL AND l.status IN ('Active','Ejari Registered') AND l.end_date BETWEEN ? AND ? ORDER BY l.end_date LIMIT 30`, todayStr(), addDays(todayStr(), Number(a.days) || 90)).map(r => ({ ...r, annual_rent: money(r.annual_rent) })) },
+  { name: 'mandate_health', risk: 'read', description: 'Active mandates with viewings in the last N days, portal publishing, days to expiry and last activity. Fewest viewings first.', parameters: obj({ days: Nn('look-back window for viewings (default 21)'), limit: Nn('max rows') }),
+    run: a => { const since = addDays(todayStr(), -(Number(a.days) || 21)); return q.all(`SELECT m.mandate_no, m.property_title, m.mandate_type, m.exclusive, m.portal_publish, m.end_date, m.last_activity, (SELECT COUNT(*) FROM viewings v WHERE v.mandate_id = m.id AND v.deleted_at IS NULL AND v.status NOT IN ('Cancelled') AND substr(v.scheduled_at,1,10) >= ?) viewings FROM mandates m WHERE m.deleted_at IS NULL AND m.status = 'Active' ORDER BY viewings, m.end_date LIMIT ${lim(a, 25)}`, since).map(r => ({ mandate_no: r.mandate_no, property: r.property_title, type: r.mandate_type, exclusive: !!r.exclusive, published_to_portals: !!r.portal_publish, expires: r.end_date, days_to_expiry: r.end_date ? daysBetween(todayStr(), r.end_date) : null, viewings_in_period: r.viewings, last_activity: r.last_activity })) } },
   { name: 'list_leads', risk: 'read', description: 'Leads, newest first, optionally by status.', parameters: obj({ status: S('lead status'), limit: Nn('max rows') }),
     run: a => q.all(`SELECT id, lead_no, company, contact_name, phone, email, source, status, est_value, created_at FROM leads WHERE deleted_at IS NULL ${a.status ? 'AND status = ?' : ''} ORDER BY id DESC LIMIT ${lim(a)}`, ...(a.status ? [a.status] : [])).map(r => ({ ...r, est_value: money(r.est_value) })) },
   { name: 'stale_opportunities', risk: 'read', description: 'Open opportunities with no update for 7+ days, and quotations sent but not answered for 5+ days.', parameters: obj({}),
@@ -82,6 +116,77 @@ export const TOOLS: Tool[] = [
   { name: 'send_whatsapp', risk: 'external', description: 'Send a WhatsApp message to a phone number or to all contacts of a customer.', parameters: obj({ to: S('phone number in international format, or customer name'), text: S('message') }, ['to', 'text']),
     summarize: a => `WhatsApp to ${a.to}: ${String(a.text).slice(0, 80)}`,
     run: async a => { const nums = /^[\d+\s-]{7,}$/.test(String(a.to)) ? [a.to] : (() => { const p = partyByName(String(a.to)); return p ? phonesForParty(p.id).slice(0, 2) : [] })(); if (!nums.length) return { error: 'No phone found' }; const out = []; for (const n of nums) out.push(await sendWhatsApp(n, a.text, { origin: 'agent', tpl: 'wa_tpl_notify' })); return out } },
+  // ---------------- phone receptionist (read)
+  { name: 'lookup_listings', risk: 'read', description: 'Search available properties for sale or rent. Returns spoken-friendly facts only (no owner details). Prices are AED.',
+    parameters: obj({ purpose: S('sale | rent'), bedrooms: Nn('number of bedrooms (0 = studio)'), area: S('community, building or area name'), max_price_aed: Nn('budget ceiling: sale price, or yearly rent'), limit: Nn('max rows (default 4)') }),
+    run: a => {
+      const rent = String(a.purpose).toLowerCase().startsWith('rent'), n = Math.min(Math.max(Number(a.limit) || 4, 1), 6)
+      const where = [`deleted_at IS NULL`, `active = 1`, `status IN ('Available','Off-Plan')`, rent ? `rent_annual > 0` : `price > 0`], args: any[] = []
+      if (a.bedrooms !== undefined && a.bedrooms !== null && a.bedrooms !== '') { where.push(`bedrooms = ?`); args.push(Number(a.bedrooms)) }
+      if (a.area) { where.push(`(community_id LIKE ? OR sub_community LIKE ? OR building_name LIKE ? OR title LIKE ?)`); args.push(...Array(4).fill(`%${clip(a.area, 60)}%`)) }
+      if (Number(a.max_price_aed) > 0) { where.push(`${rent ? 'rent_annual' : 'price'} <= ?`); args.push(toCents(a.max_price_aed)) }
+      const rows = q.all(`SELECT property_no, title, property_type, community_id, sub_community, building_name, bedrooms, bathrooms, area_sqft, furnishing, price, rent_annual, is_off_plan, payment_plan, completion_year, available_date FROM properties WHERE ${where.join(' AND ')} ORDER BY listed_date DESC, id DESC LIMIT ${n}`, ...args)
+      return { found: rows.length, listings: rows.map(r => ({ ref: r.property_no, title: r.title, type: r.property_type, area: [r.building_name, r.sub_community, r.community_id].filter(Boolean).join(', '), bedrooms: r.bedrooms, bathrooms: r.bathrooms, size_sqft: r.area_sqft, furnishing: r.furnishing, [rent ? 'rent_per_year_aed' : 'price_aed']: money(rent ? r.rent_annual : r.price), off_plan: !!r.is_off_plan, payment_plan: r.is_off_plan ? r.payment_plan : undefined, completion_year: r.is_off_plan ? r.completion_year : undefined, available_from: r.available_date })) }
+    } },
+  { name: 'find_caller', risk: 'read', description: 'Check whether the caller\'s phone number matches a known customer or lead. Caller ID can be spoofed: use this only to greet and route, never to read out account details.',
+    parameters: obj({ phone: S('only if the caller ID is unavailable') }),
+    run: a => {
+      const phone = callerPhone(a.phone); if (!phone) return { known: false, note: 'No caller ID' }
+      const known = findPartyByPhone(phone), lead = leadByPhone(phone)
+      const party = known ? q.get(`SELECT id, name FROM parties WHERE id = ?`, known.party_id) : null
+      return {
+        known: !!(party || lead), kind: party ? 'customer' : lead ? 'lead' : 'new caller', name: known?.contact || party?.name || lead?.company || null,
+        active_leases: party ? q.val<number>(`SELECT COUNT(*) FROM leases WHERE tenant_id = ? AND status IN ('Active','Ejari Registered') AND deleted_at IS NULL`, party.id) ?? 0 : 0,
+        open_tickets: party ? q.val<number>(`SELECT COUNT(*) FROM tickets WHERE customer_id = ? AND status NOT IN ('Resolved','Closed') AND deleted_at IS NULL`, party.id) ?? 0 : 0,
+        note: 'Caller ID is not proof of identity. Do not disclose balances, contract terms or personal data; take a message or offer a call-back from a colleague.',
+      }
+    } },
+  // ---------------- phone receptionist (internal writes)
+  { name: 'capture_lead', risk: 'internal', description: 'Save the caller as a sales lead (or add to their existing lead). Use once you have their name and what they are looking for.',
+    parameters: obj({ name: S('caller name'), phone: S('only if caller ID is unavailable'), interest: S(`one of: ${MODES.join(' | ')}`), notes: S('budget, area, bedrooms, timeline, financing, anything useful for the agent') }, ['notes']),
+    summarize: a => `Capture lead: ${a.name ?? 'caller'}`,
+    run: (a, c) => { const l = ensureLead(a, c.agent); setOutcome('Lead captured'); return { lead_no: l.lead_no, new_lead: l.created } } },
+  { name: 'request_viewing', risk: 'internal', description: 'Ask the sales team to arrange a viewing. A colleague confirms the exact time with the caller, so never promise a slot.',
+    parameters: obj({ name: S('caller name'), phone: S('only if caller ID is unavailable'), property: S('listing reference (e.g. PRP-26-00012) or the building/area they mean'), preferred_time: S('when the caller would like to view, in their words'), notes: S('budget, number of people, other requirements') }, ['name', 'property']),
+    summarize: a => `Viewing request: ${a.property}`,
+    run: (a, c) => {
+      const l = ensureLead({ name: a.name, phone: a.phone, notes: `Wants to view ${clip(a.property, 120)}${a.preferred_time ? ` – ${clip(a.preferred_time, 80)}` : ''}. ${clip(a.notes, 500)}` }, c.agent)
+      staffTask(`Book viewing: ${clip(a.property, 80)} for ${clip(a.name, 60)}`, `Caller ${clip(a.name, 80)} (+${callerPhone(a.phone)}) asked to view ${clip(a.property, 160)}.\nPreferred time: ${clip(a.preferred_time, 120) || 'not stated'}.\n${clip(a.notes, 500)}\nCall them back to confirm the slot and create the viewing.`, 'High', l)
+      setOutcome('Viewing requested'); notifyRole('crm', 'Viewing requested by phone', `${clip(a.name, 60)} – ${clip(a.property, 80)}`, `/e/leads/${l.id}`, 'info')
+      return { lead_no: l.lead_no, recorded: true, note: 'A colleague will call to confirm the time.' }
+    } },
+  { name: 'report_maintenance_issue', risk: 'internal', description: 'Log a maintenance problem reported by a tenant or owner as a ticket. Set urgency "emergency" for flooding, fire or smoke, gas smell, exposed electrics, lift entrapment, no security/door lock, or anything unsafe.',
+    parameters: obj({ description: S('what is wrong, where, since when'), location: S('building and unit number'), urgency: S('routine | urgent | emergency'), name: S('caller name'), phone: S('only if caller ID is unavailable') }, ['description', 'urgency']),
+    summarize: a => `Maintenance ticket (${a.urgency}): ${clip(a.description, 80)}`,
+    run: async (a, c) => {
+      const urgency = ['routine', 'urgent', 'emergency'].includes(String(a.urgency)) ? String(a.urgency) : 'urgent', priority = urgency === 'emergency' ? 'Urgent' : urgency === 'urgent' ? 'High' : 'Medium'
+      const phone = callerPhone(a.phone), known = phone ? findPartyByPhone(phone) : null
+      const r = createRecord(getDef('tickets'), { subject: `${urgency === 'emergency' ? 'EMERGENCY – ' : ''}${clip(a.description, 90)}`, type: 'Maintenance', priority, status: 'Open', customer_id: known?.party_id ?? null, description: `Reported by phone${a.name ? ` by ${clip(a.name, 80)}` : ''}${phone ? ` (+${phone})` : ''}.\nLocation: ${clip(a.location, 120) || 'not stated'}.\n${clip(a.description, 1500)}`, due_at: urgency === 'emergency' ? nowLocal() : null }, SYSTEM_CTX)
+      const t = q.get(`SELECT ticket_no FROM tickets WHERE id = ?`, r.id), call = currentCall()
+      if (call) call.ticketId = r.id
+      setOutcome('Maintenance logged')
+      notifyRole('support', `${urgency === 'emergency' ? 'EMERGENCY ' : ''}Maintenance ticket ${t?.ticket_no ?? ''}`, clip(a.description, 160), `/e/tickets/${r.id}`, urgency === 'routine' ? 'info' : 'alert')
+      if (urgency === 'emergency') await messageOwners(`🚨 Emergency maintenance call\n${clip(a.location, 80) || 'location not stated'}: ${clip(a.description, 200)}\nCaller: ${clip(a.name, 60) || 'unknown'} +${phone}\nTicket ${t?.ticket_no ?? r.id}`, 'agent', 'wa_tpl_notify')
+      return { ticket_no: t?.ticket_no, priority, note: urgency === 'emergency' ? 'The duty team has been alerted now.' : 'The maintenance team will follow up.' }
+    } },
+  { name: 'request_callback', risk: 'internal', description: 'Ask a colleague to call the person back (use when no one is available to take the call or the topic needs a human).',
+    parameters: obj({ name: S('caller name'), phone: S('only if caller ID is unavailable'), topic: S('what the call-back is about'), preferred_time: S('when it suits them, in their words') }, ['topic']),
+    summarize: a => `Call-back: ${clip(a.topic, 80)}`,
+    run: (a, c) => {
+      const phone = callerPhone(a.phone), known = phone ? findPartyByPhone(phone) : null, lead = phone ? leadByPhone(phone) : null
+      staffTask(`Call back ${clip(a.name, 60) || '+' + phone}: ${clip(a.topic, 80)}`, `Caller ${clip(a.name, 80) || 'unknown'} (+${phone})${known ? ' – existing customer' : ''}.\nTopic: ${clip(a.topic, 500)}\nBest time: ${clip(a.preferred_time, 120) || 'not stated'}.`, 'High', lead ?? undefined)
+      setOutcome('Callback requested'); notifyRole('crm', 'Call-back requested', `${clip(a.name, 60)} – ${clip(a.topic, 100)}`, '/tasks', 'info')
+      return { recorded: true, note: 'A colleague will call back.' }
+    } },
+  { name: 'transfer_call', risk: 'internal', description: 'Hand the call to a member of staff. Use when the caller asks for a person, is upset, or the question is outside what you can safely answer (legal, contracts, disputes, payments). After calling this, tell the caller you are connecting them.',
+    parameters: obj({ reason: S('why the call is being transferred') }, ['reason']),
+    summarize: a => `Transfer call: ${clip(a.reason, 80)}`,
+    run: a => {
+      const call = currentCall()
+      if (!call || !String(getSetting('voice_transfer_number') || '').trim()) return { transferred: false, note: 'No staff line is available. Offer a call-back with request_callback instead.' }
+      call.handoff = { reason: clip(a.reason, 200) }; setOutcome('Transferred to staff')
+      return { transferred: true, note: 'The call will be connected to staff as soon as you finish this reply.' }
+    } },
 ]
 export const toolByName = (n: string) => TOOLS.find(t => t.name === n)
 export const toolNow = nowLocal

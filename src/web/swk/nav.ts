@@ -4,7 +4,7 @@ import {
   UserPlus, Users, Target, PhoneCall, MessageCircle, Mail, FilePen, CalendarCheck, HandCoins, FileSignature, FileCheck, ShieldCheck,
   KeyRound, CalendarClock, Wallet, ReceiptText, Wrench, ClipboardCheck, DoorOpen, UserRoundCog, FileBarChart, Percent, Receipt, FileInput,
   Banknote, Scale, BadgeCheck, ScrollText, FileStack, Trophy, IdCard, Clock, Plane, Calculator, FileCode2, BarChart3, Settings,
-  ShieldHalf, ShieldAlert, History, Plug, DatabaseBackup, Building, Gavel, Layers,
+  ShieldHalf, History, Plug, DatabaseBackup, Building, Gavel, Layers, ShieldAlert, CheckCheck, MapPinned, Briefcase, Star, PackageCheck,
 } from 'lucide-react'
 
 export type NavItem = { label: string; to: string; icon: LucideIcon; module?: string; isNew?: boolean; desc?: string }
@@ -14,13 +14,17 @@ export type NavSection = { key: string; label: string; items: NavItem[] }
 export const SWK_NAV: NavSection[] = [
   { key: 'command', label: 'Command centre', items: [
     { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard, module: 'dashboard', desc: 'Your brokerage at a glance' },
+    { label: 'Enterprise Master OS', to: '/enterprise/master-os', icon: ShieldCheck, isNew: true, desc: '35 modules, 10 workflows & command centre' },
     { label: 'Market Pulse', to: '/market', icon: LineChart, isNew: true, desc: 'DLD-style prices, yields & supply' },
     { label: 'Deal Pipeline', to: '/pipeline', icon: KanbanSquare, module: 'sales', isNew: true, desc: 'Lead → Form B → MOU → Transfer' },
+    { label: 'Universal Approvals', to: '/e/universal_approvals', icon: CheckCheck, module: 'projects', isNew: true, desc: 'Four-eyes & maker-checker queue' },
     { label: 'Calendar', to: '/calendar', icon: CalendarDays, desc: 'Viewings, transfers & renewals' },
     { label: 'AI Concierge', to: '/ai', icon: Sparkles, module: 'ai', desc: 'AI team, briefings & approvals' },
   ] },
   { key: 'inventory', label: 'Inventory & listings', items: [
     { label: 'Listing Studio', to: '/listings', icon: Megaphone, module: 'properties', isNew: true, desc: 'Quality score, Trakheesi & portals' },
+    { label: 'Daily Inventory Queue', to: '/e/inventory_submissions', icon: Building2, module: 'properties', isNew: true, desc: '3.07 sourcing & duplicate check' },
+    { label: 'Listing Mandates & Prices', to: '/e/listing_mandates', icon: FileSignature, module: 'mandates', isNew: true, desc: '3.12 Form A, Trakheesi & price log' },
     { label: 'Properties', to: '/e/properties', icon: Building2, module: 'properties' },
     { label: 'Units', to: '/e/units', icon: Home, module: 'properties' },
     { label: 'Off-Plan Launches', to: '/offplan', icon: Rocket, module: 'properties', isNew: true, desc: 'Projects, payment plans & Oqood' },
@@ -29,8 +33,12 @@ export const SWK_NAV: NavSection[] = [
   ] },
   { key: 'clients', label: 'Clients & leads', items: [
     { label: 'Leads', to: '/e/leads', icon: UserPlus, module: 'crm' },
+    { label: 'Lead Ownership Logs', to: '/e/lead_assignment_logs', icon: History, module: 'crm', isNew: true, desc: '3.31 immutable attribution trail' },
     { label: 'Contacts', to: '/e/parties', icon: Users, module: 'crm' },
     { label: 'Opportunities', to: '/e/opportunities', icon: Target, module: 'crm' },
+    { label: 'Supervised Comms', to: '/e/communications', icon: MessageCircle, module: 'crm', isNew: true, desc: '3.09 WABA SLA & diversion flags' },
+    { label: 'AI Voice Calls', to: '/e/voice_calls', icon: PhoneCall, module: 'crm', isNew: true, desc: '3.22 AI receptionist & call logs' },
+    { label: 'QA & Client Reviews', to: '/e/qa_reviews', icon: Star, module: 'support', isNew: true, desc: '3.33 QA scoring & broker challenge' },
     { label: 'Calls & Activities', to: '/e/activities', icon: PhoneCall, module: 'crm' },
     { label: 'Campaigns', to: '/e/campaigns', icon: Megaphone, module: 'crm' },
     { label: 'WhatsApp', to: '/whatsapp', icon: MessageCircle, module: 'crm' },
@@ -38,6 +46,8 @@ export const SWK_NAV: NavSection[] = [
   ] },
   { key: 'sales', label: 'Sales & mandates', items: [
     { label: 'Mandates (Form A)', to: '/e/mandates', icon: FilePen, module: 'mandates' },
+    { label: 'Enterprise Transactions', to: '/e/transactions', icon: Briefcase, module: 'transactions', isNew: true, desc: '3.13 stage gates & 11 exceptions' },
+    { label: 'Developer NOC Centre', to: '/e/developer_requests', icon: FileCheck, module: 'transactions', isNew: true, desc: '3.08 NOC portal & closing gate' },
     { label: 'Viewings', to: '/e/viewings', icon: CalendarCheck, module: 'mandates' },
     { label: 'Offers', to: '/e/offers', icon: HandCoins, module: 'transactions' },
     { label: 'Deal Files', to: '/e/jobs', icon: FileSignature, module: 'sales' },
@@ -61,15 +71,19 @@ export const SWK_NAV: NavSection[] = [
   ] },
   { key: 'finance', label: 'Commission & finance', items: [
     { label: 'Agent Commissions', to: '/e/agent_commissions', icon: Percent, module: 'finance' },
+    { label: 'Commission Entitlements', to: '/e/commission_entitlements', icon: Percent, module: 'finance', isNew: true, desc: '3.17 3-way payout & IBAN security' },
     { label: 'Tax Invoices', to: '/e/invoices', icon: Receipt, module: 'finance' },
     { label: 'Receipts', to: '/e/receipts', icon: HandCoins, module: 'finance' },
     { label: 'Vendor Bills', to: '/e/bills', icon: FileInput, module: 'finance' },
     { label: 'Payments', to: '/e/payments', icon: Banknote, module: 'finance' },
+    { label: 'Procurement & Facilities', to: '/e/procurement_requests', icon: PackageCheck, module: 'finance', isNew: true, desc: '3.25 POs, devices & SaaS' },
     { label: 'Bank & Reconciliation', to: '/e/bank_transactions', icon: Scale, module: 'finance' },
     { label: 'Financial Statements', to: '/finance/statements', icon: FileBarChart, module: 'finance' },
   ] },
   { key: 'compliance', label: 'RERA & compliance', items: [
     { label: 'RERA Centre', to: '/rera', icon: Gavel, module: 'compliance', isNew: true, desc: 'BRN, Trakheesi, Form A & AML' },
+    { label: 'Risk, Fraud & DLP Cases', to: '/e/compliance_cases', icon: ShieldAlert, module: 'compliance', isNew: true, desc: '3.29/3.30/4.09 independent review' },
+    { label: 'Broker Authorisations', to: '/e/agent_authorisations', icon: BadgeCheck, module: 'compliance', isNew: true, desc: '3.04/4.06 regulated activation' },
     { label: 'Licences & Filings', to: '/compliance', icon: BadgeCheck, module: 'compliance' },
     { label: 'KYC Checks', to: '/e/kyc_checks', icon: ShieldCheck, module: 'compliance', isNew: true, desc: 'Client due diligence' },
     { label: 'goAML Reports', to: '/e/aml_reports', icon: ShieldAlert, module: 'compliance', isNew: true, desc: 'Suspicious activity log' },
@@ -78,9 +92,14 @@ export const SWK_NAV: NavSection[] = [
   ] },
   { key: 'team', label: 'Team', items: [
     { label: 'Agent Leaderboard', to: '/agents', icon: Trophy, module: 'hr', isNew: true, desc: 'GCI, conversion & licences' },
+    { label: 'Daily Accountability', to: '/e/daily_reports', icon: ClipboardCheck, module: 'hr', isNew: true, desc: '3.06 system snapshot vs narrative' },
+    { label: 'Visa, Immigration & PRO', to: '/e/immigration_cases', icon: Plane, module: 'hr', isNew: true, desc: '3.03 visa & work-permit workflow' },
+    { label: 'Field Presence Sessions', to: '/e/field_sessions', icon: MapPinned, module: 'hr', isNew: true, desc: '3.10 work-hours duty location' },
+    { label: 'Recruitment & Separation', to: '/e/hr_lifecycle_cases', icon: Users, module: 'hr', isNew: true, desc: '3.26/4.10 onboarding & offboarding' },
     { label: 'Agents (BRN)', to: '/e/agents', icon: IdCard, module: 'hr' },
     { label: 'Employees', to: '/e/employees', icon: Users, module: 'hr' },
     { label: 'Attendance', to: '/e/attendance', icon: Clock, module: 'hr' },
+    { label: 'Attendance Events (QR)', to: '/e/attendance_events', icon: Clock, module: 'hr', isNew: true },
     { label: 'Leave', to: '/e/leave_requests', icon: Plane, module: 'hr' },
     { label: 'Payroll & WPS', to: '/e/payslips', icon: Banknote, module: 'hr' },
   ] },
@@ -91,6 +110,9 @@ export const SWK_NAV: NavSection[] = [
   ] },
   { key: 'admin', label: 'Administration', items: [
     { label: 'Settings', to: '/admin/settings', icon: Settings, module: 'admin' },
+    { label: 'Corporate Governance', to: '/e/corporate_governance_items', icon: DevIcon, module: 'admin', isNew: true, desc: '3.01 board, budgets & authorities' },
+    { label: 'DR & Security Drills', to: '/e/dr_exercises', icon: DatabaseBackup, module: 'admin', isNew: true, desc: '3.35 RTO/RPO restore verification' },
+    { label: 'Enterprise Audit Events', to: '/e/audit_events', icon: History, module: 'admin', isNew: true },
     { label: 'Roles & Access', to: '/admin/roles', icon: ShieldHalf, module: 'admin' },
     { label: 'Branches', to: '/e/branches', icon: Building, module: 'admin' },
     { label: 'Audit Trail', to: '/admin/audit', icon: History, module: 'admin' },
@@ -100,13 +122,13 @@ export const SWK_NAV: NavSection[] = [
 ]
 
 export const QUICK_CREATE: { label: string; desc: string; to: string; icon: LucideIcon; module: string }[] = [
+  { label: 'Submit daily report', desc: '3.06 workday outcomes & system snapshot', to: '/e/daily_reports?new=1', icon: ClipboardCheck, module: 'hr' },
+  { label: 'Submit sourced unit', desc: '3.07 daily inventory acquisition queue', to: '/e/inventory_submissions?new=1', icon: Building2, module: 'properties' },
   { label: 'New lead', desc: 'Portal, WhatsApp or walk-in enquiry', to: '/e/leads?new=1', icon: UserPlus, module: 'crm' },
-  { label: 'New listing', desc: 'Property with Trakheesi permit', to: '/e/properties?new=1', icon: Building2, module: 'properties' },
   { label: 'Book a viewing', desc: 'Schedule with client & agent', to: '/e/viewings?new=1', icon: CalendarCheck, module: 'mandates' },
-  { label: 'Record an offer', desc: 'Purchase or lease offer', to: '/e/offers?new=1', icon: HandCoins, module: 'transactions' },
-  { label: 'Open a deal file', desc: 'Sale, lease or off-plan deal', to: '/e/jobs?new=1', icon: FileSignature, module: 'sales' },
+  { label: 'Request Developer NOC', desc: '3.08 transaction-specific NOC clearance', to: '/e/developer_requests?new=1', icon: FileCheck, module: 'transactions' },
+  { label: 'Open enterprise deal', desc: '3.13 controlled secondary or off-plan sale', to: '/e/transactions?new=1', icon: Briefcase, module: 'transactions' },
   { label: 'New lease (Ejari)', desc: 'Tenancy contract & cheques', to: '/e/leases?new=1', icon: KeyRound, module: 'leases' },
-  { label: 'Maintenance request', desc: 'Tenant or landlord work order', to: '/e/maintenance?new=1', icon: Wrench, module: 'leases' },
 ]
 
 export function findNav(pathname: string) {
@@ -121,17 +143,17 @@ export function findNav(pathname: string) {
 /** Launcher ("Apps") presentation for each nav section — one tile per section on the post-sign-in home screen. */
 export type AppTone = 'navy' | 'champ' | 'oasis' | 'ocean' | 'dune' | 'plum'
 export const APP_META: Record<string, { blurb: string; icon: LucideIcon; tone: AppTone }> = {
-  command: { blurb: 'Dashboard, pipeline, market pulse & calendar', icon: LayoutDashboard, tone: 'navy' },
-  inventory: { blurb: 'Listings, units, off-plan launches & developers', icon: Building2, tone: 'ocean' },
-  clients: { blurb: 'Leads, contacts, WhatsApp & email', icon: Users, tone: 'oasis' },
-  sales: { blurb: 'Form A mandates, viewings, offers & deal files', icon: FileSignature, tone: 'champ' },
+  command: { blurb: 'Enterprise Master OS, dashboard, pipeline & four-eyes approvals', icon: LayoutDashboard, tone: 'navy' },
+  inventory: { blurb: '3.07 inventory queue, 3.12 mandates, listings & off-plan', icon: Building2, tone: 'ocean' },
+  clients: { blurb: 'Leads, 3.09 supervised WhatsApp, 3.22 AI voice & 3.33 QA', icon: Users, tone: 'oasis' },
+  sales: { blurb: '3.13 transactions, 3.08 Developer NOCs, Form A/F & deals', icon: FileSignature, tone: 'champ' },
   leasing: { blurb: 'Ejari leases, PDC cheques & maintenance', icon: KeyRound, tone: 'navy' },
   owners: { blurb: 'Landlord portfolios, yields & statements', icon: UserRoundCog, tone: 'plum' },
-  finance: { blurb: 'Commissions, tax invoices, bank & statements', icon: Receipt, tone: 'oasis' },
-  compliance: { blurb: 'RERA centre, licences, filings & documents', icon: Gavel, tone: 'dune' },
-  team: { blurb: 'Agent leaderboard, HR, attendance & payroll', icon: Trophy, tone: 'ocean' },
+  finance: { blurb: '3.17 3-way commissions, tax invoices, 3.25 procurement & bank', icon: Receipt, tone: 'oasis' },
+  compliance: { blurb: 'RERA centre, 3.29/3.30 risk & DLP cases, 3.04 broker auth', icon: Gavel, tone: 'dune' },
+  team: { blurb: '3.06 daily reports, 3.03 PRO visas, 3.10 field duty & payroll', icon: Trophy, tone: 'ocean' },
   tools: { blurb: 'Deal toolkit, Document Studio & reports', icon: Calculator, tone: 'champ' },
-  admin: { blurb: 'Settings, roles, audit trail & integrations', icon: Settings, tone: 'plum' },
+  admin: { blurb: '3.01 governance, 3.35 DR drills, roles, audit & integrations', icon: Settings, tone: 'plum' },
 }
 
 export type LauncherApp = { key: string; label: string; blurb: string; icon: LucideIcon; tone: AppTone; items: NavItem[]; landing: string }

@@ -29,14 +29,14 @@ export async function seedDemoScenarios(): Promise<void> {
   const defaultRoles = [
     { name: 'Admin', description: 'Full system access, including administration', system: true, permissions: '*' },
     { name: 'Manager', description: 'Full access to every module', system: true, permissions: '*' },
-    { name: 'Sales', description: 'CRM, quotations and customer follow-up', permissions: { dashboard: V, crm: CRUD, sales: [...CRUD, 'export'], documents: CE, support: CE, projects: CRUD, reports: VE, masters: V } },
+    { name: 'Sales', description: 'CRM, quotations and customer follow-up', permissions: { dashboard: V, crm: CRUD, sales: [...CRUD, 'export'], properties: CE, mandates: CE, transactions: CE, hr: CE, documents: CE, support: CE, projects: CRUD, reports: VE, masters: V } },
     { name: 'Leasing', description: 'Leasing and tenant management', permissions: { dashboard: V, crm: V, sales: V, leases: CRUD, documents: CE, projects: CE, masters: V } },
     { name: 'Operations', description: 'Deals, leases, transactions and properties', permissions: { dashboard: V, crm: V, sales: CRUD, leases: CRUD, transactions: CRUD, properties: CRUD, documents: CRUD, support: CE, projects: CRUD, reports: VE, masters: V } },
     { name: 'Accounts', description: 'Invoicing, bills, banking and financial reports', permissions: { dashboard: V, crm: V, sales: V, finance: [...CRUD, 'approve'], documents: CE, reports: VE, masters: CE, hr: V, leases: CRUD } },
     { name: 'Property Mgmt', description: 'Leases, maintenance and inspections', permissions: { dashboard: V, sales: V, leases: CRUD, documents: CE, projects: CE, masters: V } },
     { name: 'HR', description: 'Employees, leave, attendance and payroll', permissions: { dashboard: V, hr: [...CRUD, 'approve'], documents: CE, projects: CE, masters: V } },
     { name: 'Viewer', description: 'Read-only access to business modules', permissions: { dashboard: V, crm: V, sales: V, leases: V, transactions: V, properties: V, finance: V, support: V, projects: V, documents: V, reports: V } },
-    { name: 'Customer Portal', description: 'External customers — own deals, invoices and documents only', permissions: { dashboard: V, sales: V, finance: V, documents: V, support: ['view', 'create'] } },
+    { name: 'Customer Portal', description: 'External customers — own deals, invoices and documents only', permissions: { dashboard: V, crm: V, sales: V, finance: V, leases: V, mandates: V, transactions: V, documents: V, support: ['view', 'create'] } },
   ]
   for (const r of defaultRoles) {
     const existing = q.get(`SELECT id FROM roles WHERE name = ?`, r.name)
@@ -195,7 +195,327 @@ export async function seedDemoScenarios(): Promise<void> {
   const main_bank = mk(ctx, 'bank_accounts', { name: 'Main AED Account', type: 'Bank', currency: 'AED', gl_account_id: idBy('accounts', 'code', '1100'), active: true })
 
   const rec1 = mk(ctx, 'receipts', { party_id: buyer, bank_account_id: main_bank.id, receipt_date: today, method: 'Bank transfer', currency: 'AED', amount: 57000, status: 'Posted' })
-  // Note: allocations would need receipt_allocations table
+
+  // =========================================================================
+  // Master Specification v1.0 Enterprise Aggregates (3.01 – 3.35)
+  // =========================================================================
+  const legalEntId = idBy('legal_entities', 'code', 'SWK')
+  const ahmedUserId = idBy('users', 'email', 'ahmed@demo.swkproperties.ae')
+  const fatimaUserId = idBy('users', 'email', 'fatima@demo.swkproperties.ae')
+  const sarahUserId = idBy('users', 'email', 'sarah@demo.swkproperties.ae')
+  const mohammedUserId = idBy('users', 'email', 'mohammed@demo.swkproperties.ae')
+
+  // 3.01 Corporate Governance
+  mk(ctx, 'corporate_governance_items', {
+    title: 'FY2026 Delegated Signature & Bank Signatory Matrix',
+    category: 'Signature Authority',
+    legal_entity_id: legalEntId,
+    branch_id: dxb,
+    department_id: dept('MGT'),
+    owner_id: admin.id,
+    authority_limit: 500000,
+    effective_date: d(-60),
+    expiry_date: d(305),
+    status: 'Active',
+    version_no: 2,
+    evidence_ref: 'RES-2026-04-B',
+    description: 'Four-eyes dual signatory required for treasury payouts > AED 50,000, listing price reductions, and developer NOC fee disbursements.',
+  })
+
+  // 3.03 Visa, Immigration & PRO
+  mk(ctx, 'immigration_cases', {
+    employee_id: emp_ahmed.id,
+    pro_user_id: mohammedUserId,
+    legal_entity_id: legalEntId,
+    sponsorship_type: 'Company Sponsored',
+    case_type: 'Visa & Permit Renewal',
+    work_permit_category: 'Skilled Level 1–5',
+    status: 'Officially Approved',
+    eligibility_checked: true,
+    offer_contract_signed: true,
+    application_ref: 'MOHRE-2026-88412',
+    submitted_date: d(-14),
+    expected_decision_date: d(-4),
+    medical_status: 'Fit',
+    eid_status: 'Card Delivered',
+    health_insurance_status: 'Active',
+    official_approval_ref: 'ICP-EP-2026-99201',
+    officially_approved_on: d(-5),
+    permit_expiry_date: d(720),
+    government_fee: 3850,
+    typing_vendor_fee: 250,
+    receipt_ref: 'RCP-ICP-99201',
+  })
+
+  // 3.04 Broker Authorisations
+  mk(ctx, 'agent_authorisations', {
+    agent_id: agent_ahmed.id,
+    employee_id: emp_ahmed.id,
+    user_id: ahmedUserId,
+    brn_number: 'BRK-001',
+    rera_card_no: 'RERA-001',
+    rera_expiry_date: d(365),
+    registration_status: 'Active',
+    dld_exam_passed: true,
+    dld_exam_score: 94,
+    work_auth_verified: true,
+    aml_training_completed: true,
+    conduct_policy_acknowledged: true,
+    conflict_declaration_status: 'None Declared',
+    territories: 'Dubai Marina, Palm Jumeirah, Downtown Dubai',
+    communities_scope: 'Waterfront & Luxury Towers',
+    languages: 'English, Arabic, Hindi',
+    commission_structure: 'Senior 60/40 Split',
+    compliance_score: 98,
+    status: 'Authorised',
+  })
+
+  // 3.05 Attendance & 3.10 Work-hours Field Presence
+  mk(ctx, 'attendance_events', {
+    employee_id: emp_ahmed.id,
+    user_id: ahmedUserId,
+    work_date: today,
+    shift_name: 'Standard 09:00–18:00',
+    terminal_type: 'Dynamic QR',
+    qr_token_ref: 'QR-DXB-HQ-0902',
+    check_in_at: `${today}T08:56`,
+    duty_status: 'On Duty',
+    manager_verified: true,
+  })
+  mk(ctx, 'field_sessions', {
+    employee_id: emp_ahmed.id,
+    agent_id: agent_ahmed.id,
+    duty_date: today,
+    scheduled_start: `${today}T08:00`,
+    scheduled_end: `${today}T20:00`,
+    started_at: `${today}T09:30`,
+    status: 'Active (On Duty)',
+    assigned_location: 'Marina Crown Tower, Dubai Marina',
+    property_id: p1.id,
+    appointment_ref: 'VW-MARINA-1000',
+    last_lat: '25.0795',
+    last_lng: '55.1390',
+    gps_accuracy_m: 8,
+    review_status: 'Normal',
+    retention_until: d(90),
+  })
+
+  // 3.06 Daily Staff Accountability
+  mk(ctx, 'daily_reports', {
+    employee_id: emp_ahmed.id,
+    user_id: ahmedUserId,
+    department_id: dept('SAL'),
+    manager_id: admin.id,
+    report_date: today,
+    day_type: 'Assigned Workday',
+    outcomes_narrative: 'Completed 2 viewings at Marina Crown and progressed Horizon Investments offer (AED 2.75M) toward Form F signing.',
+    blockers_narrative: 'Awaiting seller service-charge clearance statement from Emaar community management.',
+    evidence_links: 'Offer #1, Viewing #1, Property P1',
+    next_day_priorities: '1. Finalise Form F MOU with buyer and seller\n2. Submit Developer NOC request once Form F is signed',
+  })
+
+  // 3.07 Daily Inventory Acquisition & 3.12 Listing Mandates
+  mk(ctx, 'inventory_submissions', {
+    community_id: marinas.id,
+    building_name: 'Marina Gate Tower 1',
+    unit_no: '2404',
+    property_type: 'Apartment',
+    purpose: 'Sale',
+    asking_price: 3450000,
+    area_sqft: 1520,
+    floor_no: 24,
+    bedrooms: 2,
+    bathrooms: 3,
+    occupancy_status: 'Vacant',
+    owner_party_id: owner,
+    owner_name: 'SWK Properties LLC',
+    owner_phone: '+971 50 111 2233',
+    owner_contact_verified: true,
+    inventory_source: 'Direct Owner Cold Call',
+    source_permission_evidence: 'FORM-A-2026-9012',
+    price_confirmed_date: today,
+    trakheesi_permit_no: '7149281920',
+    permit_expiry_date: d(120),
+    sourcing_agent_id: agent_ahmed.id,
+    sourcing_user_id: ahmedUserId,
+  })
+  mk(ctx, 'listing_mandates', {
+    property_id: p1.id,
+    mandate_id: m1.id,
+    owner_id: owner,
+    listing_agent_id: agent_ahmed.id,
+    form_a_ref: 'FORM-A-2026-0001',
+    title_deed_verified: true,
+    passport_eid_verified: true,
+    trakheesi_permit_no: 'RERA-2024-001',
+    permit_expiry_date: d(180),
+    authorized_price: 2850000,
+    authorized_rent: 140000,
+    status: 'Verified & Active',
+    price_history: [{ price: 2850000, approved_by: admin.id, at: today, reason: 'Initial Form A mandate' }],
+  })
+
+  // 3.08 Developer NOC & Clearance
+  const nocReq = mk(ctx, 'developer_requests', {
+    developer_id: emaar.id,
+    property_id: p3.id,
+    sales_contract_id: 1,
+    job_id: dl1.id,
+    seller_id: owner,
+    buyer_id: buyer,
+    transaction_type: 'Secondary Resale',
+    checklist_completed: true,
+    owner_authorisation_ref: 'AUTH-NOC-2026-01',
+    outstanding_service_charges: 0,
+    service_charges_cleared: true,
+    service_charge_receipt_ref: 'EMAAR-SC-CLEAR-881',
+    noc_fee_amount: 5250,
+    portal_application_ref: 'EMAAR-NOC-2026-7712',
+    authorised_sender_email: 'noc@swkpropertiesuae.com',
+  })
+
+  // 3.09 Supervised Communications
+  mk(ctx, 'communications', {
+    channel: 'WhatsApp Business',
+    business_account_ref: 'SWK-WABA-PRIMARY',
+    customer_phone: '+971509998888',
+    party_id: buyer,
+    lead_id: lead_id,
+    property_id: p1.id,
+    job_id: dl1.id,
+    assigned_user_id: ahmedUserId,
+    direction: 'Inbound',
+    delivery_status: 'Read',
+    status: 'Responded',
+    message_summary: 'Client confirmed readiness to sign Form F for Marina Crown 2BR at AED 2.85M and requested trustee office schedule.',
+    ai_summary: 'Buyer confirmed Form F terms and requested DLD trustee appointment options.',
+  })
+
+  // 3.13 / 3.14 Enterprise Transactions & 3.17 Commission Entitlements
+  const entTxn = mk(ctx, 'transactions', {
+    transaction_category: 'Secondary Sale',
+    lead_id: lead_id,
+    property_id: p1.id,
+    job_id: dl1.id,
+    seller_id: owner,
+    buyer_id: buyer,
+    primary_agent_id: agent_ahmed.id,
+    co_agent_id: agent_fatima.id,
+    developer_id: emaar.id,
+    deal_value: 2850000,
+    deposit_amount: 285000,
+    deposit_held_status: 'Held in Escrow / Trust',
+    kyc_cleared: true,
+    forms_completed: true,
+    noc_request_id: nocReq.id,
+    invoice_id: inv1.id,
+    receipt_id: rec1.id,
+    projected_commission: 57000,
+  })
+  mk(ctx, 'commission_entitlements', {
+    transaction_id: entTxn.id,
+    job_id: dl1.id,
+    agent_id: agent_ahmed.id,
+    employee_id: emp_ahmed.id,
+    developer_id: emaar.id,
+    agreement_version: 'v2026.1',
+    deal_type: 'Secondary Sale',
+    gross_commission: 57000,
+    split_pct: 50,
+    entitlement_amount: 28500,
+    earned_amount: 28500,
+    invoiced_amount: 57000,
+    collected_amount: 57000,
+    payable_amount: 28500,
+    invoice_id: inv1.id,
+    receipt_id: rec1.id,
+    payee_iban: 'AE070331234567890123456',
+  })
+
+  // 3.20 / 3.29 / 3.30 / 4.09 Compliance & Risk Cases
+  mk(ctx, 'compliance_cases', {
+    title: 'Routine QA & AML Source-of-Funds Review – Marina Crown Deal',
+    case_category: 'AML / Sanctions Escalation (3.20)',
+    source_type: 'Internal Audit',
+    severity: 'Medium',
+    subject_user_id: ahmedUserId,
+    investigator_id: admin.id,
+    party_id: buyer,
+    property_id: p1.id,
+    transaction_id: entTxn.id,
+    linked_entity: 'transactions',
+    linked_record_id: entTxn.id,
+    legal_hold: true,
+    evidence_summary: 'Standard high-value corporate buyer UBO & source-of-funds verification check prior to DLD transfer.',
+  })
+
+  // 3.27 Universal Approvals, 3.26 HR Lifecycle, 3.25 Procurement, 3.33 QA & 3.35 DR Drills
+  mk(ctx, 'universal_approvals', {
+    title: 'Four-Eyes Approval: Exclusive Marketing Budget – Palm Jumeirah Villa',
+    department_id: dept('SAL'),
+    workflow_type: 'High-Risk Financial Payment',
+    target_entity: 'properties',
+    target_id: p2.id,
+    risk_level: 'High – Four-Eyes Required',
+    approval_mode: 'Four-Eyes Sequential',
+    requester_id: ahmedUserId,
+    step1_approver_id: sarahUserId,
+    step2_approver_id: admin.id,
+    sla_due_at: `${d(2)}T17:00`,
+    supporting_evidence: 'Signed Exclusive Form A Mandate #M2 for Palm Jumeirah Frond G Villa (AED 14.5M).',
+  })
+  mk(ctx, 'hr_lifecycle_cases', {
+    case_type: 'Probation Review & Confirmation',
+    employee_id: emp_sarah.id,
+    user_id: sarahUserId,
+    candidate_or_subject_name: 'Sarah Williams',
+    department_id: dept('SAL'),
+    branch_id: dxb,
+    effective_date: today,
+    confidential_notes: 'Completed 90-day probation with 100% RERA compliance score and verified DLD BRN card.',
+  })
+  mk(ctx, 'procurement_requests', {
+    title: 'Property Finder & Bayut Enterprise Portal Package Renewal',
+    category: 'Portal / SaaS Subscription',
+    department_id: dept('SAL'),
+    requester_id: admin.id,
+    vendor_id: owner,
+    amount: 48000,
+    renewal_date: d(180),
+    serial_or_plate_no: 'PF-ENT-2026-DXB',
+    quotation_refs: 'QT-PF-2026-01, QT-BAYUT-2026-04',
+    status: 'Active / In Use',
+    invoice_matched: true,
+  })
+  mk(ctx, 'qa_reviews', {
+    agent_id: agent_ahmed.id,
+    user_id: ahmedUserId,
+    reviewer_id: admin.id,
+    channel: 'WhatsApp Business Sample',
+    property_id: p1.id,
+    accuracy_score: 96,
+    etiquette_score: 94,
+    commitment_audit_passed: true,
+    overall_score: 95,
+    findings: 'Prompt 4-minute response on company WhatsApp line; accurate Trakheesi permit and service-charge disclosure.',
+    coaching_plan: 'Maintain current standard; exemplar thread shared in weekly sales briefing.',
+  })
+  mk(ctx, 'dr_exercises', {
+    title: 'Q4 Production SQLite/PostgreSQL Backup Restore & Checksum Drill',
+    exercise_type: 'Backup Restore Verification Drill',
+    target_rto_minutes: 30,
+    actual_rto_minutes: 11,
+    target_rpo_minutes: 5,
+    actual_rpo_minutes: 1,
+    backup_file_tested: 'swk-os-prod-backup-verified.zip',
+    records_verified_count: 1420,
+    checksum_verified: true,
+    status: 'Passed – RTO/RPO Verified',
+    conducted_by: admin.id,
+    verified_by: mohammedUserId,
+    evidence_report: 'Restored full production snapshot into isolated staging workspace; verified SHA-256 checksums, ledger trial balance equality, and document vault attachments.',
+    rollback_plan: 'Automated snapshot swap with zero-data-loss WAL replay.',
+  })
 
   console.log('SWK OS demo data seeded')
 }
