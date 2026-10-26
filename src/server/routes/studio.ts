@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { q, tx, inDemo } from '../db'
 import { audit, createRecord, getDef, getRecord, can } from '../engine'
-import { bad, forbidden, todayStr } from '../util'
+import { bad, forbidden, fromCents, todayStr } from '../util'
 import { getSetting, publicSettings } from '../settings'
 import { idOf, need } from './helpers'
 import { aiConfigured, chat } from '../ai/llm'
@@ -29,14 +29,14 @@ function fillValues(partyId?: number, jobId?: number): Record<string, string> {
     }
   }
   if (jobId) {
-    const j = q.get(`SELECT j.*, (SELECT name FROM properties WHERE id = j.property_id) property, (SELECT name FROM units WHERE id = j.unit_id) unit, (SELECT name FROM parties WHERE id = j.client_id) client FROM jobs j WHERE j.id = ? AND j.deleted_at IS NULL`, jobId)
+    const j = q.get(`SELECT j.*, (SELECT title FROM properties WHERE id = j.property_id) property, (SELECT unit_no FROM units WHERE id = j.unit_id) unit, (SELECT name FROM parties WHERE id = j.client_id) client FROM jobs j WHERE j.id = ? AND j.deleted_at IS NULL`, jobId)
     if (j) {
       set(['Job ref.', 'Job reference', 'Job no.', 'Job', 'Deal ref.', 'Job / deal ref.'], j.job_no)
       set(['Property', 'Property name', 'Address of property'], j.property || j.unit)
-      set(['Client', 'Customer'], j.client)
+      set(['Client', 'Customer'].filter(l => !v[l.toLowerCase()]), j.client)
       set(['Deal type', 'Type of deal'], j.deal_type); set(['Deal name', 'Deal'], j.deal_name)
-      set(['Deal value', 'Contract value'], j.deal_value != null ? Number(j.deal_value).toLocaleString('en-US', { maximumFractionDigits: 2 }) : '')
-      set(['Commission (AED)', 'Agency commission'], j.commission_amount != null ? Number(j.commission_amount).toLocaleString('en-US', { maximumFractionDigits: 2 }) : '')
+      set(['Deal value', 'Contract value'], j.deal_value != null ? fromCents(j.deal_value).toLocaleString('en-US', { maximumFractionDigits: 2 }) : '')
+      set(['Commission (AED)', 'Agency commission'], j.commission_amount != null ? fromCents(j.commission_amount).toLocaleString('en-US', { maximumFractionDigits: 2 }) : '')
       set(['Target close', 'Target close date'], j.target_close?.slice(0, 10)); set(['Actual close', 'Closed on'], j.actual_close?.slice(0, 10)); set(['Stage'], j.operational_status)
     }
   }

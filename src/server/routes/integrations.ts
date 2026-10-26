@@ -135,7 +135,9 @@ export default async function (app: FastifyInstance) {
     const rawCookie = req.cookies?.[COOKIE]
     if (!rawCookie) throw forbidden('PDF generation requires a browser session')
     const seal = qs.seal !== undefined ? `?seal=${encodeURIComponent(String(qs.seal))}` : ''
-    const buf = await renderPrintPdf(`/print/${def.key}/${rec.id}${seal}`, { name: COOKIE, value: rawCookie })
+    // Studio documents choose their own page orientation, footer line and page numbering.
+    const opts = def.key === 'studio_documents' ? { landscape: rec.orientation === 'Landscape', pageNumbers: rec.page_numbers !== false && rec.page_numbers !== 0, footerText: String(rec.footer_text ?? '') } : {}
+    const buf = await renderPrintPdf(`/print/${def.key}/${rec.id}${seal}`, { name: COOKIE, value: rawCookie }, opts)
     const disp = qs.download === '1' ? 'attachment' : 'inline'
     reply.header('content-type', 'application/pdf').header('content-disposition', `${disp}; filename="${def.key}-${rec.id}.pdf"`)
     return buf

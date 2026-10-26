@@ -15,21 +15,22 @@ async function main() {
 
   sec('Template library')
   let r = await a.get('/api/e/doc_templates?pageSize=500&sort=code&dir=asc'); const tpls = r.data.rows
-  ok('160+ templates are installed', r.data.total >= 160, r.data.total)
+  ok('50+ templates are installed', r.data.total >= 50, r.data.total)
   ok('list responses stay light (no content)', tpls.every((t: any) => t.content === undefined))
   const cats = new Set(tpls.map((t: any) => t.category))
-  for (const c of ['Corporate', 'Sales & Customers', 'Finance & Procurement', 'Shipping & Warehouse', 'HR & Administration', 'Control & Guidance', 'Legal & Contracts', 'Letters & Notices', 'Customs & Compliance', 'Marketing & Brochures', 'E-mail templates']) ok(`category “${c}” has templates`, cats.has(c))
+  for (const c of ['Corporate', 'Legal & Contracts', 'Sales & Customers', 'Letters & Notices', 'Finance & Procurement', 'Compliance & Permits', 'Control & Guidance', 'HR & Administration', 'E-mail templates', 'Marketing & Brochures']) ok(`category “${c}” has templates`, cats.has(c))
   const code = (c: string) => tpls.find((t: any) => t.code === c)
-  for (const [c, name] of [['SWK-008', 'Company Profile'], ['SWK-023', 'Tax Invoice'], ['SWK-083', 'Standard Trading Conditions'], ['MKT-01', 'Company profile'], ['MKT-02', 'Corporate brochure'], ['MKT-05', 'Ocean freight flyer'], ['EM-09', 'Invoice']]) ok(`${c} ${name} is present`, !!code(c) && code(c).is_system === true && code(c).active === true, code(c))
+  for (const [c, name] of [['CO-FACTS', 'Company particulars'], ['LC-02', 'Residential tenancy contract'], ['FN-01', 'Statement of account'], ['FN-02', 'Friendly reminder - invoice due'], ['MKT-01', 'Company profile'], ['MKT-02', 'Corporate brochure'], ['EM-09', 'Invoice']]) ok(`${c} ${name} is present`, code(c)?.title === name, code(c)?.title)
   ok('codes are unique', new Set(tpls.map((t: any) => t.code)).size === tpls.length)
-  const one = (await a.get(`/api/e/doc_templates/${code('SWK-023').id}`)).data
-  ok('a single template carries its content with highlighted fields', one.content.includes('class="ph"') && one.content.includes('{{company.name}}') && one.content.length > 1000, one.content.slice(0, 200))
+  const one = (await a.get(`/api/e/doc_templates/${code('LC-02').id}`)).data
+  const letterhead = (await a.get(`/api/e/doc_templates/${code('CO-LETTER').id}`)).data
+  ok('a single template carries its content with highlighted fields', one.content.includes('class="ph"') && letterhead.content.includes('{{company.name}}') && one.content.length > 1000, one.content.slice(0, 200))
   let empty = 0; for (const t of tpls.slice(0, 200)) { const c = (await a.get(`/api/e/doc_templates/${t.id}`)).data.content; if (!c || c.length < 200) empty++ }
   ok('every template has real content', empty === 0, empty)
 
   sec('Built-in templates are protected')
-  r = await a.put(`/api/e/doc_templates/${code('SWK-023').id}`, { title: 'Hacked', version: one.version }); ok('built-in text cannot be edited', r.status === 400 && /Duplicate/.test(r.data.error), r.data)
-  r = await a.del(`/api/e/doc_templates/${code('SWK-023').id}`); ok('built-in template cannot be deleted', r.status === 400, r.data)
+  r = await a.put(`/api/e/doc_templates/${code('LC-02').id}`, { title: 'Hacked', version: one.version }); ok('built-in text cannot be edited', r.status === 400 && /Duplicate/.test(r.data.error), r.data)
+  r = await a.del(`/api/e/doc_templates/${code('LC-02').id}`); ok('built-in template cannot be deleted', r.status === 400, r.data)
   r = await a.put(`/api/e/doc_templates/${code('EM-01').id}`, { active: false, version: (await a.get(`/api/e/doc_templates/${code('EM-01').id}`)).data.version }); ok('a built-in template can be switched off', r.status === 200 && r.data.active === false, r.data)
   await a.put(`/api/e/doc_templates/${code('EM-01').id}`, { active: true, version: r.data.version })
 
@@ -37,12 +38,12 @@ async function main() {
   await a.put('/api/admin/settings', { company_trn: '100123456700003' })
   const cust = (await a.post('/api/e/parties', { name: 'Gulf Test Trading LLC', legal_name: 'GULF TEST TRADING L.L.C', is_customer: true, trn: '100888888800003', address1: 'Office 12', city: 'Dubai', phone: '+971 4 111 2222', email: 'ops@gulftest.example', status: 'Active' })).data
   const dxb = (await a.get('/api/e/branches')).data.rows[0].id
-  const job = (await a.post('/api/e/jobs', { client_id: cust.id, branch_id: dxb, department: 'FCL IMPORT', trade: 'Import', hbl_no: 'HBL777', vessel_name: 'MV DEMO', job_date: '2026-10-01', children: { containers: [{ container_no: 'TEMU1111111' }] } })).data
-  r = await a.post('/api/studio/documents', { template_id: code('SWK-012').id, party_id: cust.id, job_id: job.id })
-  ok('document created with a number, title and status Draft', r.status === 201 && /^DOC26\d{5}$/.test(r.data.doc_no) && r.data.status === 'Draft' && r.data.title === 'Customer Complaint Response', r.data)
+  const job = (await a.post('/api/e/jobs', { deal_name: 'Studio test deal', deal_type: 'Sale', client_id: cust.id, branch_id: dxb, deal_date: '2026-10-01', deal_value: 1500000 })).data
+  r = await a.post('/api/studio/documents', { template_id: code('FN-02').id, party_id: cust.id, job_id: job.id })
+  ok('document created with a number, title and status Draft', r.status === 201 && /^DOC26\d{5}$/.test(r.data.doc_no) && r.data.status === 'Draft' && r.data.title === 'Friendly reminder - invoice due', r.data)
   const doc = r.data
   ok('company tokens are filled in, unfilled fields stay highlighted', !doc.content.includes('{{') && doc.content.includes('class="ph"'))
-  r = await a.post('/api/studio/documents', { template_id: code('MKT-02').id }); ok('brochure keeps its design classes and company details', r.data.content.includes('class="cover"') && /digitalburj shipping/i.test(r.data.content) && !r.data.content.includes('{{'), r.data.content.slice(0, 300))
+  r = await a.post('/api/studio/documents', { template_id: code('MKT-02').id }); ok('brochure keeps its design classes and company details', r.data.content.includes('class="cover"') && /SWK/i.test(r.data.content) && !r.data.content.includes('{{'), r.data.content.slice(0, 300))
   r = await a.post('/api/studio/documents', {}); ok('a blank document can be started', r.status === 201 && r.data.title === 'Untitled document')
   r = await a.post('/api/studio/documents', { template_id: 999999 }); ok('unknown template is refused', r.status === 404 || r.status === 400)
 
@@ -55,8 +56,9 @@ async function main() {
 
   sec('Edit, fill from records, duplicate, save as template')
   r = await a.get(`/api/studio/fill-data?party_id=${cust.id}&job_id=${job.id}`)
-  ok('customer and job facts are offered for matching fields', r.data.values['customer'] === 'GULF TEST TRADING L.L.C' && r.data.values['customer trn'] === '100888888800003' && r.data.values['job ref.'] === job.job_no && r.data.values['b/l / awb no.'] === 'HBL777' && r.data.values['container(s)'] === 'TEMU1111111' && r.data.values['vessel / flight'] === 'MV DEMO', r.data)
-  r = await a.put(`/api/e/studio_documents/${doc.id}`, { title: 'Reply to Gulf Test', footer_text: 'Confidential', page_numbers: true, content: doc.content.replace('[Reference]', 'REF-1'), version: doc.version }); ok('title, footer and content can be edited', r.status === 200 && r.data.title === 'Reply to Gulf Test' && r.data.footer_text === 'Confidential', r.data)
+  const fv = r.data.values ?? {}
+  ok('customer and deal facts are offered for matching fields', fv['customer'] === 'GULF TEST TRADING L.L.C' && fv['customer trn'] === '100888888800003' && fv['job ref.'] === job.job_no && fv['deal name'] === 'Studio test deal' && fv['deal type'] === 'Sale' && fv['deal value'] === '1,500,000', { customer: fv['customer'], trn: fv['customer trn'], ref: fv['job ref.'], name: fv['deal name'], type: fv['deal type'], value: fv['deal value'], expectRef: job.job_no })
+  r = await a.put(`/api/e/studio_documents/${doc.id}`, { title: 'Reply to Gulf Test', footer_text: 'Confidential', page_numbers: true, content: doc.content.replace('[Invoice no.]', 'REF-1'), version: doc.version }); ok('title, footer and content can be edited', r.status === 200 && r.data.title === 'Reply to Gulf Test' && r.data.footer_text === 'Confidential', r.data)
   const stale = await a.put(`/api/e/studio_documents/${doc.id}`, { title: 'Old', version: doc.version }); ok('a stale version is rejected (no silent overwrite)', stale.status === 409, stale.data)
   r = await a.post(`/api/studio/documents/${doc.id}/duplicate`); ok('duplicate gets a new number and (copy) title', r.status === 201 && r.data.doc_no !== doc.doc_no && r.data.title === 'Reply to Gulf Test (copy)', r.data)
   r = await a.post(`/api/studio/documents/${doc.id}/save-as-template`, { title: 'Our complaint reply' }); ok('save as template creates an editable own template', r.status === 201 && /^OWN-\d{3}$/.test(r.data.code) && r.data.is_system === false && r.data.title === 'Our complaint reply', r.data)
@@ -69,9 +71,9 @@ async function main() {
   if (pdf.status === 200) {
     const buf = Buffer.from(await pdf.arrayBuffer()); const text = pdfText(buf)
     ok('PDF is a real PDF', buf.subarray(0, 4).toString() === '%PDF')
-    if (text) ok('PDF carries the letterhead, the text, the footer line and page numbers', /ELVORA SHIPPING/i.test(text) && /REF-1/.test(text) && /Confidential/.test(text) && /Page 1 of 1/.test(text) && !/system-generated/i.test(text), text.slice(0, 800))
+    if (text) ok('PDF carries the letterhead, the text, the footer line and page numbers', /SWK Properties/i.test(text) && /REF-1/.test(text) && /Confidential/.test(text) && /Page 1 of 1/.test(text) && !/system-generated/i.test(text), text.slice(0, 3000))
     else ok('PDF text check skipped (poppler not installed)', true)
-    const guide = (await a.post('/api/studio/documents', { template_id: code('SWK-001').id })).data
+    const guide = (await a.post('/api/studio/documents', { template_id: code('CG-01').id })).data
     const g = await a.raw(`/api/pdf/studio_documents/${guide.id}?download=1`); const gt = pdfText(Buffer.from(await g.arrayBuffer()))
     if (gt) ok('guidance notes for the author are not printed', !/Guidance:/.test(gt), gt.slice(0, 600))
   } else ok('PDF engine unavailable on this host – skipped', pdf.status === 400 || pdf.status === 500, pdf.status)
@@ -91,7 +93,7 @@ async function main() {
   try {
     r = await a.post('/api/studio/ai', { action: 'draft', request: 'Write a payment reminder for invoice A1', title: 'Reminder', kind: 'Letters & Notices' })
     ok('AI draft comes back as clean HTML with highlighted fields', r.status === 200 && r.data.html.includes('<h1>Payment reminder</h1>') && r.data.html.includes('class="ph"') && !/script|onclick|```/.test(r.data.html), r.data)
-    ok('the request tells the model the house rules', /Never invent facts/.test(seen[0].messages[0].content) && /digitalburj/i.test(seen[0].messages[0].content) && seen[0].max_tokens >= 4000)
+    ok('the request tells the model the house rules', /Never invent facts/.test(seen[0].messages[0].content) && /SWK/i.test(seen[0].messages[0].content) && seen[0].max_tokens >= 4000)
     r = await a.post('/api/studio/ai', { action: 'improve', request: 'MARKDOWN please', html: '<p>Pay now.</p>' }); ok('a Markdown answer is converted to HTML', r.status === 200 && r.data.html.includes('<h2>Payment reminder</h2>') && r.data.html.includes('<strong>customer</strong>') && r.data.html.includes('<li>invoice due</li>') && r.data.html.includes('<table>'), r.data)
     r = await a.post('/api/studio/ai', { action: 'improve', html: '' }); ok('improving needs some text', r.status === 400)
     r = await a.post('/api/studio/ai', { action: 'draft', request: '' }); ok('drafting needs a request', r.status === 400)
@@ -104,15 +106,15 @@ async function main() {
   r = await a.post('/api/e/users', { name: 'Read Only', email: 'viewer@studio.example', password: 'Viewer-Pass-2026!', role_id: role.id, branch_id: dxb, active: true, must_change_password: false })
   const v = new Api(); const logged = await v.login('viewer@studio.example', 'Viewer-Pass-2026!')
   ok('a read-only user signs in', logged, r.data)
-  r = await v.get('/api/e/doc_templates?pageSize=3'); ok('a read-only user can browse templates', r.status === 200 && r.data.total > 100)
-  r = await v.post('/api/studio/documents', { template_id: code('SWK-002').id }); ok('a read-only user cannot create documents', r.status === 403, r.data)
+  r = await v.get('/api/e/doc_templates?pageSize=3'); ok('a read-only user can browse templates', r.status === 200 && r.data.total > 40)
+  r = await v.post('/api/studio/documents', { template_id: code('LC-02').id }); ok('a read-only user cannot create documents', r.status === 403, r.data)
   r = await v.post('/api/studio/ai', { action: 'draft', request: 'x' }); ok('a read-only user cannot use AI writing', r.status === 403)
 
   sec('Business reset keeps company documents, removes customer documents')
-  const company = (await a.post('/api/studio/documents', { template_id: code('SWK-118').id, title: 'Quality policy 2026' })).data
+  const company = (await a.post('/api/studio/documents', { template_id: code('CO-FACTS').id, title: 'Quality policy 2026' })).data
   r = await a.post('/api/admin/business-data/reset', { confirm: 'DELETE ALL BUSINESS DATA', load_starter: false }); ok('reset runs', r.status === 200, r.data)
   r = await a.get('/api/e/studio_documents?pageSize=100'); ok('documents linked to a customer or job are gone; company documents remain', r.data.rows.some((d: any) => d.id === company.id) && r.data.rows.every((d: any) => !d.party_id && !d.job_id), r.data.rows.map((d: any) => [d.title, d.party_id]))
-  r = await a.get('/api/e/doc_templates?pageSize=1'); ok('templates remain', r.data.total >= 160)
+  r = await a.get('/api/e/doc_templates?pageSize=1'); ok('templates remain', r.data.total >= 50)
   finish()
 }
 main().catch(e => { console.error(e); process.exit(1) })
