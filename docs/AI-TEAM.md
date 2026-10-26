@@ -8,7 +8,7 @@ Open **AI Team → Jarvis & Employees**. Connect a provider first (Integrations 
 * Daily/weekly schedules keep usage to a handful of calls; each run is capped at 8 tool-using steps.
 
 ## Employees (all ship switched off)
-Jarvis (chief of staff, daily brief) · Collections · Sales · Operations Coordinator · Customer Care · Finance Controller · HR & Compliance. Each has editable instructions, schedule, allowed tools, and an **autonomy level**:
+Jarvis (chief of staff, daily brief) · Collections · Sales · Operations Coordinator · Customer Care · Finance Controller · HR & Compliance. The **AI Receptionist** answers your phone line 24/7 in English and Arabic; it needs a voice connection, see [VOICE.md](VOICE.md). Each has editable instructions, schedule, allowed tools, and an **autonomy level**:
 
 1. *Ask first* – every action that changes data or contacts someone is queued for your approval.
 2. *Acts internally, asks before sending* (default) – tasks, notes, leads happen automatically; e-mail/WhatsApp wait in **Approvals**.

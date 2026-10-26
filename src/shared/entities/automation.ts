@@ -3,6 +3,8 @@ import { T, TA, I, M, B, S, R, D, DT, J } from '../dsl'
 
 export const AGENT_AUTONOMY = ['Ask first (every action needs approval)', 'Auto for internal actions (approve external messages)', 'Autopilot (act, then report)']
 export const AGENT_SCHEDULE = ['Manual only', 'Hourly', 'Daily', 'Weekly (Monday)']
+export const VOICE_LANGUAGES = ['English', 'Arabic', 'Hindi / Urdu', 'Russian', 'Other']
+export const VOICE_OUTCOMES = ['Lead captured', 'Viewing requested', 'Callback requested', 'Maintenance logged', 'Transferred to staff', 'Information given', 'Abandoned', 'Other']
 
 export const automation: EntityDef[] = [
   {
@@ -55,6 +57,19 @@ export const automation: EntityDef[] = [
       DT('at', 'When', { list: true }), S('direction', 'Direction', ['in', 'out'], { list: true }), T('wa_id', 'Number', { list: true, search: true }), T('contact_name', 'Name', { list: true }),
       TA('body', 'Message', { list: true, search: true }), S('status', 'Status', ['received', 'queued', 'sent', 'delivered', 'read', 'failed'], { list: true }), T('wa_message_id', 'WhatsApp id', { hidden: true }),
       R('party_id', 'Customer', 'parties', { list: true }), R('lead_id', 'Lead', 'leads'), T('origin', 'Origin', { list: true, help: 'staff command, customer, automation, agent, manual' }), T('error', 'Error'),
+    ],
+    defaultSort: { field: 'id', dir: 'desc' },
+  },
+  {
+    key: 'voice_calls', label: 'Voice call', plural: 'Voice calls', module: 'ai', icon: 'PhoneCall', title: ['caller_name', 'from_number'], titleSep: ' · ', readonlyApi: true, noDelete: true, statusField: 'status',
+    description: 'Every call handled by the AI receptionist: who called, what they wanted, what was done, and the full transcript. Calls are matched to a customer or lead by phone number.',
+    fields: [
+      DT('started_at', 'Started', { list: true, section: 'Call' }), S('direction', 'Direction', ['in', 'out'], { default: 'in', list: true }), T('from_number', 'From', { list: true, search: true }), T('to_number', 'To'),
+      T('caller_name', 'Caller', { list: true, search: true }), R('party_id', 'Customer', 'parties', { list: true }), R('lead_id', 'Lead', 'leads', { list: true }), R('ticket_id', 'Ticket', 'tickets'),
+      S('language', 'Language', VOICE_LANGUAGES, { default: 'English', list: true }), S('outcome', 'Outcome', VOICE_OUTCOMES, { default: 'Information given', list: true }),
+      S('status', 'Status', ['In progress', 'Completed', 'Failed'], { default: 'In progress', list: true }), I('duration_sec', 'Duration (s)', { list: true }), B('handoff', 'Handed to staff', { default: false, list: true }), DT('ended_at', 'Ended'),
+      T('call_id', 'Telephony call id', { unique: true, help: 'Id supplied by the voice platform; used to continue the same call across turns.' }),
+      TA('summary', 'Summary', { list: true, search: true }), J('transcript', 'Transcript'), T('error', 'Error'),
     ],
     defaultSort: { field: 'id', dir: 'desc' },
   },
