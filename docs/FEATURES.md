@@ -18,6 +18,7 @@ SWK OS is a real estate operating system for a UAE brokerage and property-manage
 | Support | Tickets, disputes and claims |
 | Work | Projects, tasks, work queues, calendar |
 | Documents | Document Studio template library, server-rendered PDF (download and e-mail with attachment), bilingual EN/AR document headings |
+| Install | Installable web app (PWA) on desktop, Android and iPhone/iPad: home-screen icon, own window, shortcuts, offline page, update prompt. Private data is never stored on the device (see docs/INSTALL-APP.md) |
 | Platform | Roles and permissions, audit log, automation rules, webhooks (HMAC), API keys, custom fields, e-mail outbox, backups, customer portal role, TOTP |
 
 ## Integrations and automation

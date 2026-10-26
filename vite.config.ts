@@ -2,9 +2,20 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
+import fs from 'node:fs'
+
+/** Stamp the service worker with a build id so each release gets fresh caches and old ones are removed. */
+const stampServiceWorker = () => ({
+  name: 'stamp-service-worker',
+  apply: 'build' as const,
+  closeBundle() {
+    const file = path.resolve('dist/web/sw.js')
+    if (fs.existsSync(file)) fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replace('__BUILD_ID__', Date.now().toString(36)))
+  },
+})
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), stampServiceWorker()],
   root: '.',
   publicDir: 'public',
   resolve: {
