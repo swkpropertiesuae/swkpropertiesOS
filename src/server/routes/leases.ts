@@ -4,6 +4,8 @@ import { q } from '../db'
 import { assertCan, createRecord, getDef, getRecord, listRecords, patchRecord } from '../engine'
 import { bad, todayStr } from '../util'
 import { idOf, need } from './helpers'
+import { getSetting } from '../settings'
+import { renewalCheck } from '../../shared/uae-rules'
 
 export default async function (app: FastifyInstance) {
   const leaseDef = () => getDef('leases')
@@ -48,18 +50,38 @@ export default async function (app: FastifyInstance) {
       new_term_end: z.string().date(),
       new_rent_amount: z.number().positive().optional(),
       new_rent_frequency: z.enum(['Monthly', 'Quarterly', 'Semi-Annual', 'Annual', 'Post-Dated Cheques', 'Custom']).optional(),
+      rera_average_rent: z.number().positive().optional(),
+      rent_notice_sent_on: z.string().date().optional(),
+      override_reason: z.string().trim().min(10).max(500).optional(),
     }).parse(req.body)
-    return patchRecord(
-      leaseDef(),
-      id,
-      {
-        status: 'Renewed',
-        end_date: b.new_term_end,
-        annual_rent: b.new_rent_amount ?? lease.annual_rent,
-        payment_frequency: b.new_rent_frequency ?? lease.payment_frequency,
-      },
-      req.ctx,
-    )
+    const patch: Record<string, any> = {
+      status: 'Renewed',
+      end_date: b.new_term_end,
+      annual_rent: b.new_rent_amount ?? lease.annual_rent,
+      payment_frequency: b.new_rent_frequency ?? lease.payment_frequency,
+    }
+    if (b.rera_average_rent) patch.rera_average_rent = b.rera_average_rent
+    if (b.rent_notice_sent_on) patch.rent_notice_sent_on = b.rent_notice_sent_on
+    // Rent-increase check against the RERA index and the notice deadline. Indicative: confirm with RERA.
+    const check = renewalCheck({
+      currentRent: Number(lease.annual_rent) || 0,
+      newRent: Number(patch.annual_rent) || 0,
+      indexAverage: b.rera_average_rent ?? lease.rera_average_rent,
+      endDate: String(lease.end_date ?? ''),
+      noticeSentOn: b.rent_notice_sent_on ?? lease.rent_notice_sent_on,
+      noticeDays: Number(lease.renewal_notice_days) > 0 ? Number(lease.renewal_notice_days) : 90,
+    })
+    if (check.problems.length) {
+      if (getSetting('rent_cap_mode') === 'enforce' && !b.override_reason) {
+        const e: any = bad(`Renewal not allowed as entered: ${check.problems.join(' ')} Fix the figures, or send an override reason (10+ characters) if a landlord and tenant agreement applies.`)
+        e.details = check
+        throw e
+      }
+      const note = `Renewal ${todayStr()}: ${check.problems.join(' ')}${b.override_reason ? ` Override: ${b.override_reason}` : ' (advisory mode)'}`
+      patch.notes = [lease.notes, note].filter(Boolean).join('\n')
+    }
+    const saved = await patchRecord(leaseDef(), id, patch, req.ctx)
+    return { ...saved, renewal_check: check }
   })
 
   // Rent Schedule management

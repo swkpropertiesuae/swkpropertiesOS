@@ -5,7 +5,39 @@ const SALES_CONTRACT_STATUS = ['Draft', 'Signed', 'In Escrow', 'DLD Submitted', 
 const ESCROW_STATUS = ['Opened', 'Funds Received', 'Funds Verified', 'DLD Submitted', 'Title Transfer Pending', 'Title Transferred', 'Funds Released', 'Closed', 'Disputed', 'Cancelled']
 const PAYMENT_METHODS = ['Bank Transfer', "Manager's Cheque", 'Cash', 'Escrow', 'Mortgage Disbursement']
 
+const FILING_TYPES = ['Form A – Listing agreement (seller / landlord)', 'Form B – Buyer / tenant agreement', 'Form I – Co-broking agreement', 'Form F – Sale MOU', 'Developer NOC', 'Oqood registration (off-plan)', 'Title deed transfer', 'Mortgage registration', 'Ejari registration', 'Ejari renewal', 'Other filing']
+const FILING_STATUS = ['Draft', 'Prepared', 'Signed', 'Submitted', 'Registered', 'Rejected', 'Expired', 'Cancelled']
+
 export const transactions: EntityDef[] = [
+  {
+    key: 'dld_filings', label: 'DLD filing', plural: 'DLD filings', module: 'transactions', icon: 'FileCheck2',
+    title: ['filing_no', 'filing_type'], titleSep: ' – ',
+    numbering: { field: 'filing_no', pattern: 'DLD-{YY}{seq:5}' },
+    panel: true, statusField: 'status', noDelete: true,
+    description: 'Every government form and registration for a deal: broker forms, NOC, Oqood, title deed, mortgage registration and Ejari. Record the reference, dates and fees so nothing is missed or left to expire.',
+    fields: [
+      T('filing_no', 'Filing No.', { readonly: true, list: true, search: true, section: 'Filing' }),
+      S('filing_type', 'Type', FILING_TYPES, { required: true, list: true }),
+      S('status', 'Status', FILING_STATUS, { default: 'Draft', list: true, key: true }),
+      T('reference_no', 'Reference / registration no.', { list: true, search: true, help: 'Number issued by DLD, the developer or Ejari. Required once registered.' }),
+      T('authority', 'Authority', { default: 'Dubai Land Department' }),
+      R('job_id', 'Deal file', 'jobs', { list: true }),
+      R('property_id', 'Property', 'properties', { list: true }),
+      R('sales_contract_id', 'Sales contract', 'sales_contracts'),
+      R('lease_id', 'Lease', 'leases'),
+      R('party_id', 'Client', 'parties', { list: true, search: true }),
+      R('agent_id', 'Agent', 'agents'),
+      D('due_date', 'Due by', { list: true }),
+      D('issue_date', 'Issued on'),
+      D('expiry_date', 'Valid until', { list: true }),
+      D('submitted_date', 'Submitted on'),
+      D('registered_date', 'Registered on'),
+      M('fee_amount', 'Government fee (AED)'),
+      B('fee_paid', 'Fee paid', { default: false }),
+      TA('notes', 'Notes', { span: 3 }),
+    ],
+    defaultSort: { field: 'due_date', dir: 'asc' },
+  },
   {
     key: 'sales_contracts', label: 'Sales Contract', plural: 'Sales Contracts', module: 'transactions', icon: 'FileCheck',
     title: ['contract_no', 'property_title'], titleSep: ' – ',

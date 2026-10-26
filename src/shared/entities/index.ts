@@ -90,6 +90,7 @@ export const NAV: NavGroup[] = [
     { label: 'Deal Files', to: '/e/jobs', icon: 'FileSignature', module: 'sales' },
     { label: 'Sales Contracts', to: '/e/sales_contracts', icon: 'FileCheck', module: 'transactions' },
     { label: 'Escrow Accounts', to: '/e/escrow_accounts', icon: 'Shield', module: 'transactions' },
+    { label: 'DLD Filings', to: '/e/dld_filings', icon: 'FileCheck2', module: 'transactions' },
   ] },
   { label: 'Leases & Mgmt', icon: 'Key', items: [
     { label: 'Leases', to: '/e/leases', icon: 'FileText', module: 'leases' },
@@ -111,6 +112,10 @@ export const NAV: NavGroup[] = [
     { label: 'Bank Reconciliation', to: '/e/bank_transactions', icon: 'Scale', module: 'finance' },
     { label: 'Owner Statements', to: '/e/owner_statements', icon: 'FileBarChart', module: 'finance' },
     { label: 'Agent Commissions', to: '/e/agent_commissions', icon: 'Percent', module: 'finance' },
+  ] },
+  { label: 'AML & KYC', icon: 'ShieldCheck', items: [
+    { label: 'KYC Checks', to: '/e/kyc_checks', icon: 'ShieldCheck', module: 'compliance' },
+    { label: 'goAML Reports', to: '/e/aml_reports', icon: 'ShieldAlert', module: 'compliance' },
   ] },
   { label: 'People', icon: 'Users', items: [
     { label: 'Employees', to: '/e/employees', icon: 'Users', module: 'hr' },

@@ -8,7 +8,43 @@ export const ITEM_TYPES = [
 ]
 export const FILING_TYPES = ['VAT return', 'VAT payment', 'Corporate tax registration', 'Corporate tax return', 'Corporate tax payment', 'E-invoicing ASP appointment', 'E-invoicing go-live', 'Licence renewal', 'UBO register review', 'Other']
 
+export const AML_REPORT_TYPES = ['STR – Suspicious Transaction Report', 'SAR – Suspicious Activity Report', 'REAR – Real Estate Activity Report', 'FFR – Funds Freeze Report', 'PNMR – Partial Name Match Report', 'Other goAML report']
+export const AML_REASONS = ['Cash payment at or above the threshold', 'Payment from an unrelated third party', 'Source of funds unexplained or inconsistent', 'Sanctions match or partial match', 'PEP involvement', 'Client refuses or delays KYC', 'Unusual pricing or rapid resale', 'High-risk jurisdiction', 'Other']
+export const KYC_CHECK_TYPES = ['Identity document (Emirates ID / passport)', 'Residence visa or entry stamp', 'Proof of address', 'Trade licence (companies)', 'Beneficial owner identification (25%+)', 'Source of funds', 'Sanctions screening', 'PEP screening', 'Adverse media screening', 'Other']
+
 export const compliance: EntityDef[] = [
+  {
+    key: 'kyc_checks', label: 'KYC check', plural: 'KYC checks', module: 'compliance', icon: 'ShieldCheck', title: ['check_type'], panel: true, statusField: 'result',
+    description: 'The due-diligence file for each client: one record per check, with the result, date and evidence. Use “Create KYC checklist” on a client to add the standard checks.',
+    fields: [
+      R('party_id', 'Client', 'parties', { required: true, list: true, search: true, section: 'Check' }),
+      S('check_type', 'Check', KYC_CHECK_TYPES, { required: true, list: true, span: 2 }),
+      S('result', 'Result', ['Pending', 'Pass', 'Fail', 'Not applicable'], { default: 'Pending', list: true, key: true }),
+      D('checked_on', 'Checked on', { list: true }), D('expiry_date', 'Valid until', { list: true }),
+      R('checked_by', 'Checked by', 'users'), T('evidence_ref', 'Evidence / document reference', { span: 2 }), TA('notes', 'Notes', { span: 3 }),
+    ],
+    defaultSort: { field: 'id', dir: 'desc' },
+  },
+  {
+    key: 'aml_reports', label: 'goAML report', plural: 'goAML reports', module: 'compliance', icon: 'ShieldAlert', title: ['report_no', 'report_type'], titleSep: ' – ',
+    numbering: { field: 'report_no', pattern: 'AML-{YY}{seq:4}' },
+    panel: true, statusField: 'status', noDelete: true,
+    description: 'Log of suspicious-activity and other goAML reports. Keep these records restricted to the compliance officer. Never tell the client a report is being considered or has been filed (tipping-off is an offence).',
+    fields: [
+      T('report_no', 'Report No.', { readonly: true, list: true, search: true, section: 'Report' }),
+      S('report_type', 'Report type', AML_REPORT_TYPES, { required: true, list: true, span: 2 }),
+      S('status', 'Status', ['Draft', 'Under review', 'Filed', 'Not required', 'Closed'], { default: 'Draft', list: true, key: true }),
+      S('reason', 'Reason', AML_REASONS, { required: true, list: true, span: 2 }),
+      R('party_id', 'Client', 'parties', { list: true, search: true }),
+      R('job_id', 'Deal file', 'jobs'), R('sales_contract_id', 'Sales contract', 'sales_contracts'),
+      M('amount', 'Amount (AED)', { list: true }), D('transaction_date', 'Transaction date'),
+      D('detected_on', 'Detected on', { default: 'today', list: true }), D('filing_due', 'File by', { list: true, help: 'Internal due date: the detection date plus the days set in Settings. Report without delay.' }),
+      D('filed_on', 'Filed on'), T('goaml_ref', 'goAML reference', { list: true }), R('filed_by', 'Filed by', 'users'),
+      TA('narrative', 'Facts and indicators', { span: 3 }), TA('mlro_decision', 'Compliance officer decision', { span: 3, help: 'Required to close a report as “Not required”.' }),
+      T('source_ref', 'Source record', { readonly: true }), B('auto_created', 'Created automatically', { readonly: true }),
+    ],
+    defaultSort: { field: 'filing_due', dir: 'asc' },
+  },
   {
     key: 'compliance_items', label: 'Licence / registration', plural: 'Licences & registrations', module: 'compliance', icon: 'BadgeCheck', title: ['name'], panel: true, statusField: 'status',
     description: 'Register of every licence, permit, registration and policy the company must hold. Expiry dates drive alerts, the compliance calendar and the readiness score.',

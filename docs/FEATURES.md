@@ -12,7 +12,7 @@ SWK OS is a real estate operating system for a UAE brokerage and property-manage
 | Properties | Properties, units, communities, developers, viewings, snagging and handover |
 | Leasing | Leases, rent schedules and receipts, service charges, maintenance requests, inspections, owner statements |
 | Mandates and offers | Listing mandates, offers, agent commissions |
-| Transactions | Sales contracts, escrow accounts and escrow transactions |
+| Transactions | Sales contracts, escrow accounts and escrow transactions, DLD filings tracker (broker forms, NOC, Oqood, title deed, mortgage, Ejari) |
 | Accounting | Invoices, bills, receipts, payments, expenses, double-entry ledger, VAT codes, FX gain/loss, lock date, statements, year-end close, multiple legal entities |
 | People | Employees, registered agents, attendance, leave, payroll records |
 | Support | Tickets, disputes and claims |
@@ -34,7 +34,7 @@ SWK OS is a real estate operating system for a UAE brokerage and property-manage
 
 ## UAE compliance
 
-Compliance Centre, licences and registrations register, licensed-activity guard, statutory calendar, exceptions log, UAE tax-invoice rules, sanctions-screening control, gratuity and related-party reports.
+Trakheesi permit expiry checks, RERA rent-increase cap and renewal notice deadline, KYC checklists, PEP and beneficial-owner records, goAML report log with cash-threshold scan (see UAE-REAL-ESTATE.md; indicative, verify with RERA/DLD), Compliance Centre, licences and registrations register, licensed-activity guard, statutory calendar, exceptions log, UAE tax-invoice rules, sanctions-screening control, gratuity and related-party reports.
 
 ## Limits you should know about
 
