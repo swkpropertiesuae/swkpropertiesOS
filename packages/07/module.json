@@ -5,6 +5,5 @@
   "category": "operations",
   "key_features": ["items", "variants", "skus", "barcodes", "warehouses", "bins", "batch-tracking", "serial-tracking", "expiry-dates", "receipts", "transfers", "reservations", "cycle-counts", "replenishment", "landed-cost", "valuation", "returns", "pick-pack-ship"],
   "brand": "SWKPROPOS",
-  "os": "SWK OS",
-  "elvora_design": true
+  "os": "SWK OS"
 }

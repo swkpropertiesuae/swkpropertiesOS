@@ -6,33 +6,18 @@ This page documents the implemented dashboard and navigation refinements. The ex
 
 The staff dashboard at `/dashboard` refreshes its business data every two minutes. Sections depend on the returned data and the signed-in user's permissions.
 
-1. **Welcome and actions:** Email, Schedule and New job, where permitted.
-2. **Business at a glance:** four available figures, normally Open jobs, In transit, Revenue this month and Receivables. Open jobs includes OPENED, IN PROGRESS and ON HOLD; In transit filters operational DEPARTED/IN TRANSIT and excludes closed/cancelled jobs.
+1. **Welcome and actions:** Email, Schedule and New deal, where permitted.
+2. **Business at a glance:** four available figures, normally Active deals, Pipeline value, Revenue this month and Receivables.
 3. **Needs attention:** all returned alerts in a neutral, collapsible list; danger icons identify urgent exceptions. Report links require report access.
-4. **Shipment desk:** the next five departures/arrivals, sorted by date, with links to each job and the schedule.
-5. **Latest jobs:** directly accessible on the main desk.
-6. **Shipment workflow:** an expandable guide from enquiry through collection; collapsed by default.
+4. **Closing soon:** the next five deals by target close date, with links to each deal and the schedule.
+5. **Latest deals:** directly accessible on the main desk.
+6. **Deal workflow:** an expandable guide from enquiry through handover; collapsed by default.
 7. **AI briefing:** expandable when available to a company-wide AI user.
-8. **Business details and reports:** collapsed by default; contains mode mix, quick workspace links, detailed charts, calls, house shipments, schedules, tasks and additional figures. Financial metrics/charts require finance view access, even for staff who can view jobs.
+8. **Business details and reports:** collapsed by default; contains quick workspace links, detailed charts, calls, schedules, tasks and additional figures. Financial metrics/charts require finance view access, even for staff who can view deals.
 
 Dashboard status labels stay on one line. Narrow tables scroll within their panels rather than splitting status words or widening the page.
 
-The customer portal instead shows Your shipments, three shipment/balance figures and a recent shipments table.
-
-## Manual workflow carousel
-
-The carousel follows the existing logistics process. Each card describes the task, shows its available figure or next action and links to its workspace:
-
-| Step | Destination |
-| --- | --- |
-| Enquiry and quotation | `/e/quotations` |
-| Booking and shipment | `/e/jobs` |
-| Documents and clearance | `/documents` |
-| Delivery and proof | `/e/transport_orders` |
-| Invoice the customer | `/reports?r=unbilled_charges` |
-| Collect payment and close | `/reports?r=ar_aging` |
-
-Cards are filtered by module view permissions; report cards also require report view access. Previous and Next buttons scroll approximately 80% of the visible carousel width. There is no automatic advance. Scroll snapping aligns cards; touch and horizontal scrolling work directly. The rail is keyboard focusable and the buttons and card links use normal Tab navigation. Previous is disabled at the start; Next is disabled at the detected end or when fewer than two cards are available. Smooth scrolling becomes immediate when reduced motion is requested. Cards are 290px wide on larger screens and 85% of the rail width below 700px.
+The customer portal instead shows Your deals, three deal/balance figures and a recent deals table.
 
 ## Sidebar explanatory popups
 
@@ -58,7 +43,7 @@ Font families remain **Instrument Sans** for body text and controls and **Plus J
 
 Some existing compact text retains its individual size: compact buttons 12.5px. Dashboard introductions are 15px, table cells 14px, panel headings 16px and status badges 12px. The refinement does not claim that every label is 16px.
 
-The palette continues to use the existing emerald (`#007b52`), graphite (`#161d1a`) and module chart colors defined in `index.css` and `Dashboard.tsx`. `reference.css` retains its existing neutral surface overrides. The header retains `/brand/logo-primary.png?v=digitalburj-website-4`. The footer retains **A product of SWK OS**, `/brand/digitalburj-business-os.png` and its [SWK OS product link](https://digitalburj.com/business-os).
+The palette continues to use the existing emerald (`#007b52`), graphite (`#161d1a`) and module chart colors defined in `index.css` and `Dashboard.tsx`. `reference.css` retains its existing neutral surface overrides. The header retains `/brand/logo-primary.png`.
 
 ## Related implementation and guidance
 

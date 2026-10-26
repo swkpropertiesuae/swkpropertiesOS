@@ -14,9 +14,9 @@ const app = await buildApp()
 let checks = 0, address = 1
 const check = (label: string, value: unknown) => { assert.ok(value, label); checks++; console.log('  ✓', label) }
 async function request(path: string, method = 'GET', payload?: any, cookie?: string, bearer?: string) {
-  return app.inject({ url: path, method: method as any, payload, remoteAddress: `127.0.0.${address++}`, headers: { 'x-digitalburj-client': 'web', ...(cookie ? { cookie } : {}), ...(bearer ? { authorization: `Bearer ${bearer}` } : {}) } })
+  return app.inject({ url: path, method: method as any, payload, remoteAddress: `127.0.0.${address++}`, headers: { 'x-swk-client': 'web', ...(cookie ? { cookie } : {}), ...(bearer ? { authorization: `Bearer ${bearer}` } : {}) } })
 }
-const sid = (r: any) => 'digitalburj_sid=' + r.cookies.find((c: any) => c.name === 'digitalburj_sid').value
+const sid = (r: any) => 'swk_sid=' + r.cookies.find((c: any) => c.name === 'swk_sid').value
 try {
   const credentials = { email: config.accounts.adminEmail, password: config.accounts.adminPassword }
   const login = await request('/api/auth/login', 'POST', credentials)
@@ -34,9 +34,9 @@ try {
   check('personal password unlocks current browser', (await request('/api/auth/change-password', 'POST', { current: credentials.password, next: password }, cookie)).statusCode === 200)
   check('dashboard available after password change', (await request('/api/dashboard', 'GET', undefined, cookie)).statusCode === 200)
   check('API key cannot change account security', (await request('/api/auth/totp/setup', 'POST', { password }, undefined, key.key)).statusCode === 403)
-  check('missing demo workspace fails closed', (await request('/api/auth/me', 'GET', undefined, cookie.replace('digitalburj_sid=', 'digitalburj_sid=demo.'))).statusCode === 503)
-  check('public requests ignore unrelated demo cookies', (await request('/api/auth/branding', 'GET', undefined, cookie.replace('digitalburj_sid=', 'digitalburj_sid=demo.'))).statusCode === 200)
-  check('bearer authentication ignores unrelated demo cookie', (await request('/api/dashboard', 'GET', undefined, 'digitalburj_sid=demo.invalid', key.key)).statusCode === 200)
+  check('missing demo workspace fails closed', (await request('/api/auth/me', 'GET', undefined, cookie.replace('swk_sid=', 'swk_sid=demo.'))).statusCode === 503)
+  check('public requests ignore unrelated demo cookies', (await request('/api/auth/branding', 'GET', undefined, cookie.replace('swk_sid=', 'swk_sid=demo.'))).statusCode === 200)
+  check('bearer authentication ignores unrelated demo cookie', (await request('/api/dashboard', 'GET', undefined, 'swk_sid=demo.invalid', key.key)).statusCode === 200)
   check('authenticator setup requires password', (await request('/api/auth/totp/setup', 'POST', {}, cookie)).statusCode === 400)
   check('incorrect setup password rejected', (await request('/api/auth/totp/setup', 'POST', { password: 'incorrect' }, cookie)).statusCode === 400)
   const second = sid(await request('/api/auth/login', 'POST', { email: credentials.email, password }))

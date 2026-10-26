@@ -12,7 +12,7 @@ import { EntityFormModal } from '../components/EntityForm'
 import { RecordView } from '../components/RecordView'
 import { ChildEditor } from '../components/ChildEditor'
 import { SidePanel } from '../components/SidePanel'
-import { QuickPayDialog, AllocateDialog, ReconcileDialog, PodDialog } from '../components/Dialogs'
+import { QuickPayDialog, AllocateDialog, ReconcileDialog } from '../components/Dialogs'
 import { RefSelect } from '../components/RefSelect'
 import { Badge, Dropdown, ErrorBox, Loading, Modal, PageHeader, Tabs, useDialogs } from '../ui/kit'
 import { ACTIONS, PRINTABLE, RELATED, type ActionDef } from '../lib/actions'
@@ -81,7 +81,7 @@ export function EntityRecordPage() {
           {primary.map(a => <button key={a.key} className={cls('btn', a.tone ?? 'green')} onClick={() => void a.run(helpers)}>{a.label}</button>)}
           {PRINTABLE.has(entity) && <Link className="btn outline" to={`/print/${entity}/${rid}`}><Printer /> Print</Link>}
           {PRINTABLE.has(entity) && <PdfDownload entity={entity} id={rid} />}
-          {PRINTABLE.has(entity) && can(def.module, 'edit') && !['payslips', 'insurance_certs', 'grns', 'dispatches', 'transport_orders'].includes(entity) && <button className="btn outline" onClick={() => setDialog({ name: 'emailPdf', props: {} })}><MailIcon /> E-mail</button>}
+          {PRINTABLE.has(entity) && can(def.module, 'edit') && entity !== 'payslips' && <button className="btn outline" onClick={() => setDialog({ name: 'emailPdf', props: {} })}><MailIcon /> E-mail</button>}
           {canDelete && <button className="btn red" onClick={() => void del_()}><Trash2 /> Delete</button>}
           {canEdit && <button className="btn green" onClick={() => setEditing(true)}><Pencil /> Edit</button>}
           {(more.length > 0 || canDelete) && <Dropdown className="btn outline" label={<MoreHorizontal size={16} />} items={[...more.map(a => ({ label: a.label, onClick: () => void a.run(helpers), danger: a.tone === 'red' })), ...(canDelete ? [{ label: <><Trash2 size={14} /> Delete</>, onClick: () => void del_(), danger: true, divider: false }] : [])]} />}
@@ -103,7 +103,6 @@ export function EntityRecordPage() {
       {dialog?.name === 'pay' && <QuickPayDialog kind={dialog.props.kind} doc={dialog.props.doc} onClose={() => setDialog(null)} onDone={() => { setDialog(null); reload() }} />}
       {dialog?.name === 'allocate' && <AllocateDialog kind={dialog.props.kind} rec={dialog.props.rec} onClose={() => setDialog(null)} onDone={() => { setDialog(null); reload() }} />}
       {dialog?.name === 'reconcile' && <ReconcileDialog txn={dialog.props.txn} onClose={() => setDialog(null)} onDone={() => { setDialog(null); reload() }} />}
-      {dialog?.name === 'pod' && <PodDialog order={dialog.props.order} onClose={() => setDialog(null)} onDone={() => { setDialog(null); reload() }} />}
       {dialog?.name === 'payExpense' && <PayExpense rec={dialog.props.rec} onClose={() => setDialog(null)} onDone={() => { setDialog(null); reload() }} />}
     </div>
   )

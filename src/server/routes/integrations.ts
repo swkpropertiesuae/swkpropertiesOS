@@ -128,17 +128,32 @@ export default async function (app: FastifyInstance) {
 
   // =================================================================== PDF rendering
   app.get('/api/pdf/status', async () => ({ available: pdfAvailable() }))
+  /** Render one record's print view to PDF with the caller's own session; studio documents carry their own page settings. */
+  const renderRecordPdf = async (req: any, def: ReturnType<typeof getDef>, rec: any, seal?: string) => {
+    const rawCookie = req.cookies?.[COOKIE]
+    if (!rawCookie) throw forbidden('PDF generation requires a browser session')
+    const sealQuery = seal !== undefined ? `?seal=${encodeURIComponent(seal)}` : ''
+    // Studio documents choose their own page orientation, footer line and page numbering.
+    const opts = def.key === 'studio_documents' ? { landscape: rec.orientation === 'Landscape', pageNumbers: rec.page_numbers !== false && rec.page_numbers !== 0, footerText: String(rec.footer_text ?? '') } : {}
+    return renderPrintPdf(`/print/${def.key}/${rec.id}${sealQuery}`, { name: COOKIE, value: rawCookie }, opts)
+  }
   app.get('/api/pdf/:entity/:id', async (req, reply) => {
     const p = req.params as any, qs = req.query as any
     const def = getDef(p.entity)
     const rec = getRecord(def, idOf(p.id), req.ctx, { children: false })
-    const rawCookie = req.cookies?.[COOKIE]
-    if (!rawCookie) throw forbidden('PDF generation requires a browser session')
-    const seal = qs.seal !== undefined ? `?seal=${encodeURIComponent(String(qs.seal))}` : ''
-    const buf = await renderPrintPdf(`/print/${def.key}/${rec.id}${seal}`, { name: COOKIE, value: rawCookie })
+    const buf = await renderRecordPdf(req, def, rec, qs.seal !== undefined ? String(qs.seal) : undefined)
     const disp = qs.download === '1' ? 'attachment' : 'inline'
     reply.header('content-type', 'application/pdf').header('content-disposition', `${disp}; filename="${def.key}-${rec.id}.pdf"`)
     return buf
+  })
+  app.post('/api/pdf/:entity/:id/email', async (req) => {
+    const p = req.params as any
+    const def = getDef(p.entity)
+    const rec = getRecord(def, idOf(p.id), req.ctx, { children: false })
+    const b = z.object({ from: z.string().max(200).optional(), to: z.string().trim().min(3).max(500), cc: z.string().max(500).optional(), subject: z.string().trim().min(1).max(300), body: z.string().max(20000), seal: z.union([z.boolean(), z.string()]).optional() }).parse(req.body ?? {})
+    const buf = await renderRecordPdf(req, def, rec, b.seal === undefined ? undefined : (b.seal === true || b.seal === '1' || b.seal === 'true') ? '1' : '0')
+    const id = queueEmail({ from: b.from, to: b.to, cc: b.cc, subject: b.subject, body: b.body, link_entity: def.key, link_id: rec.id, userId: req.user!.id, attachments: [{ filename: `${def.key}-${rec.id}.pdf`, contentBase64: buf.toString('base64'), contentType: 'application/pdf' }] })
+    return { ok: true, id }
   })
 
   // =================================================================== WhatsApp inbox

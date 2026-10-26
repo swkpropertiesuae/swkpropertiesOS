@@ -16,7 +16,7 @@ const r2 = (n: number) => Math.round((n + (n < 0 ? -1e-9 : 1e-9)) * 100) / 100
 let seq = 1
 const blank = (vat: number | null): Line => ({ key: seq++, charge_code_id: null, description: '', qty: '1', rate: '', line_ccy: '', line_roe: '', vat_code_id: vat })
 
-/** Create an invoice straight away: no job, no quotation. A job and shipment details are optional. */
+/** Create an invoice straight away: no job, no quotation. A deal is optional. */
 export function NewInvoicePage() {
   const { meta, can, me } = useMeta(); const nav = useNavigate(); const toast = useToast(); const dlg = useDialogs(); const [sp] = useSearchParams()
   const vats = useQuery({ queryKey: ['vat-codes'], queryFn: () => get<{ rows: any[] }>('/api/e/vat_codes', { pageSize: 100 }) })

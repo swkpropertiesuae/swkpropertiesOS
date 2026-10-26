@@ -5,6 +5,5 @@
   "category": "hr",
   "key_features": ["employee-records", "contracts", "onboarding", "offboarding", "shifts", "leave", "permit-visa-tracking", "expiry-alerts", "expenses", "performance", "goals", "training", "policies", "helpdesk", "self-service-portal"],
   "brand": "SWKPROPOS",
-  "os": "SWK OS",
-  "elvora_design": true
+  "os": "SWK OS"
 }

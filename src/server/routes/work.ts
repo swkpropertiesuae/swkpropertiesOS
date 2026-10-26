@@ -10,6 +10,7 @@ import { q } from '../db'
 import { nowIso } from '../util'
 import { loadUser } from '../auth'
 import { can } from '../engine'
+import { eligibleForActivity } from '../domain/enterprise'
 
 export default async function (app: FastifyInstance) {
   app.get('/api/work/overview', async req => {
@@ -38,7 +39,7 @@ export default async function (app: FastifyInstance) {
       if (r.assignee_id !== req.user!.id && !team) throw bad('Only the owner or queue manager can change work state')
       if (!['In progress', 'Waiting', 'Completed', 'Cancelled'].includes(b.status)) throw bad('Unknown work status')
       if (b.status === r.status) throw bad('Work is already in this state')
-      if (b.status === 'In progress' && r.assignee_id) throw bad('Owner no longer meets activity qualification rules')
+      if (b.status === 'In progress' && r.assignee_id && !eligibleForActivity(r.assignee_id, r.activity, r.department_id)) throw bad('Owner no longer meets activity qualification rules')
       if (['Completed', 'Cancelled'].includes(b.status) && b.note.trim().length < 10) throw bad('Record a resolution of at least 10 characters')
       const patch: any = { status: b.status, resolution: b.note || r.resolution }
       if (b.status === 'Waiting' && !r.paused_at) patch.paused_at = nowIso()

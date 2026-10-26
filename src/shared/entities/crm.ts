@@ -21,7 +21,6 @@ export const crm: EntityDef[] = [
       M('credit_limit', 'Credit limit'), I('credit_days', 'Credit days'), R('payment_term_id', 'Payment term', 'payment_terms'),
       S('currency', 'Billing currency', ['AED', 'USD', 'EUR', 'GBP', 'SAR', 'INR', 'CNY', 'ZAR'], { default: 'AED' }),
       S('kyc_status', 'KYC status', ['Pending', 'Verified', 'Expired', 'Rejected'], { default: 'Pending' }), D('kyc_expiry', 'KYC / licence expiry'),
-      T('customs_code', 'Customs client / importer-exporter code', { help: 'Dubai Customs client code used on declarations' }),
       S('sanctions_status', 'Sanctions screening', ['Not screened', 'Clear', 'Potential match', 'Confirmed match'], { default: 'Not screened', section: 'Compliance (UAE)', list: false, help: 'Screen against the UAE Local Terrorist List and UN Consolidated List. A confirmed match blocks new jobs, quotations and invoices.' }),
       D('sanctions_screened_on', 'Screened on'), S('risk_rating', 'Risk rating', ['Low', 'Medium', 'High']), B('is_related_party', 'Related party / connected person', { help: 'Owner, shareholders, group companies – disclosed in the corporate tax return' }),
       S('marketing_consent', 'Marketing consent (PDPL)', ['Unknown', 'Opted in', 'Opted out'], { default: 'Unknown' }), D('consent_date', 'Consent date'),

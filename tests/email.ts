@@ -18,15 +18,15 @@ await new Promise<void>(r => mock.listen(0, '127.0.0.1', r))
 process.env.RESEND_API_URL = `http://127.0.0.1:${(mock.address() as any).port}`
 const check = (label: string, value: unknown) => { assert.ok(value, label); checks++; console.log('  ✓', label) }
 let cookie = ''
-const request = (url: string, method = 'GET', payload?: any, bearer?: string) => app.inject({ url, method: method as any, payload, headers: { 'x-digitalburj-client': 'web', ...(bearer ? { authorization: `Bearer ${bearer}` } : { cookie }) } })
+const request = (url: string, method = 'GET', payload?: any, bearer?: string) => app.inject({ url, method: method as any, payload, headers: { 'x-swk-client': 'web', ...(bearer ? { authorization: `Bearer ${bearer}` } : { cookie }) } })
 const waitStatus = async (id: number, status: string) => { for (let i = 0; i < 100; i++) { if (q.val('SELECT status FROM email_outbox WHERE id=?', id) === status) return true; await new Promise(r => setTimeout(r, 20)) } return false }
 try {
   const login = await request('/api/auth/login', 'POST', { email: config.accounts.adminEmail, password: config.accounts.adminPassword })
-  cookie = 'digitalburj_sid=' + login.cookies.find(c => c.name === 'digitalburj_sid')!.value
+  cookie = 'swk_sid=' + login.cookies.find(c => c.name === 'swk_sid')!.value
   await request('/api/auth/change-password', 'POST', { current: config.accounts.adminPassword, next: 'Mail-Regression2026!' })
   const account = (email: string) => ({ email, provider: 'resend', host: '', port: 465, secure: true, user: '', password: '', apiKey: 'mock-private-key', enabled: true })
   check('five company addresses are available', (await request('/api/email/senders')).json().length === 5)
-  const message = { from: 'sales@swkpropertiesuae.com', to: 'customer@example.com', cc: 'accounts@example.com', subject: 'Shipment update', body: 'Cargo is ready. <script>not HTML</script>' }
+  const message = { from: 'sales@swkpropertiesuae.com', to: 'customer@example.com', cc: 'accounts@example.com', subject: 'Viewing update', body: 'The unit is ready. <script>not HTML</script>' }
   check('unconnected sender rejected', (await request('/api/email/send', 'POST', message)).statusCode === 400)
   check('configure independent senders', (await request('/api/email/settings', 'PUT', [account(message.from), account('accounts@swkpropertiesuae.com')])).statusCode === 200)
   check('integration status recognises company sender', mailProvider() === 'resend' && (await verifySmtp()).ok)
@@ -35,8 +35,8 @@ try {
   check('credentials masked in general settings', (await request('/api/admin/settings')).json().mail_accounts === '********')
   check('invalid recipients rejected', (await request('/api/email/send', 'POST', { ...message, to: 'invalid' })).statusCode === 400)
   check('unapproved from address rejected', (await request('/api/email/send', 'POST', { ...message, from: 'spoof@example.com' })).statusCode === 400)
-  check('newline in subject rejected', (await request('/api/email/send', 'POST', { ...message, subject: 'Shipment\nInvoice' })).statusCode === 400)
-  check('carriage return in subject rejected', (await request('/api/email/send', 'POST', { ...message, subject: 'Shipment\rInvoice' })).statusCode === 400)
+  check('newline in subject rejected', (await request('/api/email/send', 'POST', { ...message, subject: 'Viewing\nInvoice' })).statusCode === 400)
+  check('carriage return in subject rejected', (await request('/api/email/send', 'POST', { ...message, subject: 'Viewing\rInvoice' })).statusCode === 400)
   check('KPI board date filters bind correctly', (await request('/api/kpi')).statusCode === 200)
   const draft = (await request('/api/email/drafts', 'POST', { ...message, subject: '' })).json()
   check('incomplete emails can be saved as private drafts', draft.id > 0 && (await request('/api/email/drafts')).json()[0].subject === '')
@@ -57,12 +57,12 @@ try {
   check('retry succeeds', await waitStatus(failed.id, 'Sent'))
   check('sender remains selected after retry', received.at(-1).from === 'accounts@swkpropertiesuae.com')
   check('sent messages cannot be retried', (await request(`/api/email/messages/${sent.id}/retry`, 'POST')).statusCode === 400)
-  q.run('INSERT INTO jobs(job_no,job_date,job_status,profit,total_revenue,total_cost,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)', 'FUTURE-TEST', addDays(todayStr(), 1), 'OPENED', 10000, 20000, 10000, new Date().toISOString(), new Date().toISOString())
+  q.run('INSERT INTO jobs(job_no,deal_date,job_status,profit,total_revenue,total_cost,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)', 'FUTURE-TEST', addDays(todayStr(), 1), 'Active Mandate', 10000, 20000, 10000, new Date().toISOString(), new Date().toISOString())
   q.run('INSERT INTO invoices(invoice_no,invoice_date,status,doc_type,subtotal,ex_rate,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)', 'FUTURE-INVOICE', addDays(todayStr(), 1), 'Posted', 'Tax Invoice', 20000, 1, new Date().toISOString(), new Date().toISOString())
   const dashboard = (await request('/api/dashboard')).json()
-  check('future jobs excluded from month-to-date figures', dashboard.kpis.jobs_month === 0 && dashboard.kpis.profit_month === 0)
+  check('future deals excluded from month-to-date figures', dashboard.kpis.jobs_month === 0 && dashboard.kpis.profit_month === 0)
   check('future invoices excluded from month-to-date revenue', dashboard.kpis.revenue_month === 0)
-  check('future jobs excluded from actual trend', dashboard.charts.revenue_trend.length === 0)
+  check('future deals excluded from actual trend', dashboard.charts.revenue_trend.length === 0)
   const draftSent = (await request('/api/email/send', 'POST', { ...message, draft_id: draft.id, draft_version: 2 })).json()
   check('sending consumes the current private draft', draftSent.id > 0 && (await request('/api/email/drafts')).json().length === 0)
   check('consumed draft cannot be sent twice', (await request('/api/email/send', 'POST', { ...message, draft_id: draft.id, draft_version: 2 })).statusCode === 400)

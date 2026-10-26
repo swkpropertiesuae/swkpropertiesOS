@@ -34,8 +34,8 @@ export function createWorkItemFrom(entity: string, rec: Rec, ctx: Ctx) {
 
 export const workHooks = {
   beforeSave({ rec, old, isNew, ctx }: any) {
-    if (isNew) rec.status = 'To do'
-    if (!isNew && old?.status !== rec.status && rec.status === 'Done' && !rec.completed_at) rec.completed_at = nowIso()
+    if (isNew) rec.status = 'Open'
+    if (!isNew && old?.status !== rec.status && rec.status === 'Completed' && !rec.completed_at) rec.completed_at = nowIso()
     if (rec.assignee_id && rec.assignee_id !== ctx.user?.id) {
       const u = q.get(`SELECT name FROM users WHERE id = ?`, rec.assignee_id)
       if (u) { /* notify */ }

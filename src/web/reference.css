@@ -1,4 +1,4 @@
-/* Wallet-reference composition, using the repository's DigitalBurj identity. */
+/* Wallet-reference composition, using the repository's SWK OS identity. */
 :root {
   --bg: #f1f6f3;
   --card: #fff;
@@ -172,7 +172,7 @@ table.grid tbody tr:last-child td { border-bottom: 0; }
 @media print { .workspace-rail, .primary-pills { display: none; } .workspace-frame { height: auto; overflow: visible; } .card, .panel { box-shadow: none; } }
 
 
-/* Daily logistics work: readable labels, explicit actions and a manual workflow carousel. */
+/* Daily work: readable labels, explicit actions and a manual workflow carousel. */
 body { font-size: 16px; }
 .btn { font-size: 14px; min-height: 40px; }
 .input, .select, .textarea { font-size: 16px; }
@@ -357,7 +357,7 @@ table.grid td { font-size: 14px; }
 .section-back:focus-visible { outline: 3px solid var(--section-ink); outline-offset: 3px; }
 @media (max-width: 639px) { .section-navigation { gap: 10px; margin-bottom: 16px; } }
 
-/* The company calendar uses DigitalBurj's module colors for wayfinding. */
+/* The company calendar uses SWK OS's module colors for wayfinding. */
 .calendar-summary { display: flex; flex-wrap: wrap; gap: 12px 28px; padding: 18px 22px; background: var(--fold); color: #fff; border-radius: 16px; margin-bottom: 20px; }
 .calendar-summary > span, .calendar-summary > button { display: flex; align-items: center; gap: 8px; font-size: 14px; }
 .calendar-summary > button { background: transparent; border: 0; color: #fff; padding: 0; cursor: pointer; text-align: start; }

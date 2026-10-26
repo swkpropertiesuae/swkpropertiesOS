@@ -7,41 +7,6 @@ import {loadUser} from '../auth'
 import {queueEmail} from '../mailer'
 const digest=(v:string)=>createHash('sha256').update(v).digest('hex')
 const dateValid=(v:string)=>!!v&&v>=todayStr()
-export const rfqHooks:Hooks={beforeSave({rec,old,children,ctx}){
- if(old&&old.status!=='Draft'&&!ctx.system)throw bad('Issued RFQs are locked; create another request for changed requirements')
- if(!old)rec.status='Draft'
- if(rec.status==='Draft'&&!dateValid(rec.response_deadline))throw bad('Response deadline must be today or later')
- const providers=children.providers
- if(providers){const ids=new Set();for(const p of providers){if(ids.has(p.provider_id))throw bad('Invite each provider only once');ids.add(p.provider_id);const vendor=q.get('SELECT is_vendor FROM parties WHERE id=? AND deleted_at IS NULL',p.provider_id);if(!vendor?.is_vendor)throw bad('RFQ providers must be vendors')}}
-}}
-export const offerHooks:Hooks={beforeSave({rec,old,ctx}){
- if(old)throw bad('Responses are immutable; record a new revision to preserve history')
- const rfq=getRecord(getDef('carrier_rfqs'),rec.rfq_id,ctx)
- if(rfq.status!=='Issued')throw bad('Responses require an issued RFQ')
- if(!dateValid(rfq.response_deadline))throw bad('RFQ response deadline has passed')
- if(!q.val('SELECT 1 FROM rfq_providers WHERE rfq_id=? AND provider_id=? AND deleted_at IS NULL',rfq.id,rec.provider_id))throw bad('Provider was not invited to this RFQ')
- for(const k of ['commission_pct_seller','commission_pct_buyer','commission_pct_landlord','commission_pct_tenant'])if(!Number.isFinite(rec[k])||rec[k]<0||rec[k]>10)throw bad('Rate components must be 0–10%')
- if(!Number.isFinite(rec.ex_rate)||rec.ex_rate<=0||(rec.currency==='AED'&&rec.ex_rate!==1))throw bad('Provide a positive exchange rate; AED uses 1')
- if(!dateValid(rec.valid_until))throw bad('Response validity must be today or later')
- if(rec.terms.trim().length<10)throw bad('Record rate inclusions, exclusions and terms')
- rec.total=Math.round((rec.commission_pct_seller+rec.commission_pct_buyer+rec.commission_pct_landlord+rec.commission_pct_tenant)*rec.deal_value*100)/100;rec.total_aed=Math.round(rec.total*rec.ex_rate*100)/100
- rec.revision=(q.val<number>('SELECT MAX(revision) FROM rfq_offers WHERE rfq_id=? AND provider_id=?',rec.rfq_id,rec.provider_id)??0)+1;rec.received_at=nowIso()
-}}
-export function issueRfq(id:number,ctx:Ctx){assertCan(ctx,'sales','edit');const r=getRecord(getDef('carrier_rfqs'),id,ctx);if(r.status!=='Draft')throw bad('RFQ has already been issued or closed');if(!dateValid(r.response_deadline))throw bad('Deadline has passed');if(!r.children.providers.length)throw bad('Invite at least one provider')
- for(const p of r.children.providers){const mail=queueEmail({to:p.email,subject:`Rate request ${r.rfq_no}: ${r.origin} → ${r.destination}`,body:`${r.title}\nMode: ${r.mode}\nOrigin: ${r.origin}\nDestination: ${r.destination}\nProperty requirements: ${r.cargo}\nRespond by: ${r.response_deadline}\nPlease include commission rates, currency, validity and all exclusions.`,link_entity:'carrier_rfqs',link_id:id,userId:ctx.user?.id});q.run('UPDATE rfq_providers SET outbox_id=? WHERE id=?',mail,p.id)}
- return patchRecord(getDef('carrier_rfqs'),id,{status:'Issued'},ctx)
-}
-export function compareRfq(id:number,ctx:Ctx){const rfq=getRecord(getDef('carrier_rfqs'),id,ctx);const rows=listRecords(getDef('rfq_offers'),{filters:[{field:'rfq_id',op:'eq',value:id}],pageSize:1000},ctx).rows
- const latest=rows.filter(r=>!rows.some(o=>o.provider_id===r.provider_id&&o.revision>r.revision)).map((r):Rec=>({...r,eligible:dateValid(r.valid_until)})).sort((a,b)=>a.total_aed-b.total_aed||a.transit_days-b.transit_days)
- return {rfq,latest,history:rows}
-}
-export function awardRfq(id:number,offerId:number,reason:string,ctx:Ctx){assertCan(ctx,'sales','approve');const r=getRecord(getDef('carrier_rfqs'),id,ctx),offer=getRecord(getDef('rfq_offers'),offerId,ctx)
- if(r.status!=='Issued')throw bad('Only an issued RFQ can be awarded');if(r.created_by===ctx.user?.id||offer.created_by===ctx.user?.id)throw bad('The RFQ maker and response recorder cannot approve their own award')
- if(offer.rfq_id!==id)throw bad('Response belongs to another RFQ');if(!dateValid(offer.valid_until))throw bad('Selected response has expired')
- if(q.val('SELECT 1 FROM rfq_offers WHERE rfq_id=? AND provider_id=? AND revision>? AND deleted_at IS NULL',id,offer.provider_id,offer.revision))throw bad('Select the latest provider response')
- if(reason.trim().length<10)throw bad('Record an award justification of at least 10 characters')
- const out=patchRecord(getDef('carrier_rfqs'),id,{status:'Awarded',award_offer_id:offerId,awarded_by:ctx.user?.id,awarded_at:nowIso(),award_reason:reason},ctx);audit(ctx,getDef('carrier_rfqs'),id,'award',{offer_id:offerId,reason},r._title);return out
-}
 export const knowledgeHooks:Hooks={beforeSave({rec,old,ctx}){
  if(old&&old.status==='Published'&&!ctx.system)throw bad('Published content is immutable; start a new revision')
  if(!old){rec.status='Draft';rec.revision=1;rec.owner_id??=ctx.user?.id}

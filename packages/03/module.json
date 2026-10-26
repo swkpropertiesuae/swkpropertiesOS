@@ -5,6 +5,5 @@
   "category": "sales",
   "key_features": ["products", "price-lists", "customer-pricing", "volume-tiers", "discount-approvals", "quotations", "revisions", "contracts", "orders", "invoices", "returns", "commissions", "targets", "sales-lifecycle"],
   "brand": "SWKPROPOS",
-  "os": "SWK OS",
-  "elvora_design": true
+  "os": "SWK OS"
 }

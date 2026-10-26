@@ -14,7 +14,7 @@
   - UAE master communities & developers
   - Service charge & brokerage fee codes
   - Roles, departments (`Sales`, `Leasing`, `Property Management`, `Finance`, `HR`, `Operations`), Dubai head-office branch (`DXB`), and default legal entity (`SWK` — SWK Properties L.L.C.)
-  - DET Trade Licence (`1645802`), RERA ORN (`51517`), DCCI (`697774`), and FTA compliance items
+  - RERA ORN (`51517`) and the licence, registration and FTA compliance items to be completed by the administrator
   - 7 AI employees (all switched off by default until enabled by an administrator)
 * It contains **zero mock/sample business records** (no fictional clients, properties, units, deals, mandates, leases, cheques, or invoices).
 

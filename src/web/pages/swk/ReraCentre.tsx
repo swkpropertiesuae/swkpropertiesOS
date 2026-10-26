@@ -114,7 +114,7 @@ export default function ReraCentre() {
       )}
 
       <Reveal className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-        <StatTile label="Office RERA compliance score" value={metrics.score} format={v => `${Math.round(v)}/100`} hint="ORN 51517 · DET Licence 1645802" icon={<ShieldCheck size={16} />} tone="navy" />
+        <StatTile label="Office RERA compliance score" value={metrics.score} format={v => `${Math.round(v)}/100`} hint="ORN 51517" icon={<ShieldCheck size={16} />} tone="navy" />
         <StatTile label="Trakheesi permit coverage" value={metrics.permitPct} format={v => `${Math.round(v)}%`} hint={`${metrics.withPermit} of ${props.length} listings permitted`} icon={<FileCheck size={16} />} tone="champ" />
         <StatTile label="Active Form A mandates" value={metrics.activeMandates} hint="Signed seller / landlord agreements" icon={<FileSignature size={16} />} to="/e/mandates" />
         <StatTile label="DLD registered brokers (BRN)" value={metrics.validAgents} hint="Active RERA broker cards" icon={<IdCard size={16} />} to="/e/agents" />
@@ -141,9 +141,6 @@ export default function ReraCentre() {
               <ProgressRing value={metrics.score} size={112} color={SWK.oasis} label={`${metrics.score}%`} sub="Compliant" />
               <div className="grid gap-1.5 flex-1 text-xs">
                 <div className="swk-kv"><span>RERA ORN</span><b>51517</b></div>
-                <div className="swk-kv"><span>DET Trade Licence</span><b>1645802</b></div>
-                <div className="swk-kv"><span>DCCI Membership</span><b>697774</b></div>
-                <div className="swk-kv"><span>Commercial Register</span><b>2911510</b></div>
               </div>
             </div>
             <div className="grid gap-2.5 text-xs">

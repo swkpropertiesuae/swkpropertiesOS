@@ -6,19 +6,19 @@ const BASE = process.env.BASE_URL ?? 'http://localhost:8080'
 let cookie = '', calls = 0
 const bad: string[] = []
 async function get(path: string): Promise<{ status: number; data: any }> {
-  const res = await fetch(BASE + path, { headers: { 'x-digitalburj-client': 'web', cookie } })
+  const res = await fetch(BASE + path, { headers: { 'x-swk-client': 'web', cookie } })
   calls++
   const text = await res.text(); let data: any; try { data = JSON.parse(text) } catch { data = text }
   if (res.status >= 500) bad.push(`${res.status} ${path} → ${String(data?.error ?? text).slice(0, 200)}`)
   return { status: res.status, data }
 }
 async function main() {
-  const res = await fetch(BASE + '/api/auth/login', { method: 'POST', headers: { 'content-type': 'application/json', 'x-digitalburj-client': 'web' }, body: JSON.stringify({ email: 'demo@swkpropertiesuae.com', password: 'Demo@DigitalBurj2026' }) })
+  const res = await fetch(BASE + '/api/auth/login', { method: 'POST', headers: { 'content-type': 'application/json', 'x-swk-client': 'web' }, body: JSON.stringify({ email: 'demo@swkpropertiesuae.com', password: 'Demo@SWK2026' }) })
   cookie = (res.headers.get('set-cookie') ?? '').split(';')[0]
   if (!cookie) { console.error('Demo login failed – is the demo workspace enabled and ready?'); process.exit(2) }
 
   const meta = (await get('/api/meta')).data
-  for (const p of ['/api/dashboard', '/api/kpi', '/api/calendar', '/api/notifications', '/api/ai/brief', '/api/ai/status', '/api/integrations', '/api/admin/audit', '/api/admin/system', '/api/admin/roles', '/api/admin/settings', '/api/admin/login-events', '/api/auth/me', '/api/auth/sessions', '/api/auth/login-history', '/api/compliance/overview', '/api/finance/open-invoices', '/api/finance/open-bills', '/api/finance/bank/summary', '/api/warehouse/stock', '/api/whatsapp/threads', '/api/tags', '/api/rates/search', '/api/search/global?q=a', '/api/search/jobs?type=job_no&value=DXB', '/api/pdf/status', '/api/admin/backups']) await get(p)
+  for (const p of ['/api/dashboard', '/api/kpi', '/api/calendar', '/api/notifications', '/api/ai/brief', '/api/ai/status', '/api/integrations', '/api/admin/audit', '/api/admin/system', '/api/admin/roles', '/api/admin/settings', '/api/admin/login-events', '/api/auth/me', '/api/auth/sessions', '/api/auth/login-history', '/api/compliance/overview', '/api/finance/open-invoices', '/api/finance/open-bills', '/api/finance/bank/summary', '/api/whatsapp/threads', '/api/tags', '/api/rates/search', '/api/search/global?q=a', '/api/search/jobs?type=job_no&value=DXB', '/api/pdf/status', '/api/admin/backups']) await get(p)
 
   // every report with its default parameters
   const reports = (await get('/api/reports')).data
@@ -32,7 +32,7 @@ async function main() {
     await get(`/api/e/${e.key}/lookup?q=a`)
     // Numeric titles/revisions must support the same search and filter UI as
     // text titles, on SQLite and PostgreSQL. Exercise actual endpoint results.
-    if (['knowledge_versions', 'freight_document_versions', 'document_originals'].includes(e.key)) {
+    if (['knowledge_versions'].includes(e.key)) {
       const field = e.key === 'document_originals' ? 'original_no' : 'revision'
       for (const op of ['contains', 'starts', 'ends', 'null', 'notnull']) {
         const filters = encodeURIComponent(JSON.stringify([{ field, op, value: '1' }]))

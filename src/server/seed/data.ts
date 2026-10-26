@@ -56,18 +56,3 @@ export const CHARGE_CODES: [string, string, string, string, string, string, stri
 ]
 
 export interface RoleSeed { name: string; description: string; system?: boolean; permissions: '*' | Record<string, string[]> }
-  // export const ROLES: RoleSeed[] = (() => {
-  //   const V = ['view'], VE = ['view', 'export'], CRUD = ['view', 'create', 'edit', 'delete', 'export'], CE = ['view', 'create', 'edit', 'export']
-  //   //   const list: RoleSeed[] = [
-  //   //     { name: 'Admin', description: 'Full system access, including administration', system: true, permissions: '*' },
-  //   //     { name: 'Manager', description: 'Full access to every module', system: true, permissions: '*' },
-  //   //     { name: 'Sales', description: 'CRM, quotations and customer follow-up', permissions: { dashboard: V, crm: CRUD, sales: [...CRUD, 'approve', 'export'], documents: CE, support: CE, projects: CRUD, reports: VE, masters: V } },
-  //   //     { name: 'Operations', description: 'Jobs, shipments, customs, transport and warehouse', permissions: { dashboard: V, crm: V, sales: CRUD, leases: CRUD, transactions: CRUD, properties: CRUD, documents: CRUD, support: CE, projects: CRUD, reports: VE, masters: V } },
-  //   //     { name: 'Accounts', description: 'Invoicing, bills, banking and financial reports', permissions: { dashboard: V, crm: V, sales: V, finance: [...CRUD, 'approve'], documents: CE, reports: VE, masters: CE, hr: V, leases: CRUD } },
-  //   //     { name: 'Warehouse', description: 'Warehouse stock, receipts and dispatch', permissions: { dashboard: V, sales: V, properties: CRUD, transactions: CE, documents: CE, projects: CE, masters: V } },
-  //   //     { name: 'HR', description: 'Employees, leave, attendance and payroll', permissions: { dashboard: V, hr: [...CRUD, 'approve'], documents: CE, projects: CE, masters: V } },
-  //   //     { name: 'Viewer', description: 'Read-only access to business modules', permissions: { dashboard: V, crm: V, sales: V, leases: V, transactions: V, properties: V, finance: V, support: V, projects: V, documents: V, reports: V } },
-  //   //     { name: 'Customer Portal', description: 'External customers — own jobs, invoices and quotations only', permissions: { dashboard: V, sales: V, finance: V, documents: V, support: ['view', 'create'] } },
-  //   //   ]
-  //   //   return list
-  //   // })()

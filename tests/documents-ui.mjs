@@ -5,7 +5,7 @@ import path from 'node:path'
 import { spawn, execFileSync } from 'node:child_process'
 import { chromium } from 'playwright-core'
 
-const data = fs.mkdtempSync(path.join(os.tmpdir(), 'digitalburj-documents-'))
+const data = fs.mkdtempSync(path.join(os.tmpdir(), 'swk-documents-'))
 const base = 'http://127.0.0.1:8090'
 const server = spawn(process.execPath, ['dist/server/index.mjs'], { env: { ...process.env, DATA_DIR: data, DATABASE_URL: '', REQUIRE_DATABASE_URL: 'false', DEMO_ENABLED: 'true', PORT: '8090', HOST: '127.0.0.1' }, stdio: ['ignore', 'pipe', 'pipe'] })
 let logs = '', browser, checks = 0
@@ -107,7 +107,7 @@ try {
   check('statement includes recipient, notice and seal', await page.locator('.document-recipient').count() === 1 && await page.locator('.document-seal').count() === 1 && (await page.locator('.document-footer').textContent()).includes('system-generated statement of account'))
   const statementPdf = await context.request.get(`${base}/api/pdf/parties/${record.party_id}?from=2026-02-01&to=2026-03-01&seal=0`)
   check('statement server PDF preserves requested range', statementPdf.status() === 200)
-  const longDocResponse = await context.request.post(base + '/api/studio/documents', { headers: { 'x-swk-client': 'web' }, data: { title: 'Footer pagination acceptance', content: '<h1>Pagination acceptance</h1>' + Array.from({ length: 110 }, (_, i) => `<p>Line ${i + 1}: Shipment document footer pagination acceptance.</p>`).join('') } })
+  const longDocResponse = await context.request.post(base + '/api/studio/documents', { headers: { 'x-swk-client': 'web' }, data: { title: 'Footer pagination acceptance', content: '<h1>Pagination acceptance</h1>' + Array.from({ length: 110 }, (_, i) => `<p>Line ${i + 1}: Property document footer pagination acceptance.</p>`).join('') } })
   check('multi-page footer fixture created', longDocResponse.status() === 201)
   const longDoc = await longDocResponse.json()
   const longPdf = await context.request.get(`${base}/api/pdf/studio_documents/${longDoc.id}`)

@@ -24,7 +24,7 @@ const server = http.createServer((req, res) => {
     const json = (o: any, code = 200) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(o)) }
     if (url.startsWith('/v1/chat/completions')) { const next = llmScript.shift(); return json(next ?? { choices: [{ message: { role: 'assistant', content: 'All good.' } }], usage: { total_tokens: 10 } }) }
     if (url.startsWith('/graph/') && req.method === 'POST') return json({ messages: [{ id: 'wamid.' + calls.length }] })
-    if (url.startsWith('/graph/')) return json({ display_phone_number: '+971500000000', verified_name: 'DigitalBurj' })
+    if (url.startsWith('/graph/')) return json({ display_phone_number: '+971500000000', verified_name: 'SWK OS' })
     if (url.startsWith('/resend/emails')) return json({ id: 'em_' + calls.length })
     if (url.startsWith('/resend/domains')) return json({ data: [] })
     if (url.startsWith('/rest/v1/') && req.method === 'POST') { const t = url.split('?')[0].split('/').pop()!; sbRows[t] = (sbRows[t] ?? 0) + (Array.isArray(body) ? body.length : 0); if (/password_hash|totp_secret|key_hash/.test(text)) sbLeak = true; res.writeHead(201); return res.end() }
@@ -42,7 +42,7 @@ const server = http.createServer((req, res) => {
 })
 
 async function api(method: string, path: string, body?: any, raw = false): Promise<any> {
-  const res = path === '/api/auth/login' ? await signInReady(BASE, body) : await fetch(BASE + path, { method, headers: { 'content-type': 'application/json', 'x-digitalburj-client': 'web', ...(cookie ? { cookie } : {}) }, body: body !== undefined ? JSON.stringify(body) : undefined })
+  const res = path === '/api/auth/login' ? await signInReady(BASE, body) : await fetch(BASE + path, { method, headers: { 'content-type': 'application/json', 'x-swk-client': 'web', ...(cookie ? { cookie } : {}) }, body: body !== undefined ? JSON.stringify(body) : undefined })
   const sc = res.headers.get('set-cookie'); if (sc && path.includes('/auth/login')) cookie = sc.split(';')[0]
   if (raw) return res
   const text = await res.text(); let data: any; try { data = JSON.parse(text) } catch { data = text }
@@ -56,26 +56,26 @@ const waPost = (value: any) => fetch(BASE + '/api/public/whatsapp', { method: 'P
 
 async function main() {
   await new Promise<void>(r => server.listen(9099, r))
-  let r = await api('POST', '/api/auth/login', { email: 'admin@swkpropertiesuae.com', password: 'DigitalBurj@Admin2026' }); ok('admin signs in', r.status === 200, r.data)
+  let r = await api('POST', '/api/auth/login', { email: 'admin@swkpropertiesuae.com', password: 'SWK@Admin2026' }); ok('admin signs in', r.status === 200, r.data)
 
   sec('Bootstrap (production workspace starts empty)')
   await api('PUT', '/api/admin/settings', { company_trn: '100123456700003' })
   r = await api('POST', '/api/e/parties', { name: 'Integration Test Customer LLC', is_customer: true, status: 'Active', trn: '100123456700003', email: 'billing@itc.example' }); const cust = r.data.id; ok('customer created', r.status === 201, r.data)
-  const branch = (await api('GET', '/api/e/branches')).data.rows[0], frt = (await api('GET', '/api/e/charge_codes?q=FRT-AIR')).data.rows[0], por = (await api('GET', '/api/e/locations?q=AEDXB')).data.rows[0], jnb = (await api('GET', '/api/e/locations?q=ZAJNB')).data.rows[0]
-  r = await api('POST', '/api/e/jobs', { client_id: cust, branch_id: branch.id, department: 'AIR EXPORT', trade: 'Export', job_date: new Date().toLocaleDateString('sv-SE'), mbl_no: '60754163572', pol_id: por.id, pod_id: jnb.id, packages: 1, gross_weight: 14, commodity: 'Spare parts', children: { charges: [{ kind: 'Revenue', charge_code_id: frt.id, qty: 14, rate: 12.5, currency: 'AED', party_id: cust }], containers: [] } }); const JOB = r.data; ok('job created', r.status === 201, r.data)
+  const branch = (await api('GET', '/api/e/branches')).data.rows[0], svc = (await api('GET', '/api/e/charge_codes?pageSize=1')).data.rows[0]
+  r = await api('POST', '/api/e/jobs', { deal_name: 'Integration test deal', deal_type: 'Sale', client_id: cust, branch_id: branch.id, deal_date: new Date().toLocaleDateString('sv-SE'), deal_value: 1000000, children: { charges: [{ kind: 'Revenue', charge_code_id: svc.id, qty: 1, rate: 20000, currency: 'AED', party_id: cust }] } }); const JOB = r.data; ok('deal file created', r.status === 201, r.data)
   r = await api('POST', `/api/jobs/${JOB.id}/generate-invoices`, {}); await api('POST', `/api/finance/invoices/${r.data[0].id}/post`)
 
   sec('Settings & catalogue')
   r = await api('PUT', '/api/admin/settings', {
-    mail_provider: 'resend', resend_api_key: 're_test', resend_from: 'DigitalBurj <ops@digitalburj.test>',
+    mail_provider: 'resend', resend_api_key: 're_test', resend_from: 'SWK OS <ops@swk.test>',
     ai_enabled: true, ai_provider: 'custom', ai_base_url: MOCK + '/v1', ai_api_key: 'k', ai_model: 'mock',
     wa_enabled: true, wa_phone_number_id: '123', wa_access_token: 'tok', wa_verify_token: 'vt', wa_owner_numbers: '971500000001', wa_auto_leads: true, wa_staff_bot: true, wa_customer_bot: true,
-    company_trn: '100123456700003', einv_enabled: true, einv_endpoint: MOCK + '/asp', einv_api_key: 'asp', edi_transport: 'http', edi_http_url: MOCK + '/edi', edi_email_to: 'edi@partner.test',
-    r2_account_id: 'acct', r2_access_key_id: 'ak', r2_secret_access_key: 'sk', r2_bucket: 'elv', supabase_url: MOCK, supabase_service_key: 'svc',
+    company_trn: '100123456700003', einv_enabled: true, einv_endpoint: MOCK + '/asp', einv_api_key: 'asp',
+    r2_account_id: 'acct', r2_access_key_id: 'ak', r2_secret_access_key: 'sk', r2_bucket: 'swk-test', supabase_url: MOCK, supabase_service_key: 'svc',
     wps_employer_id: '0000012345678', wps_bank_routing: '123456789',
   }); ok('settings saved', r.status === 200, r.data)
   ok('secrets are masked in the API', r.data.resend_api_key === '********' && r.data.wa_access_token === '********' && r.data.ai_api_key === '********', r.data.resend_api_key)
-  r = await api('GET', '/api/integrations'); ok('integration catalogue lists 10 sections', r.data.sections.length >= 9 && r.data.status.whatsapp && r.data.status.ai && r.data.status.mail === 'resend', r.data.status)
+  r = await api('GET', '/api/integrations'); ok('integration catalogue lists 8 sections', r.data.sections.length >= 8 && r.data.status.whatsapp && r.data.status.ai && r.data.status.mail === 'resend', r.data.status)
   for (const k of ['mail', 'storage', 'supabase', 'whatsapp', 'ai']) { r = await api('POST', `/api/integrations/${k}/test`); ok(`${k} connection test passes`, r.data.ok === true, r.data) }
 
   sec('Resend mail')
@@ -85,8 +85,8 @@ async function main() {
   const mail = await import('../src/server/mailer').catch(() => null); void mail
 
   sec('AI employees')
-  r = await api('GET', '/api/ai/status'); ok('AI team seeded (7 employees, inactive until enabled)', r.data.agents.length >= 7 && r.data.configured, r.data.agents?.length)
-  const jarvis = r.data.agents.find((a: any) => a.role_key === 'jarvis'); const collections = r.data.agents.find((a: any) => a.role_key === 'collections')
+  r = await api('GET', '/api/ai/status'); ok('AI team seeded (6 employees, inactive until enabled)', r.data.agents.length >= 6 && r.data.configured, r.data.agents?.length)
+  const jarvis = r.data.agents.find((a: any) => a.role_key === 'jarvis'); const collections = r.data.agents.find((a: any) => a.role_key === 'collections-chaser')
   // 1) every read tool executes without error
   const readTools = r.data.tools.filter((t: any) => t.risk === 'read').map((t: any) => t.name)
   const args: Record<string, any> = { get_job: { job_no: JOB.job_no }, search_customers: { query: 'a' }, customer_statement: { customer: party.name } }
@@ -123,7 +123,7 @@ async function main() {
   r = await fetch(BASE + '/api/public/whatsapp?hub.mode=subscribe&hub.verify_token=vt&hub.challenge=777'); ok('webhook verification handshake', (await r.text()) === '777')
   r = await fetch(BASE + '/api/public/whatsapp?hub.mode=subscribe&hub.verify_token=bad&hub.challenge=777'); ok('wrong verify token rejected', r.status === 403)
   calls.length = 0
-  await waPost({ contacts: [{ wa_id: '971555000111', profile: { name: 'Hassan Trading' } }], messages: [{ from: '971555000111', id: 'wamid.in1', type: 'text', text: { body: 'Hi, need a quote for 2x40HC Jebel Ali to Mombasa' } }] })
+  await waPost({ contacts: [{ wa_id: '971555000111', profile: { name: 'Hassan Trading' } }], messages: [{ from: '971555000111', id: 'wamid.in1', type: 'text', text: { body: 'Hi, I want to view a 2BR apartment in Dubai Marina' } }] })
   await sleep(500)
   r = await api('GET', '/api/e/leads?q=Hassan'); ok('unknown number becomes a lead', r.data.total === 1 && r.data.rows[0].source === 'WhatsApp', r.data)
   ok('lead gets an automatic acknowledgement', calls.some(c => c.url.startsWith('/graph/123/messages') && c.body?.to === '971555000111'), calls.map(c => c.url))
@@ -131,7 +131,7 @@ async function main() {
   r = await api('GET', '/api/e/leads?q=Hassan'); ok('duplicate webhook delivery is ignored', r.data.total === 1)
   calls.length = 0
   await waPost({ messages: [{ from: '971500000001', id: 'wamid.in2', type: 'text', text: { body: 'report' } }] }); await sleep(500)
-  ok('owner command "report" answers with the business brief', calls.some(c => c.url.startsWith('/graph/123/messages') && /DigitalBurj brief/.test(c.body?.text?.body ?? '')), calls.map(c => c.body?.text?.body))
+  ok('owner command "report" answers with the business brief', calls.some(c => c.url.startsWith('/graph/123/messages') && /SWK OS brief/.test(c.body?.text?.body ?? '')), calls.map(c => c.body?.text?.body))
   calls.length = 0
   llmScript = [reply('Cash is fine; 2 invoices overdue.')]
   await waPost({ messages: [{ from: '971500000001', id: 'wamid.in3', type: 'text', text: { body: 'how is cash today?' } }] }); await sleep(700)
@@ -143,12 +143,6 @@ async function main() {
   r = await api('POST', '/api/whatsapp/send', { to: '0555000111', text: 'Hello from the inbox' }); ok('manual send from inbox (local number normalised)', r.status === 200, r.data)
   ok('number normalised to 971…', calls.some(c => c.body?.to === '971555000111' && /Hello from the inbox/.test(c.body?.text?.body ?? '')))
 
-  sec('Live tracking webhook')
-  r = await api('POST', '/api/integrations/webhook-secret/tracking'); const secUrl = new URL(r.data.url); ok('webhook secret generated', /\/api\/public\/tracking\/[0-9a-f]{40}$/.test(secUrl.pathname), r.data)
-  r = await fetch(BASE + secUrl.pathname.replace(/[0-9a-f]{40}$/, 'wrong'), { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }); ok('wrong secret gets 404', r.status === 404)
-  r = await fetch(BASE + secUrl.pathname, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ job_no: JOB.job_no, event: 'Vessel arrived', location: 'Lagos', at: '2026-10-06T10:00' }) }); ok('event accepted', (await r.json()).processed === 1)
-  r = await api('GET', `/api/jobs/${JOB.id}/events`); ok('milestone appears on the job timeline', JSON.stringify(r.data).includes('Vessel arrived'), r.status)
-
   sec('Bank statement import & feed')
   r = await api('GET', '/api/e/bank_accounts'); const bank = r.data.rows[0]; ok('bank account exists', !!bank)
   const csv = 'Date,Description,Reference,Debit,Credit\n01/10/2026,TRANSFER FROM CUSTOMER,REF123,,1500.00\n02/10/2026,VENDOR PAYMENT,CHQ77,820.50,\n'
@@ -159,7 +153,7 @@ async function main() {
   r = await api('POST', '/api/integrations/webhook-secret/bank'); const bu = new URL(r.data.url)
   r = await fetch(BASE + bu.pathname, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ bank_account_id: bank.id, transactions: [{ date: '2026-10-04', description: 'FEED CREDIT', amount: 99.5 }, { date: '2026-10-04', description: 'FEED DEBIT', amount: -12.25 }] }) }); const bj: any = await r.json(); ok('bank feed webhook imports lines', bj.imported === 2, bj)
 
-  sec('E-invoicing & EDI')
+  sec('E-invoicing')
   r = await api('GET', '/api/e/invoices?pageSize=100'); const posted = r.data.rows.find((i: any) => i.status !== 'Draft' && i.doc_type === 'Tax Invoice'); ok('a posted tax invoice exists', !!posted)
   r = await api('GET', `/api/invoices/${posted.id}/einvoice.xml`, undefined, true); const xml = await r.text()
   ok('UBL XML generated with PINT AE customization', r.status === 200 && xml.includes('urn:peppol:pint:billing-1@ae-1') && xml.includes('<cbc:InvoiceTypeCode>380') && xml.includes(posted.invoice_no) && xml.includes('<cac:InvoiceLine>'), xml.slice(0, 200))
@@ -167,9 +161,6 @@ async function main() {
   ok('XML totals match the invoice', xml.includes(`<cbc:PayableAmount currencyID="${posted.currency}">${Number(posted.total).toFixed(2)}`), xml.match(/PayableAmount[^<]*<?/)?.[0])
   r = await api('POST', `/api/invoices/${posted.id}/einvoice/submit`); ok('e-invoice submitted to provider', r.status === 200 && r.data.reference === 'ASP-123', r.data)
   r = await api('GET', `/api/e/invoices/${posted.id}`); ok('invoice shows e-invoice status', r.data.einvoice_status === 'Submitted' && r.data.einvoice_ref === 'ASP-123', r.data.einvoice_status)
-  calls.length = 0
-  r = await api('POST', `/api/jobs/${JOB.id}/edi/transmit`, { format: 'json', via: 'http' }); ok('EDI transmitted over HTTP', r.status === 200 && calls.some(c => c.url === '/edi'), r.data)
-  r = await api('POST', `/api/jobs/${JOB.id}/edi/transmit`, { format: 'json', via: 'email' }); ok('EDI e-mail queued with attachment', r.status === 200, r.data)
 
   sec('Payroll – WPS')
   r = await api('POST', '/api/e/employees', { name: 'Test Worker', emp_no: '', basic_salary: 5000, housing_allowance: 1500, transport_allowance: 500, bank_iban: 'AE070331234567890123456', bank_routing_code: '987654321', mol_person_id: '12345678901234', status: 'Active', join_date: '2025-01-01' }); const emp = r.data.id; ok('employee with WPS details created', r.status === 201, r.data)
@@ -214,7 +205,7 @@ async function main() {
   sec('R2 storage & Supabase replica')
   await api('PUT', '/api/admin/settings', { storage_provider: 'r2' })
   const fd = new FormData(); fd.append('link_entity', 'parties'); fd.append('link_id', String(party.id)); fd.append('file', new Blob(['hello r2 world'], { type: 'text/plain' }), 'note.txt')
-  let up = await fetch(BASE + '/api/files', { method: 'POST', headers: { cookie, 'x-digitalburj-client': 'web' }, body: fd }); const upj: any = await up.json(); ok('upload stored in R2', up.status === 200 && Object.keys(r2).some(k => k.includes('/uploads/')), upj)
+  let up = await fetch(BASE + '/api/files', { method: 'POST', headers: { cookie, 'x-swk-client': 'web' }, body: fd }); const upj: any = await up.json(); ok('upload stored in R2', up.status === 200 && Object.keys(r2).some(k => k.includes('/uploads/')), upj)
   const down = await fetch(BASE + `/api/files/${upj[0].id}/download`, { headers: { cookie } }); ok('download streams from R2', (await down.text()) === 'hello r2 world')
   r = await api('POST', '/api/integrations/backup-r2'); ok('backup uploaded to R2', r.status === 200 && Object.keys(r2).some(k => k.includes('/backups/')), r.data)
   r = await api('POST', '/api/integrations/supabase/sync', { full: true }); ok('Supabase sync pushes rows', r.data.ok && r.data.rows > 100 && sbRows['parties'] > 0 && sbRows['invoices'] > 0, r.data)
@@ -224,7 +215,7 @@ async function main() {
   r = await api('GET', '/api/integrations/supabase/schema.sql', undefined, true); const sql = await r.text(); ok('Supabase schema SQL generated with RLS', sql.includes('create table if not exists public."invoices"') && sql.includes('enable row level security') && !sql.includes('password_hash'))
 
   sec('Permissions')
-  r = await api('POST', '/api/auth/login', { email: 'manager@swkpropertiesuae.com', password: 'DigitalBurj@Manager2026' }); ok('manager sees AI team', (await api('GET', '/api/ai/status')).status === 200)
+  r = await api('POST', '/api/auth/login', { email: 'manager@swkpropertiesuae.com', password: 'SWK@Manager2026' }); ok('manager sees AI team', (await api('GET', '/api/ai/status')).status === 200)
   cookie = ''
   r = await api('GET', '/api/ai/status'); ok('AI API requires sign-in', r.status === 401)
   r = await api('POST', '/api/public/tracking/x', {}); ok('public webhooks do not leak when unconfigured', r.status === 404 || r.status === 401)

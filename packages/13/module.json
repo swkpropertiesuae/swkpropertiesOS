@@ -5,6 +5,5 @@
   "category": "communications",
   "key_features": ["whatsapp-business", "unified-inbox", "owner-command-center", "cash-receivables", "profit-dashboard", "sales-dashboard", "finance-dashboard", "hr-dashboard", "inventory-dashboard", "department-dashboards", "phone-integration", "email-integration"],
   "brand": "SWKPROPOS",
-  "os": "SWK OS",
-  "elvora_design": true
+  "os": "SWK OS"
 }

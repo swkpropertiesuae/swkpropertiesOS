@@ -63,8 +63,8 @@ export function calendarEvents(from: string, to: string, ctx: Ctx): CalendarEven
           deadline: def.calendar != null || ['due_date', 'end_date', 'target_close', 'expiry_date', 'end_date'].includes(field.name),
           owner: record[ownerField ?? ''] ?? '',
           ownerId: ownerField ? Number(record[ownerField]) : null,
-          location: '',
-          priority: '',
+          location: String(record.location ?? ''),
+          priority: String(record.priority ?? ''),
           color: catInfo.color,
           date,
         })

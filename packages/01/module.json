@@ -5,6 +5,5 @@
   "category": "administration",
   "key_features": ["legal-entities", "branches", "departments", "teams", "users", "currencies", "languages", "tax-settings", "numbering", "custom-fields", "role-permissions", "audit-history", "multi-company"],
   "brand": "SWKPROPOS",
-  "os": "SWK OS",
-  "elvora_design": true
+  "os": "SWK OS"
 }

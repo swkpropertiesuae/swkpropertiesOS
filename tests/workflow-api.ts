@@ -2,10 +2,10 @@ import { signInReady } from './login-ready'
 import assert from 'node:assert/strict'
 const base=process.env.BASE_URL??'http://127.0.0.1:8098'
 async function login(email:string,password:string){const r=await signInReady(base,{email,password});assert.equal(r.status,200);return r.headers.get('set-cookie')!.split(';')[0]}
-const admin=await login('admin@swkpropertiesuae.com','DigitalBurj@Admin2026')
-async function api(path:string,method='GET',body?:unknown,status=200,cookie=admin){const r=await fetch(base+path,{method,headers:{'content-type':'application/json','x-digitalburj-client':'web',cookie},body:body===undefined?undefined:JSON.stringify(body)});const data=await r.json() as any;assert.equal(r.status,status,JSON.stringify(data));return data}
+const admin=await login('admin@swkpropertiesuae.com','SWK@Admin2026')
+async function api(path:string,method='GET',body?:unknown,status=200,cookie=admin){const r=await fetch(base+path,{method,headers:{'content-type':'application/json','x-swk-client':'web',cookie},body:body===undefined?undefined:JSON.stringify(body)});const data=await r.json() as any;assert.equal(r.status,status,JSON.stringify(data));return data}
 await api('/api/e/workflow_runs','POST',{label:'Forged run'},403)
-await api('/api/e/automation_rules','POST',{name:'Bad state change',entity:'jobs',trigger:'Record updated',action:'Set field value',target:'job_status=CLOSED'},400)
+await api('/api/e/automation_rules','POST',{name:'Bad state change',entity:'jobs',trigger:'Record updated',action:'Set field value',target:'job_status=Completed'},400)
 const rule=await api('/api/e/automation_rules','POST',{name:'API dead-letter test',entity:'leads',trigger:'Record created',action:'Create follow-up task',message:'{unknown}',max_attempts:1},201)
 const lead=await api('/api/e/leads','POST',{company:'API workflow test '+Date.now()},201)
 async function waitFor(ruleId:number,recordId:number,status:string){for(let i=0;i<45;i++){const d=await api('/api/e/workflow_runs?pageSize=100');const r=d.rows.find((r:any)=>r.rule_id===ruleId&&r.record_id===recordId);if(r?.status===status)return r;await new Promise(r=>setTimeout(r,500))}throw Error('Workflow status did not reach '+status)}
@@ -22,7 +22,7 @@ await api(`/api/workflow-runs/${uncertain.id}/retry`,'POST',{reason:'Unsafe repl
 await api(`/api/workflow-runs/${uncertain.id}/resolve`,'POST',{outcome:'Cancelled',reason:'Reviewed provider log; cancel without replay'})
 await api(`/api/workflow-runs/${uncertain.id}/resolve`,'POST',{outcome:'Succeeded',reason:'Duplicate contradictory decision blocked'},400)
 assert.equal((await api(`/api/e/workflow_runs/${uncertain.id}`)).status,'Cancelled')
-const limitedRole=await api('/api/e/roles','POST',{name:'Workflow permission test '+Date.now(),permissions:{jobs:['view']}},201)
+const limitedRole=await api('/api/e/roles','POST',{name:'Workflow permission test '+Date.now(),permissions:{sales:['view']}},201)
 const limitedEmail='workflow-clerk-'+Date.now()+'@example.invalid'
 await api('/api/e/users','POST',{name:'Workflow clerk',email:limitedEmail,role_id:limitedRole.id,password:'Clerk@Pass2026',active:true},201)
 const clerk=await login(limitedEmail,'Clerk@Pass2026')

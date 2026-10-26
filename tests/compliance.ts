@@ -18,15 +18,19 @@ const today = todayStr()
 async function main() {
   let r = await api('POST', '/api/auth/login', { email: 'admin@swkpropertiesuae.com', password: 'SWK@Admin2026' }); ok('admin signs in', r.data.ok, r.data)
 
-  sec('Company licence data seeded from DET & RERA')
+  sec('Company licence data (entered by the administrator, never pre-filled)')
   r = await api('GET', '/api/admin/settings')
-  ok('trade licence no. 1645802', r.data.company_trade_license === '1645802', r.data.company_trade_license)
+  ok('licence and registration numbers are not pre-filled', !r.data.company_trade_license && !r.data.dcci_no && !r.data.commercial_register_no && !r.data.licence_expiry_date, [r.data.company_trade_license, r.data.dcci_no, r.data.commercial_register_no])
   ok('Arabic name and licensed name recorded', r.data.company_name_ar === 'إس دبليو كي العقارية ش.ذ.م.م' && r.data.licence_name_en === 'SWK PROPERTIES L.L.C.', [r.data.company_name_ar, r.data.licence_name_en])
-  ok('DCCI and commercial register numbers', r.data.dcci_no === '697774' && r.data.commercial_register_no === '2911510')
+  r = await api('PUT', '/api/admin/settings', { company_trade_license: 'TL-TEST-1', dcci_no: 'DCCI-TEST-1', commercial_register_no: 'CR-TEST-1', licence_issue_date: '2026-08-17', licence_expiry_date: '2027-08-16' })
+  ok('administrator saves the licence data', r.status === 200 && r.data.company_trade_license === 'TL-TEST-1', r.data)
   r = await api('GET', '/api/e/licence_activities?pageSize=50'); const acts = r.data.rows
   ok('four licensed activities', acts.length === 4 && ['SALES_BROKERAGE', 'LEASING_BROKERAGE', 'PROPERTY_MANAGEMENT', 'VALUATION'].every((c: string) => acts.some((a: any) => String(a.covers).includes(c))), acts.map((a: any) => a.covers))
-  r = await api('GET', '/api/e/compliance_items?pageSize=50'); const lic = r.data.rows.find((i: any) => i.type === 'Trade licence')
-  ok('trade licence item with expiry 2027-08-16', lic?.reference_no === '1645802' && lic.expiry_date === '2027-08-16' && lic.status === 'Active', lic)
+  r = await api('GET', '/api/e/compliance_items?pageSize=50'); let lic = r.data.rows.find((i: any) => i.type === 'Trade licence')
+  ok('trade licence item starts as "To verify" with no number', lic?.status === 'To verify' && !lic.reference_no && !lic.expiry_date, lic)
+  r = await api('PUT', `/api/e/compliance_items/${lic.id}`, { version: lic.version, reference_no: 'TL-TEST-1', status: 'Active', issue_date: '2026-08-17', expiry_date: '2027-08-16' }); ok('administrator records the licence', r.status === 200, r.data)
+  lic = r.data
+  r = await api('GET', '/api/e/compliance_items?pageSize=50')
   ok('register lists chamber, commercial register, RERA ORN and FTA registrations', ['Chamber of Commerce membership', 'Commercial register', 'Office registration (ORN)', 'Real estate broker registration (RERA)', 'VAT registration (FTA)', 'Corporate tax registration (FTA)'].every(t => r.data.rows.some((i: any) => i.type === t)))
 
   sec('Settings validation')

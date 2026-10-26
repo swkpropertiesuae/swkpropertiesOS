@@ -59,7 +59,7 @@ export const platform: EntityDef[] = [
     key: 'announcements', label: 'Announcement', plural: 'Blog & Announcements', module: 'documents', icon: 'Newspaper', title: ['title'], panel: true,
     fields: [
       T('title', 'Title', { required: true, list: true, search: true, span: 3, section: 'Post' }),
-      S('category', 'Category', ['Announcement', 'Policy', 'Training / SOP', 'Market update', 'Holiday', 'Notice', 'Customs notice'], { list: true, default: 'Announcement' }),
+      S('category', 'Category', ['Announcement', 'Policy', 'Training / SOP', 'Market update', 'Holiday', 'Notice'], { list: true, default: 'Announcement' }),
       B('pinned', 'Pinned', { list: true }), D('publish_date', 'Publish date', { default: 'today', list: true }),
       TA('body', 'Content', { required: true }),
     ],
@@ -120,7 +120,7 @@ export const platform: EntityDef[] = [
   {
     key: 'attachments', label: 'Attachment', plural: 'Documents library', module: 'documents', icon: 'FolderOpen', title: ['file_name'], readonlyApi: true, panel: true,
     fields: [
-      T('file_name', 'File', { list: true, search: true }), S('category', 'Category', ['General', 'Sale Agreement', 'Purchase Agreement', 'Lease Agreement', 'Commercial Invoice', 'Packing List', 'Customs', 'Certificate of Origin', 'Insurance', 'POD', 'Contract', 'Licence / Permit', 'KYC', 'Invoice / Bill', 'Receipt', 'Photo', 'Other'], { list: true }),
+      T('file_name', 'File', { list: true, search: true }), S('category', 'Category', ['General', 'Sale Agreement', 'Purchase Agreement', 'Lease Agreement', 'Insurance', 'Contract', 'Licence / Permit', 'KYC', 'Invoice / Bill', 'Receipt', 'Photo', 'Other'], { list: true }),
       T('link_entity', 'Linked to', { list: true }), I('link_id', 'Record'), T('link_label', 'Record label', { list: true }),
       D('expiry_date', 'Expiry', { list: true }), I('size', 'Size (bytes)'), T('mime', 'Type'), T('stored_name', 'stored', { secret: true, hidden: true }),
       T('note', 'Note', { span: 3 }), I('doc_version', 'Doc version', { default: 1 }),

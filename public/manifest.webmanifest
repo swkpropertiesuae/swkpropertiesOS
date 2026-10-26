@@ -1,7 +1,7 @@
 {
   "name": "SWK Properties Business OS",
   "short_name": "SWK OS",
-  "description": "CRM, sales, accounting, tax, procurement, inventory, HR, payroll, projects and documents for SWK Properties — by DigitalBurj Business OS.",
+  "description": "CRM, sales, accounting, tax, procurement, inventory, HR, payroll, projects and documents for SWK Properties.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

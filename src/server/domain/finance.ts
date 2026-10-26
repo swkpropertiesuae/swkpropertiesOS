@@ -78,25 +78,23 @@ function roundingAccount(): number {
   try { return accountByRole('rounding') } catch { return accountByRole('fx_gain_loss') }
 }
 
-const INVOICE_TRADE_CODE: Record<string, string> = { Import: 'IMP', Export: 'EXP', 'Cross trade': 'XTR', Domestic: 'DOM' }
 export const DEFAULT_INVOICE_PATTERN = '{prefix}{YY}{seq:5}'
 
 /**
- * Next invoice number. The legacy pattern keeps one counter per prefix and year. A custom company pattern (for example `{branch}/{dir}/ES{seq:3}`)
+ * Next invoice number. The legacy pattern keeps one counter per prefix and year. A custom company pattern (for example `{branch}/INV{seq:3}`)
  * uses ONE counter for the whole series, so IMP and EXP invoices continue the same sequence and a manual start number can be set.
  */
 export function invoiceSeriesKey(pattern: string, date: string): string {
   const d = date || todayStr()
-  const dated = pattern.replace(/\{(YYYY|YY|MM|DD)\}/g, (_m, t) => ({ YYYY: d.slice(0, 4), YY: d.slice(2, 4), MM: d.slice(5, 7), DD: d.slice(8, 10) } as Record<string, string>)[t]).replace(/\{(prefix|branch|dir)\}/g, '*')
+  const dated = pattern.replace(/\{(YYYY|YY|MM|DD)\}/g, (_m, t) => ({ YYYY: d.slice(0, 4), YY: d.slice(2, 4), MM: d.slice(5, 7), DD: d.slice(8, 10) } as Record<string, string>)[t]).replace(/\{(prefix|branch)\}/g, '*')
   return `invoices:series|${dated}`
 }
 function nextInvoiceNumber(inv: Rec, prefix: string): string {
   const pattern = String(getSetting('invoice_no_pattern') || DEFAULT_INVOICE_PATTERN)
   const date = inv.invoice_date
   if (pattern === DEFAULT_INVOICE_PATTERN) return formatNumber('invoices', pattern, { prefix }, date)
-  const job = inv.job_id ? q.get(`SELECT trade FROM jobs WHERE id = ?`, inv.job_id) : null
   const branch = (inv.branch_id ? q.val<string>(`SELECT code FROM branches WHERE id = ?`, inv.branch_id) : null) ?? q.val<string>(`SELECT code FROM branches WHERE is_head_office = 1 AND deleted_at IS NULL ORDER BY id LIMIT 1`) ?? 'DXB'
-  const tokens = { prefix, branch, dir: INVOICE_TRADE_CODE[inv.trade || job?.trade || ''] ?? 'GEN' }
+  const tokens = { prefix, branch }
   const key = invoiceSeriesKey(pattern, date)
   const seq = nextSeq(key)
   let pad = 3
@@ -107,12 +105,12 @@ function nextInvoiceNumber(inv: Rec, prefix: string): string {
 export function setNextInvoiceNumber(next: number, date = todayStr()) {
   if (!Number.isInteger(next) || next < 1 || next > 99_999_999) throw bad('Enter a whole number of 1 or more')
   const pattern = String(getSetting('invoice_no_pattern') || DEFAULT_INVOICE_PATTERN)
-  if (pattern === DEFAULT_INVOICE_PATTERN) throw bad('Set a company invoice number format first, for example {branch}/{dir}/ES{seq:3}')
+  if (pattern === DEFAULT_INVOICE_PATTERN) throw bad('Set a company invoice number format first, for example {branch}/INV{seq:3}')
   q.run(`INSERT INTO sequences(key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`, invoiceSeriesKey(pattern, date), next - 1)
 }
 
 /** Copy deal facts from the linked job into blank invoice fields so the printed document carries them. Anything typed on the document wins. */
-function fillShipmentFromJob(rec: Rec) {
+function fillFromDeal(rec: Rec) {
   const j = q.get(`SELECT j.job_no, j.deal_name, j.deal_type, j.job_status, j.deal_value, j.commission_amount,
       (SELECT title FROM properties WHERE id = j.property_id) property, (SELECT unit_no FROM units WHERE id = j.unit_id) unit
     FROM jobs j WHERE j.id = ?`, rec.job_id)
@@ -129,7 +127,7 @@ export const invoiceHooks: Hooks = {
   numberDate: rec => rec.invoice_date,
   beforeSave(a) {
     const { rec, old, children, isNew } = a
-    if (lockCheck(a, ['notes', 'terms', 'reference', 'bank_account_id', 'ship_bl_no', 'ship_vessel', 'ship_receipt', 'ship_pol', 'ship_pod', 'ship_destination', 'ship_containers', 'ship_weight', 'ship_cargo', 'ship_hs_code'], 'invoices')) return
+    if (lockCheck(a, ['notes', 'terms', 'reference', 'bank_account_id'], 'invoices')) return
     rec.ex_rate = fxRate(rec.currency, rec.ex_rate)
     rec.custom_no = String(rec.custom_no ?? '').trim() || null
     if (rec.custom_no) {
@@ -137,7 +135,7 @@ export const invoiceHooks: Hooks = {
       const clash = q.val<number>(`SELECT id FROM invoices WHERE deleted_at IS NULL AND status <> 'Void' AND id <> ? AND (lower(custom_no) = lower(?) OR lower(invoice_no) = lower(?)) LIMIT 1`, rec.id ?? 0, rec.custom_no, rec.custom_no)
       if (clash) throw bad(`Invoice number ${rec.custom_no} is already used by another document`)
     }
-    if (isNew && rec.job_id) fillShipmentFromJob(rec)
+    if (isNew && rec.job_id) fillFromDeal(rec)
     if (['Credit Note', 'Debit Note'].includes(rec.doc_type) && !rec.original_invoice_id && rec.doc_type === 'Credit Note') {
       // a credit note may stand alone (e.g. goodwill) – allowed
     }
@@ -520,7 +518,6 @@ export const journalHooks: Hooks = {
 export function reverseEntry(id: number, ctx: Ctx) {
   const e = q.get(`SELECT * FROM journal_entries WHERE id = ?`, id)
   if (!e) throw bad('Entry not found')
-  if(e.source_type==='Container deposit')throw bad('Reverse this entry through its deposit transaction to preserve the recoverable balance')
   if (e.status === 'Reversed' || e.source_type === 'Reversal') throw bad('This entry is already reversed or is itself a reversal')
   assertNotLocked(todayStr())
   return reverseJournal(ctx, id, `Reversal of ${e.entry_no}`)

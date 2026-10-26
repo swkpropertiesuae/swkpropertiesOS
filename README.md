@@ -1,14 +1,14 @@
 # SWK OS – SWKPROPOS
 
-A sovereign, agentic operating system for SWK Properties' UAE real estate enterprise. Built by adapting the ElvoraLogisticsOS codebase into a comprehensive property management and real estate OS with 14 core SME modules, agentic workflow orchestration, and full UAE regulatory compliance.
+A sovereign, agentic operating system for SWK Properties' UAE real estate enterprise. A comprehensive property management and real estate OS with 14 core SME modules, agentic workflow orchestration, and full UAE regulatory compliance.
 
-This is not a logistics ERP rebranded — it is a purpose-built real estate operating system with sovereign agent capabilities, financial substrate, and governed intelligence layers.
+It is a purpose-built real estate operating system with sovereign agent capabilities, financial substrate, and governed intelligence layers.
 
 ---
 
 ## 🏢 What It Is
 
-SWK OS – SWKPROPOS is a complete real estate operating system that covers every function an SME runs on: from company administration and CRM through accounting, procurement, HR, project management, and communications. It is presented as 14 core modules, branded as SWK OS, with a dashboard designed exactly to the elvora OS specification (Instrument Sans + Plus Jakarta Sans fonts, emerald `#007b52` + graphite `#161d1a` palette).
+SWK OS – SWKPROPOS is a complete real estate operating system that covers every function an SME runs on: from company administration and CRM through accounting, procurement, HR, project management, and communications. It is presented as 14 core modules, branded as SWK OS, with a dashboard built on the SWK OS design system (Instrument Sans + Plus Jakarta Sans fonts, emerald `#007b52` + graphite `#161d1a` palette).
 
 The system includes:
 - **14 seeded SWK properties** across UAE locations (Dubai Marina, Palm Jumeirah, Downtown Dubai, Dubai Hills Estate, Arabian Ranches, JVC, Business Bay)
@@ -40,7 +40,7 @@ The system includes:
 | 13 | Communications & Dashboards | communications |
 | 14 | Complete Service Catalogue | catalogue |
 
-Each module is in `packages/ID/` with a `module.json` containing its description, key features, brand flag, and elvora design marker.
+Each module is in `packages/ID/` with a `module.json` containing its description, key features, and brand flag.
 
 ---
 
@@ -88,7 +88,7 @@ Production accounts must set their own password at first sign-in, or set `ADMIN_
 
 ## 🎨 Design System
 
-The dashboard and UI are consistent with the **elvora OS** design specifications:
+The dashboard and UI follow the **SWK OS** design system:
 
 - **Body font**: `Instrument Sans` — used across all UI text, tables, forms
 - **Heading font**: `Plus Jakarta Sans` — used for all section headers, page titles, badges
@@ -97,7 +97,7 @@ The dashboard and UI are consistent with the **elvora OS** design specifications
 - **Neutral surface**: `#fafafa` — light background, card backgrounds
 - **Dark mode**: Full theme support with swapped palette for night operation
 
-All CSS in `src/web/index.css` follows this system — buttons, cards, tables, alerts, modals, badges, avatars, progress bars, and the dashboard grid layout all use the elvora palette and typography.
+All CSS in `src/web/index.css` follows this system — buttons, cards, tables, alerts, modals, badges, avatars, progress bars, and the dashboard grid layout all use this palette and typography.
 
 ---
 
@@ -112,15 +112,12 @@ SWK OS/
 ├── data/                  # Runtime data directory
 ├── .env                   # Configuration (PORT=8081, AED currency, credentials)
 ├── package.json           # swkpropos / SWK OS
-├── vite.config.ts         # Vite config with elvora design system
-├── index.css              # Complete elvora OS design system stylesheet
+├── vite.config.ts         # Vite config
+├── index.css              # Complete SWK OS design system stylesheet
 ├── .impeccable/design.json  # Design system metadata
 ├── deploy/                # Deployment configs
-├── corporate-templates/   # SWK-### document templates (was ELV-###)
 └── README.md              # You are here
 ```
-
-All old ElvoraLogisticsOS phase packages (agents, ai-act-pdpl-rera, blockchain-asset-rails, forestswarm, mcp-gateway, ml-valuation) have been removed. The embedded `ElvoraLogisticsOS` git submodule has been deleted.
 
 ---
 
@@ -143,7 +140,6 @@ npm run build:web    # Build web frontend to dist/web/
 Key docs are available in the `docs/` directory and referenced from the app:
 
 - `docs/DASHBOARD.md` — Dashboard section layout and data refresh (2-min intervals)
-- `docs/UAE-COMPLIANCE.md` — UAE real estate compliance rules (DLD, escrow, VAT 5%, RERA, Ejari)
 - `docs/FEATURES.md` — Feature catalog and limits
 - `docs/AI-TEAM.md` — AI employees (Jarvis) and audited tooling
 - `docs/INTEGRATIONS.md` — Resend, R2, Supabase, WhatsApp, e-invoicing integrations
@@ -194,4 +190,4 @@ The API esbuild target is `node22`. The web Vite build outputs to `dist/web/`. B
 
 ---
 
-*SWK OS – SWKPROPOS. Sovereign agentic operating system for UAE real estate enterprises. 14 core SME modules. elvora OS design system consistent throughout.*
+*SWK OS – SWKPROPOS. Sovereign agentic operating system for UAE real estate enterprises. 14 core SME modules.*

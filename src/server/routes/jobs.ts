@@ -108,8 +108,10 @@ export default async function (app: FastifyInstance) {
     const j: any = q.get(`SELECT id, job_no, deal_name, deal_type, job_status, operational_status, target_close, deal_date, client_id, property_id FROM jobs WHERE id = ? AND deleted_at IS NULL`, jobId)
     if (!j) throw notFound('This deal is no longer available')
     const client = j.client_id ? q.val<string>(`SELECT name FROM parties WHERE id = ?`, j.client_id) : null
-    const prop: any = j.property_id ? q.get(`SELECT title, community_id FROM properties WHERE id = ?`, j.property_id) : null
-    const community = prop?.community_id ? q.val<string>(`SELECT name FROM communities WHERE id = ?`, prop.community_id) : null
+    // community_id is free text on a property; community_ref is the link to the communities master.
+    const prop: any = j.property_id ? q.get(`SELECT title, community_id, community_ref FROM properties WHERE id = ?`, j.property_id) : null
+    const communityId = prop?.community_ref ?? (/^\d+$/.test(String(prop?.community_id ?? '')) ? Number(prop.community_id) : null)
+    const community = (communityId ? q.val<string>(`SELECT name FROM communities WHERE id = ?`, communityId) : null) ?? (prop?.community_id && !communityId ? String(prop.community_id) : null)
     const events = q.all(`SELECT event_at, event_type, description FROM job_events WHERE job_id = ? AND deleted_at IS NULL AND visible_to_customer = 1 ORDER BY event_at DESC, id DESC LIMIT 20`, j.id)
     return {
       job_no: j.job_no, deal_name: j.deal_name, deal_type: j.deal_type, job_status: j.job_status,

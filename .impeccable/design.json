@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "generatedAt": "2026-10-08T03:46:42.401568+00:00",
-  "title": "Design System: DigitalBurj Business OS – SWKPROPOS",
+  "title": "Design System: SWK OS – SWKPROPOS",
   "extensions": {
     "colorMeta": {
       "emerald": {
@@ -574,7 +574,7 @@
       "kind": "input",
       "refersTo": "input",
       "description": "Labelled field with emerald focus.",
-      "html": "<label class=\"ds-field-label\" for=\"ds-field\">Reference</label><input id=\"ds-field\" class=\"ds-field\" placeholder=\"Shipment reference\" />",
+      "html": "<label class=\"ds-field-label\" for=\"ds-field\">Reference</label><input id=\"ds-field\" class=\"ds-field\" placeholder=\"Deal reference\" />",
       "css": ".ds-field-label{font-family:var(--font-sans, Instrument Sans, system-ui, sans-serif);display:block;font-size:12px;font-weight:600;color:var(--muted, #53655b);margin-bottom:7px}.ds-field{font-family:var(--font-sans, Instrument Sans, system-ui, sans-serif);width:100%;min-height:42px;padding:9px 10px;border:1px solid var(--line-strong, #cbd6ce);border-radius:12px;background:var(--card, #fff);color:var(--ink, #161d1a);font-size:14px;transition:border-color 150ms,box-shadow 150ms}.ds-field:hover{border-color:#9fb3a7}.ds-field:focus-visible{outline:none;border-color:var(--emerald, #007b52);box-shadow:0 0 0 3px #007b5226}"
     },
     {
@@ -598,7 +598,7 @@
       "kind": "card",
       "refersTo": "workspace-card",
       "description": "Lifted workspace entry with full feature destination.",
-      "html": "<a class=\"ds-workspace\" href=\"#\"><svg width=\"26\" height=\"26\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/></svg><h2>Operations</h2><p>Jobs<br>Shipments<br>Documents</p><span>Open workspace \u2197</span></a>",
+      "html": "<a class=\"ds-workspace\" href=\"#\"><svg width=\"26\" height=\"26\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/></svg><h2>Operations</h2><p>Deals<br>Leases<br>Documents</p><span>Open workspace \u2197</span></a>",
       "css": ".ds-workspace{font-family:var(--font-sans, Instrument Sans, system-ui, sans-serif);display:block;min-height:230px;padding:24px;border-radius:16px;background:#edf5f0;color:var(--ink, #161d1a);text-decoration:none;box-shadow:var(--surface-raised, 0 8px 24px -14px #173d2926);transition:background 180ms,box-shadow 180ms}.ds-workspace svg{color:var(--emerald, #007b52);margin-bottom:26px}.ds-workspace h2{font-family:var(--font-display, Plus Jakarta Sans, sans-serif);font-size:23px;font-weight:650;margin:0 0 12px}.ds-workspace p{font-size:12px;line-height:1.45;color:var(--muted, #53655b)}.ds-workspace span{font-size:12px;font-weight:700;color:var(--emerald, #007b52)}.ds-workspace:hover{background:var(--hover, #f0f5f1);box-shadow:var(--surface-floating, 0 20px 48px -24px #173d2940)}.ds-workspace:focus-visible{outline:3px solid var(--focus, #1fa06b);outline-offset:2px;}"
     },
     {
@@ -612,7 +612,7 @@
   ],
   "narrative": {
     "northStar": "The Calm Operating Desk",
-    "overview": "DigitalBurj translates the supplied wallet reference into a calm operating workspace for the owner and the sales and finance teams. Quiet pill navigation, a narrow icon rail and floating rounded surfaces create clear access to financial context and deal work. DigitalBurj orange, deep red, graphite ink and warm paper tints form the SWK Properties brand palette.\n\nThe same surface language spans workspaces, dashboards, records, forms, dialogs and sign-in. Repository logos, icon marks and self-hosted fonts remain the only brand assets. The reference supplies composition; real API data and permission-filtered real-estate workflows supply the content.",
+    "overview": "SWK OS translates the supplied wallet reference into a calm operating workspace for the owner and the sales and finance teams. Quiet pill navigation, a narrow icon rail and floating rounded surfaces create clear access to financial context and deal work. SWK OS orange, deep red, graphite ink and warm paper tints form the SWK Properties brand palette.\n\nThe same surface language spans workspaces, dashboards, records, forms, dialogs and sign-in. Repository logos, icon marks and self-hosted fonts remain the only brand assets. The reference supplies composition; real API data and permission-filtered real-estate workflows supply the content.",
     "keyCharacteristics": [
       "Capsule navigation and circular shortcuts.",
       "Light neutral canvas, white floating surfaces and restrained brand tints.",
@@ -622,7 +622,7 @@
     "rules": [
       {
         "name": "The Brand Continuity Rule",
-        "body": "Translate the reference composition using SWK Properties' existing identity assets and the DigitalBurj palette.",
+        "body": "Translate the reference composition using SWK Properties' existing identity assets and the SWK OS palette.",
         "section": "colors"
       },
       {
@@ -632,7 +632,7 @@
       }
     ],
     "dos": [
-      "Do use the supplied SWK Properties assets, fonts and DigitalBurj brand palette.",
+      "Do use the supplied SWK Properties assets, fonts and SWK OS brand palette.",
       "Do derive navigation and displayed figures from permitted metadata and actual API data.",
       "Do keep table scrolling inside its surface and labels able to wrap.",
       "Do keep keyboard focus visible and respect reduced motion.",

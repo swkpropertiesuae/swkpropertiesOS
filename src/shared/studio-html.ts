@@ -87,7 +87,7 @@ export const looksLikeHtml = (s: string) => /<\/?(p|div|h[1-6]|ul|ol|li|table|tr
 export function presentDocumentHtml(html: string, title = ''): string {
   const tax = /\btax invoice\b|\b(?:tax )?credit note\b|\bdebit note\b/i.test(title)
   const identifier = /\bTRN\b|trade licen[cs]e|licen[cs]e (?:no|number)|commercial register|chamber membership|establishment card|corporate tax application|company\.(?:trn|trade_license|dcci_no|commercial_register_no|establishment_card_no|ct_application_reference)/i
-  html = html.replace(/Office F101-3, Ibrahim Mohammed Sharif Balsalah building, Naif, Dubai, United Arab Emirates|Naif, Dubai, United Arab Emirates \(Parcel ID 118-157\)|Bur Dubai, Dubai, United Arab Emirates/g, 'Bur Dubai, Dubai, UAE')
+  html = html.replace(/Bur Dubai, Dubai, United Arab Emirates/g, 'Bur Dubai, Dubai, UAE')
   let out = html.replace(/<tr\b[^>]*>[\s\S]*?<\/tr>/gi, row => {
     // Remove just the matching label/value pair, preserving other fields in the same row.
     const cells = row.match(/<(?:th|td)\b[^>]*>[\s\S]*?<\/(?:th|td)>/gi)
