@@ -62,12 +62,12 @@ export default async function (app: FastifyInstance) {
   app.post('/api/integrations/webhook-secret/:which', async (req) => {
     need(req, 'admin', 'edit')
     const which = (req.params as any).which
-    const key = which === 'tracking' ? 'tracking_webhook_secret' : which === 'bank' ? 'bank_webhook_secret' : null
+    const key = which === 'tracking' ? 'tracking_webhook_secret' : which === 'bank' ? 'bank_webhook_secret' : which === 'voice' ? 'voice_secret' : null
     if (!key) throw bad('Unknown webhook')
     const secret = crypto.randomBytes(20).toString('hex')
     setSettings({ [key]: secret })
     audit(req.ctx, getDef('branches'), 0, 'settings', { [key]: ['***', '***'] }, 'Webhook secret regenerated')
-    return { url: `${origin(req)}/api/public/${which}/${secret}`, note: 'Copy this URL now – it is not shown again.' }
+    return { url: `${origin(req)}/api/public/${which}/${secret}`, note: which === 'voice' ? 'Copy this base URL now – it is not shown again. Your voice platform calls <base>/greeting, <base>/turn and <base>/end.' : 'Copy this URL now – it is not shown again.' }
   })
   app.get('/api/integrations/supabase/schema.sql', async (req, reply) => { need(req, 'admin', 'view'); reply.header('content-type', 'text/plain; charset=utf-8').header('content-disposition', 'attachment; filename="SWK OS supabase schema.sql"'); return schemaSql() })
   app.post('/api/integrations/supabase/sync', async (req) => { need(req, 'admin', 'edit'); const b = (req.body ?? {}) as any; if (b.full) resetSupabaseCursors(); return syncToSupabase() })

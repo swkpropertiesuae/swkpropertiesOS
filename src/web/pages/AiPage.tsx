@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams, Link } from 'react-router-dom'
-import { Bot, Send, Play, Plus, Check, X as XIcon, Sparkles, Settings2, Loader2, ShieldCheck } from 'lucide-react'
+import { Bot, Send, Play, Plus, Check, X as XIcon, Sparkles, Settings2, Loader2, ShieldCheck, PhoneCall, PhoneForwarded, CircleCheck, Circle } from 'lucide-react'
 import { get, post, put } from '../lib/api'
 import { useToast } from '../lib/toast'
 import { PageHeader, Loading, ErrorBox, Tabs, Badge, Empty, Modal } from '../ui/kit'
@@ -24,11 +24,12 @@ export function AiPage() {
       <PageHeader icon={<Bot size={20} />} title="AI Team" subtitle="Jarvis and your digital employees – they read live brokerage and portfolio data, handle routine follow-ups and report to you. External messages always wait for your approval, including in autopilot. Financial posting, DLD title deed transfers and escrow releases always require human approval." actions={<Link className="btn outline" to="/admin/integrations"><Settings2 /> AI provider</Link>} />
       {!d.configured && <div className="mb-4 p-4 rounded-xl border border-[#ecd9a0] bg-[#fbf3d6] text-[14px]"><b>AI is not connected yet.</b> Choose a provider in <Link to="/admin/integrations" className="underline">Integrations → AI employees</Link>. Free options: Groq, OpenRouter “:free” models, Google Gemini, Cloudflare Workers AI, or your own Ollama server.</div>}
       <div className="card overflow-hidden">
-        <Tabs tabs={[{ key: 'chat', label: 'Chat with Jarvis' }, { key: 'team', label: 'Employees', count: d.agents.length }, { key: 'approvals', label: 'Approvals', count: d.pending || undefined }, { key: 'activity', label: 'Activity' }]} value={tab} onChange={k => setSp({ tab: k })} />
+        <Tabs tabs={[{ key: 'chat', label: 'Chat with Jarvis' }, { key: 'team', label: 'Employees', count: d.agents.length }, { key: 'approvals', label: 'Approvals', count: d.pending || undefined }, { key: 'voice', label: 'Voice' }, { key: 'activity', label: 'Activity' }]} value={tab} onChange={k => setSp({ tab: k })} />
         <div className="p-4 md:p-5">
           {tab === 'chat' && <Chat status={d} />}
           {tab === 'team' && <Team status={d} reload={() => void q.refetch()} />}
           {tab === 'approvals' && <Approvals reload={() => void q.refetch()} />}
+          {tab === 'voice' && <Voice reload={() => void q.refetch()} />}
           {tab === 'activity' && <Activity />}
         </div>
       </div>
@@ -149,3 +150,69 @@ function Activity() {
       {(open === r.id || r.status === 'failed') && <div className="mt-2 text-[13.5px] whitespace-pre-wrap leading-relaxed">{r.output || r.error}{r.status === 'failed' && r.error && r.output ? '\n' + r.error : ''}</div>}</div>))}</div>
 }
 
+
+interface VoiceStatus { enabled: boolean; secret_set: boolean; ai_configured: boolean; agent: { id: number; name: string; active: boolean } | null; transfer_configured: boolean; calls_today: number; ready: boolean; greeting: { en: string; ar: string } }
+
+function Voice({ reload }: { reload: () => void }) {
+  const toast = useToast()
+  const st = useQuery({ queryKey: ['voice-status'], queryFn: () => get<VoiceStatus>('/api/voice/status'), refetchInterval: 20000 })
+  const calls = useQuery({ queryKey: ['voice-calls'], queryFn: () => get<any>('/api/e/voice_calls', { pageSize: 15, sort: 'id', dir: 'desc' }), refetchInterval: 20000 })
+  const [callId, setCallId] = useState(() => `test-${Date.now()}`); const [from, setFrom] = useState('')
+  const [turns, setTurns] = useState<{ who: 'caller' | 'ai'; text: string; transfer?: string }[]>([]); const [text, setText] = useState(''); const [busy, setBusy] = useState(false)
+  const end = useRef<HTMLDivElement>(null)
+  useEffect(() => { end.current?.scrollIntoView({ behavior: 'smooth' }) }, [turns, busy])
+  if (st.error) return <ErrorBox error={st.error} onRetry={() => void st.refetch()} />
+  if (!st.data) return <Loading />
+  const s = st.data
+  const say = async () => {
+    const m = text.trim(); if (!m || busy) return
+    setTurns(x => [...x, { who: 'caller', text: m }]); setText(''); setBusy(true)
+    try { const r = await post<{ reply: string; action: string; transfer_to?: string }>('/api/voice/test', { call_id: callId, from, text: m }); setTurns(x => [...x, { who: 'ai', text: r.reply, transfer: r.action === 'transfer' ? r.transfer_to || 'staff line' : undefined }]) }
+    catch (e: any) { toast.error(e.message) } finally { setBusy(false) }
+  }
+  const hangUp = async () => { if (!turns.length) return; try { await post('/api/voice/test', { call_id: callId, end: true }); toast.ok('Test call logged'); setTurns([]); setCallId(`test-${Date.now()}`); void calls.refetch(); void st.refetch() } catch (e: any) { toast.error(e.message) } }
+  const switchOn = async () => { if (!s.agent) return; try { await put(`/api/e/ai_agents/${s.agent.id}`, { active: true }); toast.ok('AI Receptionist is on duty'); void st.refetch(); reload() } catch (e: any) { toast.error(e.message) } }
+  const Step = ({ ok, children }: { ok: boolean; children: React.ReactNode }) => <li className="flex gap-2 items-start text-[14px]">{ok ? <CircleCheck size={18} className="text-fold mt-0.5 shrink-0" /> : <Circle size={18} className="text-muted mt-0.5 shrink-0" />}<span>{children}</span></li>
+  return (
+    <div className="grid gap-5">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-2xl border border-line p-4 grid gap-3 content-start">
+          <div className="flex items-center gap-2"><PhoneCall size={18} /><b className="font-display">AI Receptionist on your phone line</b>{s.ready ? <Badge value="Ready" tone="green" /> : <Badge value="Setup needed" tone="amber" />}</div>
+          <ul className="grid gap-2 m-0 p-0 list-none">
+            <Step ok={s.ai_configured}>An AI model is connected – <Link className="underline" to="/admin/integrations">Integrations → AI employees</Link></Step>
+            <Step ok={!!s.agent?.active}>The AI Receptionist is on duty {s.agent && !s.agent.active && <button className="btn outline sm ml-1" onClick={() => void switchOn()}>Switch on</button>}</Step>
+            <Step ok={s.enabled && s.secret_set}>The voice gateway is enabled and its URL generated – <Link className="underline" to="/admin/integrations">Integrations → Voice</Link></Step>
+            <Step ok={s.transfer_configured}>A staff number for transfers is set (optional – otherwise callers are offered a call-back)</Step>
+          </ul>
+          <div className="text-[12.5px] text-muted">Calls reach this OS through a voice platform connected to your du SIP line – see <code>docs/VOICE.md</code>. {s.calls_today} call{s.calls_today === 1 ? '' : 's'} handled today.</div>
+          <div className="text-[12.5px] bg-soft border border-line rounded-xl p-3"><b>Opening line callers hear:</b><div className="mt-1">{s.greeting.en}</div><div className="mt-1" dir="rtl">{s.greeting.ar}</div></div>
+        </div>
+        <div className="rounded-2xl border border-line p-4 grid gap-3 content-start">
+          <div className="flex items-center gap-2 flex-wrap"><b className="font-display">Try the receptionist</b><span className="text-[12.5px] text-muted">Plays a caller in text. Leads and tickets it creates are real; the call is logged below.</span></div>
+          <input className="input" placeholder="Caller number (optional), e.g. +971501234567" value={from} onChange={e => setFrom(e.target.value)} disabled={turns.length > 0} />
+          <div className="rounded-xl border border-line bg-soft p-3 min-h-[200px] max-h-[40vh] overflow-auto grid gap-2 content-start">
+            {turns.length === 0 && <div className="text-[13.5px] text-muted">Say something a caller would, for example: “Hi, I’m looking for a two-bedroom apartment to rent in Dubai Marina.”</div>}
+            {turns.map((t, i) => <div key={i} className={cls('max-w-[90%] rounded-2xl px-3.5 py-2 text-[14px] leading-relaxed', t.who === 'caller' ? 'justify-self-end bg-fold text-white' : 'bg-card border border-line')}>{t.text}{t.transfer && <div className="mt-1 text-[12px] font-semibold flex items-center gap-1 text-[#9a6b00]"><PhoneForwarded size={13} /> Transfers to {t.transfer}</div>}</div>)}
+            {busy && <div className="flex items-center gap-2 text-muted text-sm"><Loader2 className="animate-spin" size={16} /> thinking…</div>}
+            <div ref={end} />
+          </div>
+          <form className="flex gap-2" onSubmit={e => { e.preventDefault(); void say() }}>
+            <input className="input flex-1" placeholder={s.agent?.active && s.ai_configured ? 'What the caller says…' : 'Switch the receptionist on and connect AI first'} value={text} onChange={e => setText(e.target.value)} disabled={busy || !s.agent?.active || !s.ai_configured} />
+            <button className="btn green" disabled={busy || !text.trim() || !s.agent?.active || !s.ai_configured}><Send /> Say</button>
+            <button type="button" className="btn outline" disabled={!turns.length || busy} onClick={() => void hangUp()}>Hang up</button>
+          </form>
+        </div>
+      </div>
+      <div>
+        <div className="flex items-center mb-2"><b className="font-display flex-1">Recent calls</b><Link className="btn outline sm" to="/e/voice_calls">All calls</Link></div>
+        {calls.error ? <ErrorBox error={calls.error} /> : !calls.data ? <Loading /> : !calls.data.rows.length ? <Empty title="No calls yet" hint="Calls handled by the receptionist, including test calls, appear here with a summary and transcript." /> : (
+          <div className="grid gap-2">{calls.data.rows.map((r: any) => (
+            <Link key={r.id} to={`/e/voice_calls/${r.id}`} className="rounded-xl border border-line p-3 flex gap-3 items-start flex-wrap no-underline text-ink hover:bg-soft">
+              <div className="min-w-[170px]"><div className="text-[13px] font-semibold">{r.caller_name || r.from_number || 'Unknown caller'}</div><div className="text-xs text-muted">{r.started_at?.replace('T', ' ')} · {r.duration_sec ? `${r.duration_sec}s` : r.status}</div></div>
+              <Badge value={r.outcome} tone={r.outcome === 'Transferred to staff' || r.outcome === 'Abandoned' ? 'amber' : 'green'} />
+              <div className="flex-1 min-w-[220px] text-[13.5px] text-muted">{r.summary || '—'}</div>
+            </Link>))}</div>)}
+      </div>
+    </div>
+  )
+}
