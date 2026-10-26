@@ -53,6 +53,7 @@ export const SWK_NAV: NavSection[] = [
     { label: 'Deal Files', to: '/e/jobs', icon: FileSignature, module: 'sales' },
     { label: 'Sales Contracts (Form F)', to: '/e/sales_contracts', icon: FileCheck, module: 'transactions' },
     { label: 'Escrow Accounts', to: '/e/escrow_accounts', icon: ShieldCheck, module: 'transactions' },
+    { label: 'DLD Filings', to: '/e/dld_filings', icon: FileCheck, module: 'transactions', isNew: true, desc: 'Forms, NOC, Oqood, title deed, Ejari' },
   ] },
   { key: 'leasing', label: 'Leasing & management', items: [
     { label: 'Leases & Ejari', to: '/e/leases', icon: KeyRound, module: 'leases' },
@@ -84,7 +85,9 @@ export const SWK_NAV: NavSection[] = [
     { label: 'Risk, Fraud & DLP Cases', to: '/e/compliance_cases', icon: ShieldAlert, module: 'compliance', isNew: true, desc: '3.29/3.30/4.09 independent review' },
     { label: 'Broker Authorisations', to: '/e/agent_authorisations', icon: BadgeCheck, module: 'compliance', isNew: true, desc: '3.04/4.06 regulated activation' },
     { label: 'Licences & Filings', to: '/compliance', icon: BadgeCheck, module: 'compliance' },
-    { label: 'Company Documents', to: '/e/company_documents', icon: ScrollText, module: 'documents' },
+    { label: 'KYC Checks', to: '/e/kyc_checks', icon: ShieldCheck, module: 'compliance', isNew: true, desc: 'Client due diligence' },
+    { label: 'goAML Reports', to: '/e/aml_reports', icon: ShieldAlert, module: 'compliance', isNew: true, desc: 'Suspicious activity log' },
+    { label: 'Company Documents', to: '/e/compliance_items', icon: ScrollText, module: 'documents' },
     { label: 'Document Vault', to: '/documents', icon: FileStack, module: 'documents' },
   ] },
   { key: 'team', label: 'Team', items: [

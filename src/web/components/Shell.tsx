@@ -2,11 +2,13 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'motion/react'
-import { Bell, Search, Plus, Check, ChevronDown, ChevronRight, LogOut, UserRound, LifeBuoy, LayoutGrid, Languages } from 'lucide-react'
+import { Bell, Search, Plus, Check, ChevronDown, ChevronRight, LogOut, UserRound, LifeBuoy, LayoutGrid, Languages, Download, RefreshCw } from 'lucide-react'
 import { useMeta } from '../lib/meta'
 import { get, post } from '../lib/api'
 import { cls, fmtIsoStamp } from '../lib/format'
 import { Modal, useClickOutside } from '../ui/kit'
+import { applyUpdate, isIosBrowser, promptInstall, usePwa } from '../lib/pwa'
+import { useToast } from '../lib/toast'
 import { CommandPalette } from './CommandPalette'
 import { APP_META, QUICK_CREATE, findNav, rememberVisit } from '../swk/nav'
 
@@ -95,6 +97,8 @@ export function Shell() {
   const [palette, setPalette] = useState(false)
   const [guide, setGuide] = useState(false)
   const [userMenu, setUserMenu] = useState(false)
+  const pwa = usePwa(), toast = useToast(), ios = isIosBrowser()
+  const install = async () => { setUserMenu(false); if (ios) { toast.ok('On iPhone or iPad: tap Share, then Add to Home Screen.'); return } const r = await promptInstall(); if (r === 'accepted') toast.ok('SWK OS is being installed.') }
   const userRef = useClickOutside<HTMLDivElement>(() => setUserMenu(false))
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setPalette(true) } }
@@ -134,11 +138,13 @@ export function Shell() {
                 <Link to="/workspace-tools" onClick={() => setUserMenu(false)}><span className="ic"><Languages size={16} /></span>Language & preferences</Link>
                 <Link to="/home" onClick={() => setUserMenu(false)}><span className="ic"><LayoutGrid size={16} /></span>All apps</Link>
                 <button className="item" onClick={() => { setUserMenu(false); setGuide(true) }}><span className="ic"><LifeBuoy size={16} /></span>Quick guide</button>
+                {!pwa.installed && (pwa.canInstall || ios) && <button className="item" onClick={install}><span className="ic"><Download size={16} /></span>Install app</button>}
                 <div className="sep" />
                 <button className="item" onClick={logout}><span className="ic"><LogOut size={16} /></span>Sign out</button>
               </motion.div>)}</AnimatePresence>
           </div>
         </header>
+        {pwa.updateReady && <div className="no-print" role="status" style={{ position: 'fixed', left: 16, right: 16, bottom: 16, zIndex: 80, maxWidth: 440, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 12, background: '#0f1714', color: '#e8efe9', boxShadow: '0 8px 30px rgba(0,0,0,.3)' }}><RefreshCw size={16} /><span style={{ flex: 1, fontSize: 13.5 }}>A new version of SWK OS is ready.</span><button className="btn sm" onClick={applyUpdate}>Reload</button></div>}
         {!isHome && <AppNav pathname={loc.pathname} />}
         {me?.demo && <div className="demo-notice no-print"><span><strong>Demo workspace</strong> · fictional data · external sending disabled</span><details><summary>Details</summary><p>Isolated from production. Resets every night. External e-mail, WhatsApp and integrations are switched off.</p><button className="btn outline sm" onClick={async () => { if (confirm('Restore the demo to its original state and sign out?')) { await post('/api/demo/reset'); window.location.href = '/login' } }}>Reset demo</button></details></div>}
         {me?.defaultPassword && !me?.demo && <div className="no-print bg-[#f3e6c4] text-[#6b4a00] px-5 py-2 text-sm font-semibold flex items-center gap-3 flex-wrap">You are signed in with the default password. <Link to="/profile" className="underline">Change it now</Link></div>}
