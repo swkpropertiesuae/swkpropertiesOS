@@ -125,7 +125,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   // static web app
   const webDir = path.resolve('dist/web')
   if (fs.existsSync(webDir)) {
-    await app.register(fstatic, { root: webDir, wildcard: false, setHeaders(res, p) { if (/\/assets\//.test(p)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'); else res.setHeader('Cache-Control', 'no-cache') } })
+    await app.register(fstatic, { root: webDir, wildcard: false, cacheControl: false, setHeaders(res, p) { if (/\/assets\//.test(p)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'); else res.setHeader('Cache-Control', 'no-cache') } })
     app.setNotFoundHandler((req, reply) => {
       if (req.url.startsWith('/api/')) return reply.status(404).send({ error: 'Not found' })
       return reply.sendFile('index.html')
