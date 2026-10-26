@@ -63,19 +63,3 @@ export function ReconcileDialog({ txn, onClose, onDone }: { txn: any; onClose: (
   )
 }
 
-export function PodDialog({ order, onClose, onDone }: { order: any; onClose: () => void; onDone: () => void }) {
-  const toast = useToast(); const cv = useRef<HTMLCanvasElement>(null); const [name, setName] = useState(order.pod_signed_by ?? ''); const [drawn, setDrawn] = useState(false)
-  useEffect(() => { const c = cv.current!; const x = c.getContext('2d')!; x.lineWidth = 2.2; x.lineCap = 'round'; x.strokeStyle = '#0b1a33'; let down = false
-    const pos = (e: PointerEvent) => { const r = c.getBoundingClientRect(); return [(e.clientX - r.left) * (c.width / r.width), (e.clientY - r.top) * (c.height / r.height)] }
-    const d = (e: PointerEvent) => { down = true; const [px, py] = pos(e); x.beginPath(); x.moveTo(px, py); c.setPointerCapture(e.pointerId) }
-    const m = (e: PointerEvent) => { if (!down) return; const [px, py] = pos(e); x.lineTo(px, py); x.stroke(); setDrawn(true) }
-    const u = () => { down = false }
-    c.addEventListener('pointerdown', d); c.addEventListener('pointermove', m); c.addEventListener('pointerup', u); return () => { c.removeEventListener('pointerdown', d); c.removeEventListener('pointermove', m); c.removeEventListener('pointerup', u) } }, [])
-  const save = async () => { try { await put(`/api/e/transport_orders/${order.id}`, { pod_signed_by: name, pod_signature: cv.current!.toDataURL('image/png'), status: 'POD received', version: order.version }); toast.ok('Proof of delivery captured'); onDone() } catch (e: any) { toast.error(e.message) } }
-  return (
-    <Modal open onClose={onClose} title={`Proof of delivery – ${order.order_no}`} width={560} footer={<><button className="btn outline" onClick={() => { const c = cv.current!; c.getContext('2d')!.clearRect(0, 0, c.width, c.height); setDrawn(false) }}>Clear</button><div className="flex-1" /><button className="btn outline" onClick={onClose}>Cancel</button><button className="btn green" disabled={!name.trim() || !drawn} onClick={() => void save()}>Save POD</button></>}>
-      <label className="label">Received by (name)<span className="req">*</span></label><input className="input mb-3" value={name} onChange={e => setName(e.target.value)} />
-      <label className="label">Signature<span className="req">*</span></label><canvas ref={cv} width={900} height={300} className="w-full border border-line-strong rounded-lg bg-white touch-none" style={{ touchAction: 'none', height: 160 }} aria-label="Signature pad" />
-    </Modal>
-  )
-}

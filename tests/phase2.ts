@@ -123,7 +123,7 @@ async function main() {
   r = await fetch(BASE + '/api/public/whatsapp?hub.mode=subscribe&hub.verify_token=vt&hub.challenge=777'); ok('webhook verification handshake', (await r.text()) === '777')
   r = await fetch(BASE + '/api/public/whatsapp?hub.mode=subscribe&hub.verify_token=bad&hub.challenge=777'); ok('wrong verify token rejected', r.status === 403)
   calls.length = 0
-  await waPost({ contacts: [{ wa_id: '971555000111', profile: { name: 'Hassan Trading' } }], messages: [{ from: '971555000111', id: 'wamid.in1', type: 'text', text: { body: 'Hi, need a quote for 2x40HC Jebel Ali to Mombasa' } }] })
+  await waPost({ contacts: [{ wa_id: '971555000111', profile: { name: 'Hassan Trading' } }], messages: [{ from: '971555000111', id: 'wamid.in1', type: 'text', text: { body: 'Hi, I want to view a 2BR apartment in Dubai Marina' } }] })
   await sleep(500)
   r = await api('GET', '/api/e/leads?q=Hassan'); ok('unknown number becomes a lead', r.data.total === 1 && r.data.rows[0].source === 'WhatsApp', r.data)
   ok('lead gets an automatic acknowledgement', calls.some(c => c.url.startsWith('/graph/123/messages') && c.body?.to === '971555000111'), calls.map(c => c.url))

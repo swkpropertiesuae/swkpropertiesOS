@@ -15,4 +15,4 @@ Overdue, Due today and Due soon labels apply to unfinished deadline records; Due
 
 Schedule activity creates a planned Meeting, Call, Video call or Visit in Calls & Activities, or a Task in Tasks & follow-ups. It requires create permission for that module. Enter a title, start/due date, optional end, location and details; tasks also have priority. New items are assigned to the current user. Open the linked record to edit, assign another owner or change status. Customer portal users see only their permitted customer-scoped records.
 
-Validation: npm run typecheck; npm run build; TEST_SUITES=calendar npm run test:all; CHROME_PATH=/usr/bin/chromium node tests/calendar-ui.mjs. Browser captures default to /tmp/digitalburj-calendar-review (override CALENDAR_CAPTURE_DIR).
+Validation: npm run typecheck; npm run build; TEST_SUITES=calendar npm run test:all; CHROME_PATH=/usr/bin/chromium node tests/calendar-ui.mjs. Browser captures default to /tmp/swk-calendar-review (override CALENDAR_CAPTURE_DIR).

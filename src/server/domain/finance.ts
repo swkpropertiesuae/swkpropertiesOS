@@ -81,12 +81,12 @@ function roundingAccount(): number {
 export const DEFAULT_INVOICE_PATTERN = '{prefix}{YY}{seq:5}'
 
 /**
- * Next invoice number. The legacy pattern keeps one counter per prefix and year. A custom company pattern (for example `{branch}/{dir}/ES{seq:3}`)
+ * Next invoice number. The legacy pattern keeps one counter per prefix and year. A custom company pattern (for example `{branch}/INV{seq:3}`)
  * uses ONE counter for the whole series, so IMP and EXP invoices continue the same sequence and a manual start number can be set.
  */
 export function invoiceSeriesKey(pattern: string, date: string): string {
   const d = date || todayStr()
-  const dated = pattern.replace(/\{(YYYY|YY|MM|DD)\}/g, (_m, t) => ({ YYYY: d.slice(0, 4), YY: d.slice(2, 4), MM: d.slice(5, 7), DD: d.slice(8, 10) } as Record<string, string>)[t]).replace(/\{(prefix|branch|dir)\}/g, '*')
+  const dated = pattern.replace(/\{(YYYY|YY|MM|DD)\}/g, (_m, t) => ({ YYYY: d.slice(0, 4), YY: d.slice(2, 4), MM: d.slice(5, 7), DD: d.slice(8, 10) } as Record<string, string>)[t]).replace(/\{(prefix|branch)\}/g, '*')
   return `invoices:series|${dated}`
 }
 function nextInvoiceNumber(inv: Rec, prefix: string): string {
@@ -94,7 +94,7 @@ function nextInvoiceNumber(inv: Rec, prefix: string): string {
   const date = inv.invoice_date
   if (pattern === DEFAULT_INVOICE_PATTERN) return formatNumber('invoices', pattern, { prefix }, date)
   const branch = (inv.branch_id ? q.val<string>(`SELECT code FROM branches WHERE id = ?`, inv.branch_id) : null) ?? q.val<string>(`SELECT code FROM branches WHERE is_head_office = 1 AND deleted_at IS NULL ORDER BY id LIMIT 1`) ?? 'DXB'
-  const tokens = { prefix, branch, dir: 'GEN' } // {dir} had no meaning once the freight trade field was removed; kept so existing patterns still validate
+  const tokens = { prefix, branch }
   const key = invoiceSeriesKey(pattern, date)
   const seq = nextSeq(key)
   let pad = 3
@@ -105,7 +105,7 @@ function nextInvoiceNumber(inv: Rec, prefix: string): string {
 export function setNextInvoiceNumber(next: number, date = todayStr()) {
   if (!Number.isInteger(next) || next < 1 || next > 99_999_999) throw bad('Enter a whole number of 1 or more')
   const pattern = String(getSetting('invoice_no_pattern') || DEFAULT_INVOICE_PATTERN)
-  if (pattern === DEFAULT_INVOICE_PATTERN) throw bad('Set a company invoice number format first, for example {branch}/{dir}/ES{seq:3}')
+  if (pattern === DEFAULT_INVOICE_PATTERN) throw bad('Set a company invoice number format first, for example {branch}/INV{seq:3}')
   q.run(`INSERT INTO sequences(key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`, invoiceSeriesKey(pattern, date), next - 1)
 }
 
@@ -518,7 +518,6 @@ export const journalHooks: Hooks = {
 export function reverseEntry(id: number, ctx: Ctx) {
   const e = q.get(`SELECT * FROM journal_entries WHERE id = ?`, id)
   if (!e) throw bad('Entry not found')
-  if(e.source_type==='Container deposit')throw bad('Reverse this entry through its deposit transaction to preserve the recoverable balance')
   if (e.status === 'Reversed' || e.source_type === 'Reversal') throw bad('This entry is already reversed or is itself a reversal')
   assertNotLocked(todayStr())
   return reverseJournal(ctx, id, `Reversal of ${e.entry_no}`)

@@ -19,7 +19,7 @@ This review combined code inspection of document generation, settings, dashboard
 ## Verification
 
 - TypeScript type checking and web/API builds passed.
-- All 23 default SQLite acceptance suites passed. The smoke suite passed 147 checks, integrations 84, handover 51 and compliance 65. The entity sweep completed 822 requests with zero server errors. Other suites cover authentication, email, calendars, approvals, work queues/handovers, durable workflow restart, RFQ/knowledge/competency, AI controls, vendor services, cargo custody, deposits and real PDF/image OCR.
+- All 23 default SQLite acceptance suites passed. The smoke suite passed 147 checks, integrations 84, handover 51 and compliance 65. The entity sweep completed 822 requests with zero server errors. Other suites cover authentication, email, calendars, approvals, work queues, durable workflow restart, knowledge/competency, AI controls, and PDF generation.
 - The dashboard browser suite passed desktop/mobile/dark contrast, layout, navigation, carousel controls, sidebar keyboard/motion behavior, email drafts and vendor-service forms.
 - The calendar browser suite passed persisted scheduling, four views, filters, mobile access and contrast/layout.
 - `npm run test:documents` passed 30 checks, including original raster upload, recipient ordering, notices, seal overrides, mobile containment, delayed loading, metadata, date ranges, error handling and inspection of actual PDF text and embedded seal images. It is also included in the browser CI step.

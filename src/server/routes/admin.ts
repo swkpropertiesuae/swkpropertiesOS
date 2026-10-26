@@ -57,7 +57,7 @@ export default async function (app: FastifyInstance) {
     if ('invoice_no_pattern' in patch) {
       const pat = String(patch.invoice_no_pattern ?? '').trim()
       const tokens = pat.match(/\{[^}]*\}/g) ?? []
-      if (!pat || pat.length > 60 || !/^[A-Za-z0-9/\-_.{}:]+$/.test(pat) || !/\{seq:[1-8]\}/.test(pat) || tokens.some(t => !/^\{(prefix|branch|dir|YY|YYYY|MM|DD|seq:[1-8])\}$/.test(t)) || tokens.filter(t => t.startsWith('{seq')).length !== 1) throw bad('Invoice number format must contain one {seq:3}-style counter and may use {prefix} {branch} {dir} {YY} {YYYY} {MM} {DD}, for example {branch}/{dir}/ES{seq:3}')
+      if (!pat || pat.length > 60 || !/^[A-Za-z0-9/\-_.{}:]+$/.test(pat) || !/\{seq:[1-8]\}/.test(pat) || tokens.some(t => !/^\{(prefix|branch|YY|YYYY|MM|DD|seq:[1-8])\}$/.test(t)) || tokens.filter(t => t.startsWith('{seq')).length !== 1) throw bad('Invoice number format must contain one {seq:3}-style counter and may use {prefix} {branch} {YY} {YYYY} {MM} {DD}, for example {branch}/INV{seq:3}')
       patch.invoice_no_pattern = pat
     }
     if ('document_seal' in patch) patch.document_seal = validateDocumentSeal(patch.document_seal)

@@ -5,7 +5,7 @@ import path from 'node:path'
 import { spawn, execFileSync } from 'node:child_process'
 import { chromium } from 'playwright-core'
 
-const data = fs.mkdtempSync(path.join(os.tmpdir(), 'digitalburj-ui-'))
+const data = fs.mkdtempSync(path.join(os.tmpdir(), 'swk-ui-'))
 const server = spawn(process.execPath, ['dist/server/index.mjs'], { env: { ...process.env, DATA_DIR: data, DATABASE_URL: '', REQUIRE_DATABASE_URL: 'false', DEMO_ENABLED: 'true', PORT: '8088', HOST: '127.0.0.1' }, stdio: ['ignore', 'pipe', 'pipe'] })
 let logs = ''; server.stdout.on('data', b => { logs += b }); server.stderr.on('data', b => { logs += b })
 const base = 'http://127.0.0.1:8088', out = '.impeccable/review'

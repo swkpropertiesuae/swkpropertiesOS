@@ -4,10 +4,10 @@ import os from 'node:os'
 import path from 'node:path'
 import { spawn, execFileSync } from 'node:child_process'
 import { chromium } from 'playwright-core'
-const base = 'http://127.0.0.1:8091', data = fs.mkdtempSync(path.join(os.tmpdir(), 'digitalburj-calendar-ui-'))
+const base = 'http://127.0.0.1:8091', data = fs.mkdtempSync(path.join(os.tmpdir(), 'swk-calendar-ui-'))
 const server = spawn(process.execPath, ['dist/server/index.mjs'], { env: { ...process.env, DATA_DIR: data, DATABASE_URL: '', DEMO_ENABLED: 'true', PORT: '8091', HOST: '127.0.0.1', NODE_ENV: 'development', COOKIE_SECURE: 'false' }, stdio: ['ignore', 'pipe', 'pipe'] })
 let logs = '', browser; server.stdout.on('data', b => logs += b); server.stderr.on('data', b => logs += b)
-const out = process.env.CALENDAR_CAPTURE_DIR || '/tmp/digitalburj-calendar-review'; fs.mkdirSync(out, { recursive: true })
+const out = process.env.CALENDAR_CAPTURE_DIR || '/tmp/swk-calendar-review'; fs.mkdirSync(out, { recursive: true })
 try {
   let ready = false
   for (let i = 0; i < 90; i++) { try { if ((await fetch(base + '/api/health')).ok) { ready = true; break } } catch {} await new Promise(r => setTimeout(r, 500)) }
@@ -39,6 +39,9 @@ try {
   await page.getByLabel('Search calendar').fill('NoSuchCalendarActivity987'); await page.getByText('No matching events this day', { exact: true }).waitFor()
   await page.getByRole('button', { name: 'Clear filters', exact: true }).click()
   const check = async () => {
+    // Colours are transitioned; measure contrast only once every animation and transition has finished.
+    await page.evaluate(() => Promise.all(document.getAnimations().map(a => a.finished.catch(() => {}))))
+    await page.waitForTimeout(250)
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'no horizontal page overflow')
     const failures = await page.locator('.calendar-type,.calendar-event-chip,.calendar-day-number,.calendar-mobile-count,.calendar-summary,.calendar-event-title,.calendar-event-facts,.calendar-event-status,.calendar-views button,.calendar-panel-hint').evaluateAll(nodes => {
       const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d')

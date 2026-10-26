@@ -13,7 +13,7 @@ for suite in ${TEST_SUITES:-company-documents demo-dates pgbridge auth-security 
   free_port
   dir="$(mktemp -d)"; export DATA_DIR="$dir"
   if [ -n "${TEST_PG_ADMIN_URL:-}" ]; then
-    db="digitalburj_test_${suite//-/_}"; psql "$TEST_PG_ADMIN_URL" -qc "drop database if exists $db" -c "create database $db"
+    db="swk_test_${suite//-/_}"; psql "$TEST_PG_ADMIN_URL" -qc "drop database if exists $db" -c "create database $db"
     export DATABASE_URL="${TEST_PG_ADMIN_URL%/*}/$db"
   fi
   case "$suite" in

@@ -18,7 +18,7 @@ async function main() {
   if (!cookie) { console.error('Demo login failed – is the demo workspace enabled and ready?'); process.exit(2) }
 
   const meta = (await get('/api/meta')).data
-  for (const p of ['/api/dashboard', '/api/kpi', '/api/calendar', '/api/notifications', '/api/ai/brief', '/api/ai/status', '/api/integrations', '/api/admin/audit', '/api/admin/system', '/api/admin/roles', '/api/admin/settings', '/api/admin/login-events', '/api/auth/me', '/api/auth/sessions', '/api/auth/login-history', '/api/compliance/overview', '/api/finance/open-invoices', '/api/finance/open-bills', '/api/finance/bank/summary', '/api/warehouse/stock', '/api/whatsapp/threads', '/api/tags', '/api/rates/search', '/api/search/global?q=a', '/api/search/jobs?type=job_no&value=DXB', '/api/pdf/status', '/api/admin/backups']) await get(p)
+  for (const p of ['/api/dashboard', '/api/kpi', '/api/calendar', '/api/notifications', '/api/ai/brief', '/api/ai/status', '/api/integrations', '/api/admin/audit', '/api/admin/system', '/api/admin/roles', '/api/admin/settings', '/api/admin/login-events', '/api/auth/me', '/api/auth/sessions', '/api/auth/login-history', '/api/compliance/overview', '/api/finance/open-invoices', '/api/finance/open-bills', '/api/finance/bank/summary', '/api/whatsapp/threads', '/api/tags', '/api/rates/search', '/api/search/global?q=a', '/api/search/jobs?type=job_no&value=DXB', '/api/pdf/status', '/api/admin/backups']) await get(p)
 
   // every report with its default parameters
   const reports = (await get('/api/reports')).data

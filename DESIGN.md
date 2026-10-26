@@ -1,6 +1,6 @@
 ---
-name: DigitalBurj OS
-description: A calm wallet-inspired operating workspace in the existing DigitalBurj identity.
+name: SWK OS
+description: A calm wallet-inspired operating workspace in the existing SWK OS identity.
 colors:
   emerald: "#007b52"
   fold: "#025e3d"
@@ -137,13 +137,13 @@ components:
     rounded: "{rounded.pill}"
     padding: "3px 9px"
 ---
-# Design System: DigitalBurj OS
+# Design System: SWK OS
 
 ## Overview
 
 **Creative North Star: "The Calm Operating Wallet"**
 
-DigitalBurj translates the supplied wallet reference into a calm operating workspace for the owner and operations team. Quiet pill navigation, a narrow icon rail and floating rounded surfaces create clear access to financial context and shipment work. Emerald, graphite and warm neutral tints retain the existing DigitalBurj brand.
+SWK OS translates the supplied wallet reference into a calm operating workspace for the owner and operations team. Quiet pill navigation, a narrow icon rail and floating rounded surfaces create clear access to financial context and deal work. Emerald, graphite and warm neutral tints retain the existing SWK OS brand.
 
 The same surface language spans workspaces, dashboards, records, forms, dialogs and sign-in. Repository logos, icon marks and self-hosted fonts remain the only brand assets. The reference supplies composition; real API data and permission-filtered operational workflows supply the content.
 
@@ -155,11 +155,11 @@ The same surface language spans workspaces, dashboards, records, forms, dialogs 
 
 ## Colors
 
-DigitalBurj emerald leads actions; deep fold green anchors the cash card and first workspace card. Emerald and fold green identify active primary navigation and workspace shortcuts; graphite remains available for strong secondary actions. Signal red remains reserved for errors and destructive operations. Ocean, teal, aviation, copper and violet preserve module and chart meanings; existing pastel status colours remain available.
+SWK OS emerald leads actions; deep fold green anchors the cash card and first workspace card. Emerald and fold green identify active primary navigation and workspace shortcuts; graphite remains available for strong secondary actions. Signal red remains reserved for errors and destructive operations. Ocean, teal, aviation, copper and violet preserve module and chart meanings; existing pastel status colours remain available.
 
 The light canvas, white surfaces, soft green and champagne tints create tonal separation. Ink, body and muted establish the reading hierarchy; line colours divide data and outline fields. Reverse-muted labels support green cards. Dark mode keeps semantic variable overrides from the stylesheets, including the dark canvas and card surfaces; use variables for shared surfaces.
 
-**The Brand Continuity Rule.** Translate the reference composition using DigitalBurj's existing identity assets and palette.
+**The Brand Continuity Rule.** Translate the reference composition using SWK OS's existing identity assets and palette.
 
 ## Typography
 
@@ -201,7 +201,7 @@ Workspace cards show an icon, wrapping name, up to three previews, feature count
 
 ### Dashboard operating desk
 
-The dashboard uses neutral surfaces and dividers, with emerald action/navigation accents and red urgent-exception icons. The default view prioritizes key figures, all actionable alerts, upcoming movements and latest jobs. Shipment workflow guidance, AI briefings and detailed business reports use keyboard-accessible disclosure sections, collapsed by default. Duplicate financial overview cards are removed. Chart series use restrained grey/green tones and labels. Finance view permission gates financial metrics and charts. Light and dark themes retain readable contrast.
+The dashboard uses neutral surfaces and dividers, with emerald action/navigation accents and red urgent-exception icons. The default view prioritizes key figures, all actionable alerts, upcoming closings and latest deals. Deal workflow guidance, AI briefings and detailed business reports use keyboard-accessible disclosure sections, collapsed by default. Duplicate financial overview cards are removed. Chart series use restrained grey/green tones and labels. Finance view permission gates financial metrics and charts. Light and dark themes retain readable contrast.
 
 ### Status chips, tables and dialogs
 
@@ -214,7 +214,7 @@ Sign-in uses an existing brand-green panel and a floating white form. Existing r
 ## Do's and Don'ts
 
 ### Do:
-- **Do** use the supplied DigitalBurj assets, fonts and brand palette.
+- **Do** use the supplied SWK Properties assets, fonts and brand palette.
 - **Do** derive navigation and displayed figures from permitted metadata and actual API data.
 - **Do** keep table scrolling inside its surface and labels able to wrap.
 - **Do** keep keyboard focus visible and respect reduced motion.
@@ -229,6 +229,6 @@ Sign-in uses an existing brand-green panel and a floating white form. Existing r
 
 ### Company calendar
 
-The calendar is an operating surface using Month, Week, Day and Agenda views. Emerald identifies selection, today and scheduling actions; module colors identify event groups with text labels and a filterable legend. Event chips use matching pastel backgrounds and dark text; dark mode uses tinted dark surfaces with light text. Red overdue and ochre due-soon labels remain separate from activity colors. The shared Back navigation and existing DigitalBurj assets remain visible.
+The calendar is an operating surface using Month, Week, Day and Agenda views. Emerald identifies selection, today and scheduling actions; module colors identify event groups with text labels and a filterable legend. Event chips use matching pastel backgrounds and dark text; dark mode uses tinted dark surfaces with light text. Red overdue and ochre due-soon labels remain separate from activity colors. The shared Back navigation and existing SWK OS assets remain visible.
 
 A full selected-day schedule sits beside the desktop month/week board; on mobile, compact day counts lead to details below. Search, assignment, completion and deadline filters reduce dense schedules without hiding access to full records. Personal notifications occupy a separate alert panel. Civil date arithmetic follows the company timezone and preserves multi-day ranges. See docs/CALENDAR.md for coverage and behavior.

@@ -2,7 +2,7 @@
 
 ## Product and Users
 
-SWK Properties OS supports the daily operations of **SWK Properties L.L.C.** (`إس دبليو كي العقارية ش.ذ.م.م`), a RERA-licensed real estate brokerage and property management enterprise in Dubai, UAE (DET Licence `1645802`, RERA ORN `51517`).
+SWK Properties OS supports the daily operations of **SWK Properties L.L.C.** (`إس دبليو كي العقارية ش.ذ.م.م`), a RERA-licensed real estate brokerage and property management enterprise in Dubai, UAE (RERA ORN `51517`).
 
 Staff manage property listings, units, Form A mandates, buyer/tenant leads, viewings, offers, Form F sales contracts, DLD trustee transfers, escrow accounts, Ejari leases, post-dated cheques (PDCs), maintenance requests, property handovers, commission tax invoices, vendor bills, HR/WPS payroll, and UAE statutory compliance. Landlords and clients have a dedicated portal view of their own deals, leases, and statements.
 

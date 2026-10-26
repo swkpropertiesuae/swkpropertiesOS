@@ -2,7 +2,7 @@
 
 Invoices, quotations, vouchers, purchase orders, statements and other print layouts identify the customer, supplier, employee or other recipient before the document title. Where no recipient is available, they say “To whom it may concern”.
 
-Every document includes a system-generated notice. Invoices say: **“This is a system-generated invoice and does not require a signature.”** Other layouts identify their document type and say that an issuer’s signature is not required. This notice is independent of the configurable footer. Customer acceptance, delivery/warehouse acknowledgements, custody requirements and the authorised carrier-original issuance process remain in place.
+Every document includes a system-generated notice. Invoices say: **“This is a system-generated invoice and does not require a signature.”** Other layouts identify their document type and say that an issuer’s signature is not required. This notice is independent of the configurable footer.
 
 ## Configure the seal
 

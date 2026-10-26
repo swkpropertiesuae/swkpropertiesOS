@@ -58,7 +58,7 @@ If using Admin → E-mail for the default sender: choose SMTP, fill host/port/us
 
 Credentials: Cloudflare Account ID, bucket name, S3 Access Key ID and Secret Access Key. The S3 credentials are different from an ordinary Cloudflare API bearer token.
 
-14. Cloudflare → R2 object storage → create a private bucket, such as `digitalburj-private`.
+14. Cloudflare → R2 object storage → create a private bucket, such as `swk-private`.
 15. Create R2 S3 credentials with **Object Read & Write**, restricted to this bucket.
 16. In File storage & backups, enter all four values; initially keep uploads on Server disk.
 17. Save & test connection. The test checks bucket access; it does not prove successful writes or a restorable backup.

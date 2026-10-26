@@ -2,7 +2,7 @@
 
 1. Provision a host with Docker (or Node 22 and a C toolchain for better-sqlite3).
 2. `cp .env.example .env`, set `PUBLIC_URL`, passwords, SMTP.
-3. `docker compose up -d --build`. Data lives in the `digitalburj-data` volume (SQLite file + uploads + backups).
+3. `docker compose up -d --build`. Data lives in the `swkos-data` volume (SQLite file + uploads + backups).
 4. Put a TLS reverse proxy in front (Caddy/nginx), keep `TRUST_PROXY=true` and `COOKIE_SECURE=true`.
 5. Sign in, change both default passwords, enable TOTP for admins, set company details under Administration → Settings.
 

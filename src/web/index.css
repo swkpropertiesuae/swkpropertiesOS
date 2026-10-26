@@ -198,7 +198,7 @@ html[dir='rtl'] .absolute.right-0 { right: auto; left: 0; }
 html[dir='rtl'] .print-sheet { text-align: left; }
 
 
-/* Consistent operating surfaces: preserves DigitalBurj's existing module colours. */
+/* Consistent operating surfaces: preserves SWK OS's existing module colours. */
 :root { --elevation: 0 8px 28px -18px #0f171440; --motion-fast: 180ms; }
 body { caret-color: var(--focus); }
 * { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
@@ -544,7 +544,7 @@ table.grid td.num, table.grid th.num { white-space: nowrap; }
 .corporate-footer-contact strong { color: #0f2244; }
 .corporate-footer-identity strong { color: #0b1a33; }
 
-/* ------------------ DigitalBurj OS · SWK Properties layers ------------------ */
+/* ------------------ SWK OS · SWK Properties layers ------------------ */
 
 /* Brand attribution (login + footer). */
 .product-brand { color: var(--muted); }
@@ -562,7 +562,7 @@ table.grid td.num, table.grid th.num { white-space: nowrap; }
 .dashboard-metrics .metric-revenue { border-top: 3px solid #0f2244; }
 .dashboard-metrics .metric-collections { border-top: 3px solid #b8955a; }
 
-/* Login world (DigitalBurj palette). */
+/* Login world (SWK OS palette). */
 .login-world { background: var(--bg); }
 .login-brand { background: #0b1a33; }
 .login-brand h1 { letter-spacing: -.03em; }
@@ -590,7 +590,7 @@ table.grid td.num, table.grid th.num { white-space: nowrap; }
 :root[data-theme='dark'] .badge.green { background: rgba(242,58,29,.18); color: #dcc8a2; border-color: rgba(242,58,29,.38); }
 :root[data-theme='dark'] .workspace-flow svg { color: #c9a96e; }
 
-/* DigitalBurj brand blend: fixed shell watermark + inverted brand on dark surfaces */
+/* SWK OS brand blend: fixed shell watermark + inverted brand on dark surfaces */
 .app-watermark { position: fixed; inset-inline-end: 18px; bottom: 38px; width: clamp(130px, 13vw, 210px); opacity: .055; pointer-events: none; user-select: none; z-index: 45; mix-blend-mode: multiply; }
 .brand-invert { filter: brightness(0) invert(1); }
 @media print { .app-watermark { display: none !important; } }

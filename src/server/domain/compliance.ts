@@ -203,7 +203,7 @@ export function generateCalendar(): { created: number; updated: number } {
     }
   }
 
-  const issue = String(getSetting('licence_issue_date') || '2026-08-17')
+  const issue = String(getSetting('licence_issue_date') || '')
   if (/^\d{4}-\d{2}-\d{2}$/.test(issue)) {
     const d = new Date(issue + 'T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() + 3)
     const ctRegDue = d.toISOString().slice(0, 10)
