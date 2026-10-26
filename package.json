@@ -24,7 +24,7 @@
     "test:documents": "node tests/documents-ui.mjs",
     "test:handover": "tsx --env-file-if-exists=.env tests/handover.ts",
     "test:all": "bash tests/run-all.sh",
-    "android:sync": "npm run build:web && npx cap copy android",
+    "android:sync": "npm run build:web && node tools/android/sync-assets.mjs",
     "android:apk": "cd android && ./gradlew assembleDebug"
   },
   "dependencies": {

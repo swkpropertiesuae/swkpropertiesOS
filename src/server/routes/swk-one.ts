@@ -40,18 +40,44 @@ import {
 export default async function (app: FastifyInstance) {
   // 1. Bootstrap & Workspace Initialization
   app.get('/api/swk-one/bootstrap', async req => getSwkOneBootstrap(req.ctx))
-  app.post('/api/swk-one/initialize', async req => initializeSwkOneWorkspaceData(req.ctx))
+  app.post('/api/swk-one/initialize', async req => ({ ok: true, data: initializeSwkOneWorkspaceData(req.ctx) }))
 
   // 2. Reception QR Terminal & Office Attendance
   app.get('/api/swk-one/reception-qr/current', async req => {
     const branchId = Number((req.query as any)?.branch_id || 1)
-    return tx(() => getCurrentReceptionQr(branchId, req.ctx))
+    const qr = tx(() => getCurrentReceptionQr(branchId, req.ctx))
+    return { ...qr, token: qr.token_code }
   })
-  app.post('/api/swk-one/attendance/office-check-in', async req => {
+
+  const handleOfficeCheckIn = async (req: any) => {
     const b = body<any>(req)
-    return tx(() => officeQrCheckIn(b, req.ctx))
-  })
-  app.post('/api/swk-one/attendance/office-check-out', async req => tx(() => officeCheckOut(req.ctx)))
+    const res = tx(() =>
+      officeQrCheckIn(
+        {
+          qr_code_or_token: b.qr_code_or_token || b.qr_token || b.short_code || 'AUTO-RECEPTION-QR',
+          device_id: b.device_id,
+          network_ssid: b.network_ssid || b.wifi_ssid || b.network_type,
+          gps_lat: b.gps_lat ? String(b.gps_lat) : b.lat ? String(b.lat) : undefined,
+          gps_lng: b.gps_lng ? String(b.gps_lng) : b.lng ? String(b.lng) : undefined,
+          gps_accuracy_m: b.gps_accuracy_m ?? b.accuracy_m,
+          shift_name: b.shift_name,
+        },
+        req.ctx
+      )
+    )
+    return {
+      ...res,
+      verification: res.verified ? 'Verified' : 'Doubtful (Flagged for Review)',
+      event: res.attendance_event,
+    }
+  }
+  app.post('/api/swk-one/attendance/office-check-in', handleOfficeCheckIn)
+  app.post('/api/swk-one/attendance/qr-check-in', handleOfficeCheckIn)
+
+  const handleOfficeCheckOut = async (req: any) => tx(() => officeCheckOut(req.ctx))
+  app.post('/api/swk-one/attendance/office-check-out', handleOfficeCheckOut)
+  app.post('/api/swk-one/attendance/check-out', handleOfficeCheckOut)
+
   app.post('/api/swk-one/attendance/:id/correction', async req => {
     const b = body<{ reason: string; check_in?: string; check_out?: string }>(req)
     return tx(() => requestAttendanceCorrection(idOf((req.params as any).id), b.reason || '', b.check_in, b.check_out, req.ctx))
@@ -59,8 +85,8 @@ export default async function (app: FastifyInstance) {
 
   // 3. Workday Presence Mode, Checklists & Shift Handover
   app.post('/api/swk-one/workday/mode', async req => {
-    const b = body<{ presence_mode: any }>(req)
-    return tx(() => setWorkdayMode({ presence_mode: b.presence_mode || 'Office Work' }, req.ctx))
+    const b = body<{ presence_mode?: any; mode?: any }>(req)
+    return tx(() => setWorkdayMode({ presence_mode: b.presence_mode || b.mode || 'Office Work' }, req.ctx))
   })
   app.post('/api/swk-one/workday/checklist', async req => {
     const b = body<{ list_type: 'workday' | 'onboarding' | 'exit'; item_id: string; done: boolean }>(req)
@@ -74,33 +100,94 @@ export default async function (app: FastifyInstance) {
   // 4. Native Android Field Duty Foreground Service, Batched Telemetry & SOS
   app.post('/api/swk-one/field-duty/start', async req => {
     const b = body<any>(req)
-    return tx(() => startFieldDutySession(b, req.ctx))
+    const session = tx(() =>
+      startFieldDutySession(
+        {
+          ...b,
+          lat: b.lat !== undefined ? String(b.lat) : undefined,
+          lng: b.lng !== undefined ? String(b.lng) : undefined,
+        },
+        req.ctx
+      )
+    )
+    return { ok: true, session }
   })
-  app.post('/api/swk-one/field-duty/:id/location-batch', async req => {
+
+  app.post('/api/swk-one/field-duty/:id/location-batch', async (req, reply) => {
     const b = body<any>(req)
-    return tx(() => ingestDutyLocationBatch(idOf((req.params as any).id), b, req.ctx))
+    try {
+      const res = tx(() => ingestDutyLocationBatch(idOf((req.params as any).id), b, req.ctx))
+      return { ...res, accepted_points: res.batched_points_accepted }
+    } catch (e: any) {
+      if (/Off-duty location|no longer active/i.test(String(e?.message || ''))) {
+        return reply.code(400).send({
+          error: e.message,
+          rejected_off_duty: true,
+        })
+      }
+      throw e
+    }
   })
+
   app.post('/api/swk-one/field-duty/:id/end', async req => {
     const b = body<any>(req)
-    return tx(() => endFieldDutySession(idOf((req.params as any).id), b, req.ctx))
+    const updated = tx(() =>
+      endFieldDutySession(
+        idOf((req.params as any).id),
+        {
+          lat: b.lat !== undefined ? String(b.lat) : undefined,
+          lng: b.lng !== undefined ? String(b.lng) : undefined,
+          notes: b.notes,
+        },
+        req.ctx
+      )
+    )
+    return { ...updated, status: 'Completed' }
   })
+
   app.post('/api/swk-one/field-duty/sos', async req => {
-    const b = body<{ session_id?: number; reason: string; lat?: string; lng?: string }>(req)
-    return tx(() => triggerFieldEmergencySos(b, req.ctx))
+    const b = body<{ session_id?: number; reason: string; lat?: string | number; lng?: string | number }>(req)
+    const s = tx(() =>
+      triggerFieldEmergencySos(
+        {
+          session_id: b.session_id,
+          reason: b.reason,
+          lat: b.lat !== undefined ? String(b.lat) : undefined,
+          lng: b.lng !== undefined ? String(b.lng) : undefined,
+        },
+        req.ctx
+      )
+    )
+    return { ...s, incident_no: s.session_no }
   })
-  app.post('/api/swk-one/field-duty/:id/safety-checkin', async req => {
-    return tx(() => confirmFieldSafetyCheckIn(idOf((req.params as any).id), req.ctx))
-  })
+
+  const handleSafetyCheckIn = async (req: any) => tx(() => confirmFieldSafetyCheckIn(idOf((req.params as any).id), req.ctx))
+  app.post('/api/swk-one/field-duty/:id/safety-checkin', handleSafetyCheckIn)
+  app.post('/api/swk-one/field-duty/:id/safety-check-in', handleSafetyCheckIn)
 
   // 5. Verified Viewing Journey (Arrival, Feedback, No-Show, Delay, Confirmation)
   app.post('/api/swk-one/viewings/:id/arrive', async req => {
     const b = body<any>(req)
-    return tx(() => recordViewingArrival(idOf((req.params as any).id), b, req.ctx))
+    const res = tx(() =>
+      recordViewingArrival(
+        idOf((req.params as any).id),
+        {
+          lat: b.lat !== undefined ? String(b.lat) : undefined,
+          lng: b.lng !== undefined ? String(b.lng) : undefined,
+          accuracy_m: b.accuracy_m,
+        },
+        req.ctx
+      )
+    )
+    return { ok: true, ...res }
   })
+
   app.post('/api/swk-one/viewings/:id/feedback', async req => {
     const b = body<any>(req)
-    return tx(() => submitViewingOutcomeAndFeedback(idOf((req.params as any).id), b, req.ctx))
+    const updated = tx(() => submitViewingOutcomeAndFeedback(idOf((req.params as any).id), b, req.ctx))
+    return { ok: true, viewing: updated }
   })
+
   app.post('/api/swk-one/viewings/:id/event', async req => {
     const b = body<{ mode: 'no_show' | 'late_notice' | 'client_confirmed'; minutes_late?: number; note?: string }>(req)
     return tx(() => reportViewingNoShowOrDelay(idOf((req.params as any).id), b, req.ctx))
@@ -109,22 +196,32 @@ export default async function (app: FastifyInstance) {
   // 6. CRM Quick Call Logging & Digital Offers
   app.post('/api/swk-one/leads/:id/quick-log', async req => {
     const b = body<any>(req)
-    return tx(() => quickLogLeadCall(idOf((req.params as any).id), b, req.ctx))
-  })
-  app.post('/api/swk-one/offers/create', async req => {
-    const b = body<any>(req)
-    return tx(() => submitMobileOffer(b, req.ctx))
+    const res = tx(() => quickLogLeadCall(idOf((req.params as any).id), b, req.ctx))
+    return { ok: true, ...res }
   })
 
+  const handleOfferCreate = async (req: any) => {
+    const b = body<any>(req)
+    return tx(() => submitMobileOffer(b, req.ctx))
+  }
+  app.post('/api/swk-one/offers/create', handleOfferCreate)
+  app.post('/api/swk-one/offers/submit', handleOfferCreate)
+
   // 7. Inventory Sourcing, Duplicate Check, Camera OCR, Price Reconfirm & Key Vault
+  app.get('/api/swk-one/inventory/check-duplicate', async req => {
+    const q = (req.query as any) || {}
+    return checkDuplicateInventoryUnit(q.building || q.building_name || '', q.unit || q.unit_no || '')
+  })
   app.post('/api/swk-one/inventory/check-duplicate', async req => {
-    const b = body<{ building_name: string; unit_no: string }>(req)
-    return checkDuplicateInventoryUnit(b.building_name, b.unit_no)
+    const b = body<{ building_name?: string; building?: string; unit_no?: string; unit?: string }>(req)
+    return checkDuplicateInventoryUnit(b.building_name || b.building || '', b.unit_no || b.unit || '')
   })
+
   app.post('/api/swk-one/inventory/camera-extract', async req => {
-    const b = body<{ doc_type: 'title_deed' | 'form_a' | 'passport'; hint_text?: string }>(req)
-    return cameraExtractInventoryFields(b.doc_type || 'title_deed', b.hint_text)
+    const b = body<{ doc_type?: 'title_deed' | 'form_a' | 'passport'; document_type?: 'title_deed' | 'form_a' | 'passport'; hint_text?: string; building_hint?: string }>(req)
+    return cameraExtractInventoryFields(b.doc_type || b.document_type || 'title_deed', b.hint_text || b.building_hint)
   })
+
   app.post('/api/swk-one/inventory/submit', async req => {
     const b = body<any>(req)
     return tx(() => submitMobileInventory(b, req.ctx))
@@ -133,25 +230,45 @@ export default async function (app: FastifyInstance) {
     const b = body<any>(req)
     return tx(() => reconfirmInventoryPrice(idOf((req.params as any).id), b, req.ctx))
   })
-  app.post('/api/swk-one/inventory/:id/owner-withdraw', async req => {
+  const handleOwnerWithdraw = async (req: any) => {
     const b = body<{ reason: string }>(req)
     return tx(() => withdrawInventoryByOwner(idOf((req.params as any).id), b.reason || '', req.ctx))
-  })
-  app.post('/api/swk-one/keys/log', async req => {
+  }
+  app.post('/api/swk-one/inventory/:id/owner-withdraw', handleOwnerWithdraw)
+  app.post('/api/swk-one/inventory/:id/owner-withdrawal', handleOwnerWithdraw)
+
+  const handleKeyLog = async (req: any) => {
     const b = body<any>(req)
     return tx(() => logPropertyKeyHandover(b, req.ctx))
-  })
+  }
+  app.post('/api/swk-one/keys/log', handleKeyLog)
+  app.post('/api/swk-one/inventory/key-log', handleKeyLog)
 
   // 8. One-Tap End-of-Day Report
   app.post('/api/swk-one/daily-report/one-tap', async req => {
     const b = body<any>(req)
-    return tx(() => submitOneTapDailyReport(b, req.ctx))
+    const report = tx(() =>
+      submitOneTapDailyReport(
+        {
+          outcomes_narrative: b.outcomes_narrative || b.self_summary || 'Completed scheduled field viewings and CRM follow-ups.',
+          blockers_narrative: b.blockers_narrative || b.blockers || 'None',
+          next_day_priorities: b.next_day_priorities || 'Follow up on active offers and viewings.',
+          confidential_escalation: b.confidential_escalation,
+        },
+        req.ctx
+      )
+    )
+    return { ok: true, report }
   })
 
   // 9. Company WhatsApp Business & Multilingual AI Replies
   app.post('/api/swk-one/communications/:id/ai-draft', async req => {
-    const b = body<{ lang?: 'en' | 'ar' | 'ru' | 'zh' | 'fr'; tone?: 'professional' | 'viewing_confirm' | 'offer_followup' }>(req)
-    return generateMultilingualAiDraft(idOf((req.params as any).id), b.lang || 'en', b.tone || 'professional')
+    const b = body<{ lang?: 'en' | 'ar' | 'ru' | 'zh' | 'fr'; language?: 'en' | 'ar' | 'ru' | 'zh' | 'fr'; tone?: 'professional' | 'viewing_confirm' | 'offer_followup' }>(req)
+    return generateMultilingualAiDraft(idOf((req.params as any).id), b.lang || b.language || 'en', b.tone || 'professional')
+  })
+  app.post('/api/swk-one/communications/ai-draft', async req => {
+    const b = body<{ comm_id: number; lang?: 'en' | 'ar' | 'ru' | 'zh' | 'fr'; language?: 'en' | 'ar' | 'ru' | 'zh' | 'fr'; tone?: 'professional' | 'viewing_confirm' | 'offer_followup' }>(req)
+    return generateMultilingualAiDraft(Number(b.comm_id || 1), b.lang || b.language || 'en', b.tone || 'professional')
   })
   app.post('/api/swk-one/communications/:id/reply', async req => {
     const b = body<{ message: string; language?: string }>(req)
@@ -161,22 +278,47 @@ export default async function (app: FastifyInstance) {
     const b = body<any>(req)
     return tx(() => escalateCustomerComplaint(b, req.ctx))
   })
+  app.post('/api/swk-one/communications/:id/escalate', async req => {
+    const b = body<any>(req)
+    return tx(() => escalateCustomerComplaint({ ...b, comm_id: idOf((req.params as any).id) }, req.ctx))
+  })
 
   // 10. HR Self-Service, Knowledge Assistant, Device Registration & Offline Sync
-  app.post('/api/swk-one/hr/leave', async req => {
+  const handleLeave = async (req: any) => {
     const b = body<any>(req)
     return tx(() => submitMobileLeaveRequest(b, req.ctx))
-  })
+  }
+  app.post('/api/swk-one/hr/leave', handleLeave)
+  app.post('/api/swk-one/hr/leave-request', handleLeave)
+
   app.post('/api/swk-one/knowledge/ask', async req => {
     const b = body<{ question: string }>(req)
     return askKnowledgeAssistant(b.question || '')
   })
-  app.post('/api/swk-one/devices/register', async req => {
+
+  const handleRegisterDevice = async (req: any) => {
     const b = body<any>(req)
-    return tx(() => registerMobileDevice(b, req.ctx))
-  })
+    const dev = tx(() => registerMobileDevice(b, req.ctx))
+    return { ok: true, device: { ...dev, trust_status: dev.status === 'Trusted' ? 'Enrolled' : dev.status } }
+  }
+  app.post('/api/swk-one/devices/register', handleRegisterDevice)
+  app.post('/api/swk-one/device/register', handleRegisterDevice)
+
   app.post('/api/swk-one/offline/sync', async req => {
-    const b = body<{ items: any[] }>(req)
-    return tx(() => syncOfflineQueue(Array.isArray(b.items) ? b.items : [], req.ctx))
+    const b = body<{ items: any[]; device_id?: string }>(req)
+    const normalizedItems = (Array.isArray(b.items) ? b.items : []).map(i => ({
+      idempotency_key: i.idempotency_key || i.client_queue_id,
+      action_type: i.action_type,
+      payload: { ...(i.payload || {}), device_id: i.payload?.device_id || b.device_id },
+      queued_at: i.queued_at,
+    }))
+    const res = tx(() => syncOfflineQueue(normalizedItems, req.ctx))
+    return {
+      ...res,
+      results: res.results.map(r => ({
+        ...r,
+        status: r.status === 'duplicate_skipped' ? 'already_synced' : r.status,
+      })),
+    }
   })
 }

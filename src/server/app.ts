@@ -54,7 +54,19 @@ export async function buildApp(): Promise<FastifyInstance> {
   app.decorateRequest('ctx', null as any)
 
   // Demo sessions (cookie prefix "demo.") and demo tracking links run against the isolated demo database.
-  app.addHook('onRequest', (req: FastifyRequest, _reply, done) => {
+  app.addHook('onRequest', (req: FastifyRequest, reply, done) => {
+    const origin = req.headers.origin
+    if (origin && (/^https?:\/\/localhost(:\d+)?$/i.test(origin) || /^capacitor:\/\/localhost$/i.test(origin) || req.headers['x-swk-client'] === 'android')) {
+      reply.header('Access-Control-Allow-Origin', origin)
+      reply.header('Access-Control-Allow-Credentials', 'true')
+      reply.header('Access-Control-Allow-Methods', 'GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS')
+      reply.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-SWK-Client, X-SWK-Session')
+      reply.header('Vary', 'Origin')
+      if (req.method === 'OPTIONS') {
+        reply.status(204).send()
+        return
+      }
+    }
     const raw = req.cookies?.[COOKIE]
     const mobSession = typeof req.headers['x-swk-session'] === 'string' ? req.headers['x-swk-session'].trim() : undefined
     const url = req.url.split('?')[0]

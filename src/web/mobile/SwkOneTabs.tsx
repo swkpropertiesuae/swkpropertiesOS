@@ -1,13 +1,33 @@
 import { useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 import {
-  MapPin, Navigation, ShieldAlert, CheckCircle2, Clock, PhoneCall, MessageSquare, Building2, Camera,
-  KeyRound, FileCheck2, Sparkles, Scale, HandCoins, Percent, Plane, BookOpen, Award, AlertTriangle,
-  Send, Languages, UserCheck, Eye, Lock, Check, Plus, RefreshCw, ArrowUpRight, Star, Briefcase,
+  MapPin, Navigation, ShieldAlert, CheckCircle2, PhoneCall, MessageSquare, Building2, Camera,
+  KeyRound, FileCheck2, Sparkles, Scale, HandCoins, Percent, Plane, BookOpen, AlertTriangle,
+  Send, Languages, UserCheck, Eye, Radio, ScanLine, ShieldCheck, IdCard,
 } from 'lucide-react'
+import { AnimatedNumber } from '../swk/ui'
+import {
+  SWK_BRAND,
+  resolvePropertyPhoto,
+  resolveCommunityMedia,
+  resolveDeveloperBrand,
+} from './SwkOneBrandAssets'
 import { openAndroidMapsNavigation } from './native-bridge'
 
+const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1]
+
+const listStagger = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.055 } },
+}
+
+const itemRise = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.42, ease: EASE } },
+}
+
 /**
- * TAB 2: Field Duty, Safety, Location Privacy & Verified Viewing Journey (Features 17–20, 40–50)
+ * TAB 2: Field Duty, Live Radar, Safety, Location Privacy & Verified Viewing Journey (Features 17–20, 40–50)
  */
 export function DutyAndViewingsTab({
   data,
@@ -48,339 +68,547 @@ export function DutyAndViewingsTab({
     setObjections(prev => (prev.includes(obj) ? prev.filter(x => x !== obj) : [...prev, obj]))
   }
 
+  const activeCommunity = resolveCommunityMedia(activeSession?.assigned_location || dutyLoc, 2)
+
   return (
-    <div className="space-y-4">
-      {/* 1. Explicit Start / End Field Duty Card (Foreground Service Control) */}
-      <div className="rounded-2xl bg-white border border-[#e6ebe7] p-4 shadow-xs space-y-3">
+    <motion.div variants={listStagger} initial="hidden" animate="show" className="space-y-4">
+      {/* 1. Explicit Start / End Field Duty Card + Animated Live GPS Radar Visualizer */}
+      <motion.div
+        variants={itemRise}
+        className="rounded-3xl bg-white border border-[#e7e1d4] overflow-hidden shadow-[0_14px_34px_-22px_rgba(11,26,51,0.32)]"
+      >
+        {/* Interactive Live Dubai GPS Telemetry & Radar Header */}
+        <div className="relative h-44 bg-[#08142a] text-white overflow-hidden p-4 flex flex-col justify-between">
+          <div
+            className="absolute inset-0 bg-cover bg-center opacity-28"
+            style={{ backgroundImage: `url(${activeCommunity.image})` }}
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                'radial-gradient(circle at 78% 50%, rgba(79,211,154,0.18), transparent 55%), linear-gradient(180deg, rgba(8,20,42,0.72) 0%, rgba(11,26,51,0.95) 100%)',
+            }}
+          />
+          <img
+            src={SWK_BRAND.skylineFront}
+            alt=""
+            aria-hidden
+            className="absolute bottom-0 left-0 right-0 w-full h-14 object-cover opacity-15 pointer-events-none"
+          />
+
+          {/* Animated SVG Radar Rings on Right Side */}
+          <div className="absolute right-5 top-1/2 -translate-y-1/2 w-28 h-28 pointer-events-none flex items-center justify-center">
+            <svg width={112} height={112} viewBox="0 0 112 112" className="overflow-visible">
+              <circle
+                cx={56}
+                cy={56}
+                r={48}
+                fill="none"
+                stroke={activeSession ? 'rgba(79,211,154,0.28)' : 'rgba(201,169,110,0.22)'}
+                strokeWidth={1}
+                strokeDasharray="3 3"
+              />
+              <circle
+                cx={56}
+                cy={56}
+                r={32}
+                fill="none"
+                stroke={activeSession ? 'rgba(79,211,154,0.4)' : 'rgba(201,169,110,0.3)'}
+                strokeWidth={1}
+              />
+              {activeSession && (
+                <>
+                  <motion.circle
+                    cx={56}
+                    cy={56}
+                    r={14}
+                    fill="none"
+                    stroke="#4fd39a"
+                    strokeWidth={2}
+                    initial={{ r: 10, opacity: 0.9 }}
+                    animate={{ r: 50, opacity: 0 }}
+                    transition={{ duration: 2.2, repeat: Infinity, ease: 'easeOut' }}
+                  />
+                  <motion.circle
+                    cx={56}
+                    cy={56}
+                    r={14}
+                    fill="none"
+                    stroke="#c9a96e"
+                    strokeWidth={1.5}
+                    initial={{ r: 10, opacity: 0.7 }}
+                    animate={{ r: 46, opacity: 0 }}
+                    transition={{ duration: 2.2, delay: 0.9, repeat: Infinity, ease: 'easeOut' }}
+                  />
+                </>
+              )}
+              <circle
+                cx={56}
+                cy={56}
+                r={6}
+                fill={activeSession ? '#4fd39a' : '#c9a96e'}
+              />
+            </svg>
+          </div>
+
+          <div className="relative z-10 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span
+                className={`w-2.5 h-2.5 rounded-full ${
+                  activeSession ? 'bg-[#4fd39a] animate-ping' : 'bg-[#c9a96e]'
+                }`}
+              />
+              <span className="text-[10.5px] uppercase tracking-[0.18em] font-bold text-[#dcc8a2]">
+                Android Foreground Location Service
+              </span>
+            </div>
+            <span
+              className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                activeSession
+                  ? 'bg-[#1f9d6b]/30 border-[#4fd39a]/50 text-[#8fe3bd]'
+                  : 'bg-white/10 border-white/20 text-[#f3ead8]'
+              }`}
+            >
+              {activeSession ? activeSession.status : 'Off Duty · Private'}
+            </span>
+          </div>
+
+          <div className="relative z-10 pr-24">
+            <h3 className="font-display font-bold text-base text-white leading-snug">
+              {activeSession
+                ? activeSession.assigned_location
+                : 'Authorised Field Duty & Viewing Telemetry'}
+            </h3>
+            <p className="text-[11px] text-[#c8d3e6] mt-1 font-mono">
+              {activeSession
+                ? `Session ${activeSession.session_no} · GPS ${activeSession.last_lat ?? activeCommunity.lat}°N, ${activeSession.last_lng ?? activeCommunity.lng}°E (±${activeSession.gps_accuracy_m || 8}m)`
+                : `Sector: ${activeCommunity.name} (${activeCommunity.lat}°N, ${activeCommunity.lng}°E) · Zero Off-Duty Tracking`}
+            </p>
+          </div>
+        </div>
+
+        {/* Controls Body */}
+        <div className="p-4 space-y-3">
+          {activeSession ? (
+            <div className="p-3.5 rounded-2xl bg-[#fbf8f2] border border-[#e3d1ad] space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-[#0b1a33] flex items-center gap-1.5">
+                  <Radio size={14} className="text-[#1f9d6b]" />
+                  Persistent Android Notification Active
+                </span>
+                <span className="text-[10.5px] font-semibold text-[#9a7a42]">
+                  Batched Low-Battery Mode
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => void onSendLocationBatch(activeSession.id)}
+                  className="py-2.5 px-2.5 rounded-xl bg-white text-[#14305c] border border-[#d9d1c1] hover:border-[#c9a96e] text-xs font-bold cursor-pointer shadow-2xs"
+                >
+                  Sync GPS Batch
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => void onSafetyCheckIn(activeSession.id)}
+                  className="py-2.5 px-2.5 rounded-xl bg-[#e3f4ec] text-[#157a52] border border-[#b5e2cd] text-xs font-bold cursor-pointer"
+                >
+                  ✓ I Am Safe
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => void onEndDuty(activeSession.id, 'Completed scheduled field duty')}
+                  className="py-2.5 px-2.5 rounded-xl bg-[#0b1a33] text-[#f3ead8] text-xs font-bold border-0 cursor-pointer"
+                >
+                  End Duty
+                </motion.button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              <p className="text-xs text-[#3a4660]">
+                Location is <b className="text-[#0b1a33]">never</b> shared when off duty. Starting Field Duty launches the Android Foreground Service with a visible status notification until you end duty.
+              </p>
+              <input
+                type="text"
+                value={dutyLoc}
+                onChange={e => setDutyLoc(e.target.value)}
+                placeholder="Assigned community / building (e.g. Dubai Marina Gate 1)"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-xs text-[#0b1a33] focus:outline-none focus:border-[#c9a96e]"
+              />
+              {viewings.length > 0 && (
+                <select
+                  value={selectedViewingId}
+                  onChange={e => {
+                    const id = e.target.value ? Number(e.target.value) : ''
+                    setSelectedViewingId(id)
+                    const v = viewings.find(x => x.id === id)
+                    if (v) setDutyLoc(v.property_title || v.meeting_point || dutyLoc)
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-xs text-[#0b1a33]"
+                >
+                  <option value="">Link to an assigned viewing appointment (optional)…</option>
+                  {viewings.map(v => (
+                    <option key={v.id} value={v.id}>
+                      {v.viewing_no} – {v.property_title} ({String(v.scheduled_at || '').slice(11, 16)})
+                    </option>
+                  ))}
+                </select>
+              )}
+              <motion.button
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => {
+                  const v = viewings.find(x => x.id === selectedViewingId)
+                  void onStartDuty(dutyLoc, v?.id ?? null, v?.property_id ?? null)
+                }}
+                className="w-full py-3 rounded-2xl text-[#0b1a33] font-bold text-xs border-0 cursor-pointer flex items-center justify-center gap-2 shadow-md"
+                style={{ background: 'linear-gradient(135deg, #f1e3c2 0%, #c9a96e 55%, #b08d52 100%)' }}
+              >
+                <MapPin size={15} /> Start Approved Field Duty (Enable Foreground Service)
+              </motion.button>
+            </div>
+          )}
+
+          {/* Emergency SOS Bar (Feature #46) */}
+          <div className="pt-2.5 border-t border-[#e7e1d4] flex items-center justify-between">
+            <span className="text-[11px] font-medium text-[#6b7488]">
+              Lone-Worker Field Safety & Emergency Escalation
+            </span>
+            <motion.button
+              whileTap={{ scale: 0.94 }}
+              onClick={() => setShowSosBox(s => !s)}
+              className="px-3 py-1.5 rounded-full bg-[#fbe4dd] text-[#a33a22] font-bold text-xs border border-[#f2bcc3] cursor-pointer flex items-center gap-1"
+            >
+              <ShieldAlert size={13} /> Emergency SOS
+            </motion.button>
+          </div>
+
+          <AnimatePresence>
+            {showSosBox && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="p-3 rounded-2xl bg-[#fbe4dd]/70 border border-[#c4492f]/40 space-y-2 mt-1">
+                  <input
+                    type="text"
+                    value={sosReason}
+                    onChange={e => setSosReason(e.target.value)}
+                    placeholder="Describe emergency or safety concern (alerts management immediately)…"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-[#c4492f]/40 text-xs text-[#0b1a33]"
+                  />
+                  <motion.button
+                    whileTap={{ scale: 0.96 }}
+                    onClick={async () => {
+                      await onTriggerSos(sosReason || 'Urgent field safety assistance needed')
+                      setShowSosBox(false)
+                      setSosReason('')
+                    }}
+                    className="w-full py-2.5 rounded-xl bg-[#c4492f] text-white font-bold text-xs border-0 cursor-pointer shadow-sm"
+                  >
+                    🚨 Dispatch Immediate SOS Alert + Live Coordinates
+                  </motion.button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </motion.div>
+
+      {/* 2. Scheduled Route Overview & Verified Viewing Journey with High-Res Property Photography */}
+      <motion.div
+        variants={itemRise}
+        className="rounded-3xl bg-white border border-[#e7e1d4] p-4 shadow-[0_14px_34px_-22px_rgba(11,26,51,0.32)] space-y-3"
+      >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className={`w-2.5 h-2.5 rounded-full ${activeSession ? 'bg-[#007b52] animate-ping' : 'bg-[#53655b]'}`} />
-            <h3 className="font-bold font-display text-sm text-[#161d1a]">
-              Android Field Duty & Foreground Location Service
+          <div>
+            <div className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#9a7a42]">
+              Verified Field Route
+            </div>
+            <h3 className="font-bold font-display text-sm text-[#0b1a33]">
+              Viewing Journey & Daily Route ({viewings.length})
             </h3>
           </div>
-          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-            activeSession ? 'bg-[#dcf1e6] text-[#025e3d]' : 'bg-[#f1f6f3] text-[#53655b]'
-          }`}>
-            {activeSession ? activeSession.status : 'Off Duty (No Tracking)'}
+          <span className="px-2.5 py-1 rounded-full bg-[#f3ead8] text-[#7d5f2c] text-[10.5px] font-bold">
+            GPS Verified
           </span>
         </div>
 
-        {activeSession ? (
-          <div className="p-3.5 rounded-2xl bg-[#edf5f0] border border-[#007b52]/30 space-y-3">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <div className="text-xs font-bold text-[#025e3d]">
-                  Active Session: {activeSession.session_no} · {activeSession.assigned_location}
-                </div>
-                <div className="text-[11px] text-[#3f4f47] mt-0.5">
-                  Persistent Android Notification active · Last coords: {activeSession.last_lat}, {activeSession.last_lng} (±{activeSession.gps_accuracy_m || 8}m)
-                </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                onClick={() => void onSendLocationBatch(activeSession.id)}
-                className="py-2 px-2.5 rounded-full bg-white text-[#007b52] border border-[#007b52]/30 text-xs font-semibold cursor-pointer"
-              >
-                Send Batch Update
-              </button>
-              <button
-                onClick={() => void onSafetyCheckIn(activeSession.id)}
-                className="py-2 px-2.5 rounded-full bg-white text-[#161d1a] border border-[#cbd6ce] text-xs font-semibold cursor-pointer"
-              >
-                ✓ I Am Safe
-              </button>
-              <button
-                onClick={() => void onEndDuty(activeSession.id, 'Completed scheduled field duty')}
-                className="py-2 px-2.5 rounded-full bg-[#161d1a] text-white text-xs font-semibold border-0 cursor-pointer"
-              >
-                End Field Duty
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-2.5">
-            <p className="text-xs text-[#53655b]">
-              Location is <b>never</b> shared when off duty. Starting Field Duty launches the Android Foreground Service with a visible notification until you end duty.
-            </p>
-            <input
-              type="text"
-              value={dutyLoc}
-              onChange={e => setDutyLoc(e.target.value)}
-              placeholder="Assigned community / building (e.g. Dubai Marina Gate 1)"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-[#cbd6ce] text-xs"
-            />
-            {viewings.length > 0 && (
-              <select
-                value={selectedViewingId}
-                onChange={e => {
-                  const id = e.target.value ? Number(e.target.value) : ''
-                  setSelectedViewingId(id)
-                  const v = viewings.find(x => x.id === id)
-                  if (v) setDutyLoc(v.property_title || v.meeting_point || dutyLoc)
-                }}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-[#cbd6ce] text-xs bg-white"
-              >
-                <option value="">Link to an assigned viewing appointment (optional)…</option>
-                {viewings.map(v => (
-                  <option key={v.id} value={v.id}>
-                    {v.viewing_no} – {v.property_title} ({String(v.scheduled_at || '').slice(11, 16)})
-                  </option>
-                ))}
-              </select>
-            )}
-            <button
-              onClick={() => {
-                const v = viewings.find(x => x.id === selectedViewingId)
-                void onStartDuty(dutyLoc, v?.id ?? null, v?.property_id ?? null)
-              }}
-              className="w-full py-3 rounded-full bg-[#007b52] hover:bg-[#025e3d] text-white font-bold text-xs border-0 cursor-pointer flex items-center justify-center gap-2"
-            >
-              <MapPin size={15} /> Start Approved Field Duty (Enable Foreground Service)
-            </button>
-          </div>
-        )}
-
-        {/* Emergency SOS Bar (Feature #46) */}
-        <div className="pt-2 border-t border-[#e6ebe7] flex items-center justify-between">
-          <span className="text-[11px] text-[#53655b]">Field Safety & Emergency Escalation (46–47)</span>
-          <button
-            onClick={() => setShowSosBox(s => !s)}
-            className="px-3 py-1.5 rounded-full bg-[#fbe1e4] text-[#c32135] font-bold text-xs border-0 cursor-pointer flex items-center gap-1"
-          >
-            <ShieldAlert size={13} /> Emergency SOS
-          </button>
-        </div>
-        {showSosBox && (
-          <div className="p-3 rounded-xl bg-[#fbe1e4]/60 border border-[#c32135]/40 space-y-2">
-            <input
-              type="text"
-              value={sosReason}
-              onChange={e => setSosReason(e.target.value)}
-              placeholder="Describe emergency or safety concern (alerts management immediately)…"
-              className="w-full px-3 py-2 rounded-lg bg-white border border-[#c32135]/40 text-xs"
-            />
-            <button
-              onClick={async () => {
-                await onTriggerSos(sosReason || 'Urgent field safety assistance needed')
-                setShowSosBox(false)
-                setSosReason('')
-              }}
-              className="w-full py-2.5 rounded-full bg-[#c32135] text-white font-bold text-xs border-0 cursor-pointer"
-            >
-              🚨 Dispatch Immediate SOS Alert + Live Coordinates
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* 2. Scheduled Route Overview & Verified Viewing Journey (Features 17–20, 41–45) */}
-      <div className="rounded-2xl bg-white border border-[#e6ebe7] p-4 shadow-xs space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-bold font-display text-sm text-[#161d1a]">
-              Verified Viewing Journey & Daily Route ({viewings.length})
-            </h3>
-            <p className="text-[11px] text-[#53655b]">
-              Appointment → Maps Navigation → GPS Arrival → Client Feedback → CRM Follow-up
-            </p>
-          </div>
-        </div>
-
         {viewings.length === 0 ? (
-          <div className="p-6 rounded-xl bg-[#f1f6f3] text-center text-xs text-[#53655b]">
-            No viewings scheduled yet. Tap "Initialize Field Workspace" on the Command tab or book a viewing in CRM.
+          <div className="p-6 rounded-2xl bg-[#fbf8f2] border border-[#efe9dc] text-center space-y-2">
+            <img src={SWK_BRAND.logoInk} alt="" className="h-7 w-auto mx-auto opacity-30" />
+            <div className="text-xs font-bold text-[#0b1a33]">No viewings scheduled yet today</div>
+            <p className="text-[11px] text-[#6b7488]">
+              Tap &ldquo;Populate Live Dubai Field Workspace Data&rdquo; on the Command tab or schedule a viewing in CRM.
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
-            {viewings.map((v, idx) => (
-              <div key={v.id} className="p-3.5 rounded-2xl bg-[#f1f6f3] border border-[#e6ebe7] space-y-2.5">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[#007b52] text-[10px] font-bold border border-[#cbd6ce]">
-                      Stop #{idx + 1} · {v.viewing_no}
-                    </span>
-                    <div className="font-bold text-sm text-[#161d1a] mt-1">{v.property_title || `Property #${v.property_id}`}</div>
-                    <div className="text-xs text-[#53655b]">
-                      Time: <b>{String(v.scheduled_at || '').replace('T', ' ')}</b> · Meet: {v.meeting_point || 'Main Lobby'}
-                    </div>
-                  </div>
-                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                    v.status === 'Completed'
-                      ? 'bg-[#dcf1e6] text-[#025e3d]'
-                      : v.status === 'No-Show'
-                        ? 'bg-[#fbe1e4] text-[#c32135]'
-                        : 'bg-[#dfecfa] text-[#15526b]'
-                  }`}>
-                    {v.status}
-                  </span>
-                </div>
-
-                {v.feedback && (
-                  <div className="p-2 rounded-xl bg-white text-[11px] text-[#3f4f47] border border-[#e6ebe7]">
-                    <b>Outcome:</b> {v.feedback}
-                  </div>
-                )}
-
-                {/* Action buttons for Viewing Journey */}
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  <button
-                    onClick={() => openAndroidMapsNavigation(null, null, v.property_title || v.meeting_point)}
-                    className="px-3 py-1.5 rounded-full bg-white text-[#161d1a] border border-[#cbd6ce] text-[11px] font-semibold cursor-pointer flex items-center gap-1"
-                  >
-                    <Navigation size={12} className="text-[#007b52]" /> Navigate (Maps)
-                  </button>
-                  <button
-                    onClick={() => void onViewingArrive(v.id)}
-                    className="px-3 py-1.5 rounded-full bg-[#007b52] text-white text-[11px] font-semibold border-0 cursor-pointer flex items-center gap-1"
-                  >
-                    <MapPin size={12} /> Confirm Arrival
-                  </button>
-                  <button
-                    onClick={() => setFeedbackViewingId(feedbackViewingId === v.id ? null : v.id)}
-                    className="px-3 py-1.5 rounded-full bg-[#161d1a] text-white text-[11px] font-semibold border-0 cursor-pointer"
-                  >
-                    Checkout & Feedback
-                  </button>
-                  <button
-                    onClick={() => void onViewingEvent(v.id, 'client_confirmed', 'Client confirmed via WhatsApp')}
-                    className="px-2.5 py-1.5 rounded-full bg-white text-[#3f4f47] border border-[#cbd6ce] text-[11px] cursor-pointer"
-                  >
-                    Client Confirmed
-                  </button>
-                  <button
-                    onClick={() => void onViewingEvent(v.id, 'late_notice', '15 min traffic delay on SZR')}
-                    className="px-2.5 py-1.5 rounded-full bg-white text-[#8c4329] border border-[#cbd6ce] text-[11px] cursor-pointer"
-                  >
-                    Send 15m Delay Alert
-                  </button>
-                  <button
-                    onClick={() => void onViewingEvent(v.id, 'no_show', 'Client did not attend; GPS arrival logged')}
-                    className="px-2.5 py-1.5 rounded-full bg-white text-[#c32135] border border-[#cbd6ce] text-[11px] cursor-pointer"
-                  >
-                    Log Client No-Show
-                  </button>
-                </div>
-
-                {/* Structured Client Feedback Drawer (Feature #20) */}
-                {feedbackViewingId === v.id && (
-                  <div className="p-3 rounded-xl bg-white border border-[#007b52] space-y-2.5 mt-2">
-                    <div className="text-xs font-bold text-[#161d1a]">Record Client Viewing Feedback & Objections</div>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div>
-                        <label className="block text-[10px] font-semibold text-[#53655b]">Client Interest (1–10)</label>
-                        <input
-                          type="number"
-                          min={1}
-                          max={10}
-                          value={interest}
-                          onChange={e => setInterest(Number(e.target.value))}
-                          className="w-full px-2.5 py-1.5 rounded-lg border border-[#cbd6ce] text-xs"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-semibold text-[#53655b]">Client Decision</label>
-                        <select
-                          value={decision}
-                          onChange={e => setDecision(e.target.value as any)}
-                          className="w-full px-2.5 py-1.5 rounded-lg border border-[#cbd6ce] text-xs bg-white"
-                        >
-                          <option value="Make Offer">Ready to Make Offer</option>
-                          <option value="Second Viewing">Request Second Viewing</option>
-                          <option value="Send Alternatives">Send Verified Alternatives</option>
-                          <option value="Not Interested">Not Interested</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] font-semibold text-[#53655b] mb-1">Client Objections (Tap to tag)</div>
-                      <div className="flex flex-wrap gap-1">
-                        {['Asking Price High', 'Service Charges', 'Floor / View', 'Kitchen Layout', 'Needs Mortgage', 'Handover Date'].map(obj => (
-                          <button
-                            key={obj}
-                            type="button"
-                            onClick={() => toggleObjection(obj)}
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border cursor-pointer ${
-                              objections.includes(obj)
-                                ? 'bg-[#007b52] text-white border-[#007b52]'
-                                : 'bg-[#f1f6f3] text-[#3f4f47] border-[#cbd6ce]'
-                            }`}
-                          >
-                            {obj}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <textarea
-                      rows={2}
-                      value={feedbackNotes}
-                      onChange={e => setFeedbackNotes(e.target.value)}
-                      placeholder="Client preferences, price feedback & next follow-up step…"
-                      className="w-full px-3 py-2 rounded-lg border border-[#cbd6ce] text-xs"
+            {viewings.map((v, idx) => {
+              const photoUrl = resolvePropertyPhoto(v.property_title || v.meeting_point, idx)
+              const comm = resolveCommunityMedia(v.property_title || v.meeting_point, idx)
+              return (
+                <motion.div
+                  key={v.id}
+                  layout
+                  className="rounded-2xl bg-[#fbf8f2] border border-[#e7e1d4] overflow-hidden shadow-2xs"
+                >
+                  {/* Property Visual Banner */}
+                  <div className="relative h-28 bg-[#0b1a33] overflow-hidden">
+                    <div
+                      className="absolute inset-0 bg-cover bg-center"
+                      style={{ backgroundImage: `url(${photoUrl})` }}
                     />
-                    <button
-                      onClick={async () => {
-                        await onViewingFeedback(v.id, {
-                          interest_level: interest,
-                          decision,
-                          objections,
-                          feedback: feedbackNotes || 'Client toured unit and reviewed floor plan.',
-                        })
-                        setFeedbackViewingId(null)
-                        setFeedbackNotes('')
-                        setObjections([])
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        background:
+                          'linear-gradient(180deg, rgba(11,26,51,0.2) 0%, rgba(11,26,51,0.88) 100%)',
                       }}
-                      className="w-full py-2 rounded-full bg-[#007b52] text-white font-bold text-xs border-0 cursor-pointer"
-                    >
-                      Save Outcome & Create CRM Follow-up Task
-                    </button>
+                    />
+                    <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between">
+                      <span className="px-2.5 py-0.5 rounded-full bg-[#0b1a33]/85 backdrop-blur-xs text-[#f3ead8] text-[10px] font-bold border border-[#c9a96e]/40">
+                        Stop #{idx + 1} · {v.viewing_no}
+                      </span>
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                          v.status === 'Completed'
+                            ? 'bg-[#1f9d6b] text-white'
+                            : v.status === 'No-Show'
+                              ? 'bg-[#c4492f] text-white'
+                              : 'bg-[#c9a96e] text-[#0b1a33]'
+                        }`}
+                      >
+                        {v.status}
+                      </span>
+                    </div>
+                    <div className="absolute bottom-2 left-3 right-3 text-white">
+                      <div className="font-bold font-display text-sm truncate">
+                        {v.property_title || `Property #${v.property_id}`}
+                      </div>
+                      <div className="text-[11px] text-[#dcc8a2] flex items-center justify-between">
+                        <span>
+                          {String(v.scheduled_at || '').replace('T', ' ')} · {v.meeting_point || 'Main Lobby'}
+                        </span>
+                        <span className="text-[10px] text-white/80">{comm.name}</span>
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
-            ))}
+
+                  {/* Card Actions & Feedback */}
+                  <div className="p-3.5 space-y-2.5">
+                    {v.feedback && (
+                      <div className="p-2.5 rounded-xl bg-white text-[11px] text-[#3a4660] border border-[#e7e1d4]">
+                        <b className="text-[#0b1a33]">Recorded Outcome:</b> {v.feedback}
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-1.5">
+                      <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => openAndroidMapsNavigation(comm.lat, comm.lng, v.property_title || v.meeting_point)}
+                        className="px-3 py-1.5 rounded-full bg-white text-[#0b1a33] border border-[#d9d1c1] hover:border-[#c9a96e] text-[11px] font-bold cursor-pointer flex items-center gap-1"
+                      >
+                        <Navigation size={12} className="text-[#9a7a42]" /> Navigate (Maps)
+                      </motion.button>
+                      <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => void onViewingArrive(v.id)}
+                        className="px-3 py-1.5 rounded-full text-white text-[11px] font-bold border-0 cursor-pointer flex items-center gap-1 shadow-2xs"
+                        style={{ background: 'linear-gradient(135deg, #1b3a6b, #0b1a33)' }}
+                      >
+                        <MapPin size={12} className="text-[#c9a96e]" /> Confirm Arrival
+                      </motion.button>
+                      <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setFeedbackViewingId(feedbackViewingId === v.id ? null : v.id)}
+                        className="px-3 py-1.5 rounded-full text-[#0b1a33] text-[11px] font-bold border-0 cursor-pointer"
+                        style={{ background: 'linear-gradient(135deg, #f1e3c2, #c9a96e)' }}
+                      >
+                        Checkout & Feedback
+                      </motion.button>
+                      <button
+                        onClick={() => void onViewingEvent(v.id, 'client_confirmed', 'Client confirmed via WhatsApp')}
+                        className="px-2.5 py-1.5 rounded-full bg-white text-[#3a4660] border border-[#d9d1c1] text-[11px] font-semibold cursor-pointer"
+                      >
+                        Client Confirmed
+                      </button>
+                      <button
+                        onClick={() => void onViewingEvent(v.id, 'late_notice', '15 min traffic delay on SZR')}
+                        className="px-2.5 py-1.5 rounded-full bg-white text-[#9a7a42] border border-[#e3d1ad] text-[11px] font-semibold cursor-pointer"
+                      >
+                        15m Delay Alert
+                      </button>
+                      <button
+                        onClick={() => void onViewingEvent(v.id, 'no_show', 'Client did not attend; GPS arrival logged')}
+                        className="px-2.5 py-1.5 rounded-full bg-white text-[#c4492f] border border-[#f2bcc3] text-[11px] font-semibold cursor-pointer"
+                      >
+                        Log No-Show
+                      </button>
+                    </div>
+
+                    {/* Structured Client Feedback Drawer (Feature #20) */}
+                    <AnimatePresence>
+                      {feedbackViewingId === v.id && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="p-3.5 rounded-2xl bg-white border border-[#c9a96e] space-y-2.5 mt-1">
+                            <div className="text-xs font-bold font-display text-[#0b1a33]">
+                              Record Client Viewing Feedback & Objections
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div>
+                                <label className="block text-[10px] font-semibold text-[#6b7488] mb-1">
+                                  Client Interest (1–10)
+                                </label>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  max={10}
+                                  value={interest}
+                                  onChange={e => setInterest(Number(e.target.value))}
+                                  className="w-full px-2.5 py-1.5 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-xs font-bold text-[#0b1a33]"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-semibold text-[#6b7488] mb-1">
+                                  Client Decision
+                                </label>
+                                <select
+                                  value={decision}
+                                  onChange={e => setDecision(e.target.value as any)}
+                                  className="w-full px-2.5 py-1.5 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-xs font-semibold text-[#0b1a33]"
+                                >
+                                  <option value="Make Offer">Ready to Make Offer</option>
+                                  <option value="Second Viewing">Request Second Viewing</option>
+                                  <option value="Send Alternatives">Send Verified Alternatives</option>
+                                  <option value="Not Interested">Not Interested</option>
+                                </select>
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] font-semibold text-[#6b7488] mb-1">
+                                Client Objections (Tap to tag)
+                              </div>
+                              <div className="flex flex-wrap gap-1">
+                                {[
+                                  'Asking Price High',
+                                  'Service Charges',
+                                  'Floor / View',
+                                  'Kitchen Layout',
+                                  'Needs Mortgage',
+                                  'Handover Date',
+                                ].map(obj => (
+                                  <button
+                                    key={obj}
+                                    type="button"
+                                    onClick={() => toggleObjection(obj)}
+                                    className={`px-2.5 py-1 rounded-full text-[10px] font-bold border cursor-pointer transition ${
+                                      objections.includes(obj)
+                                        ? 'bg-[#0b1a33] text-[#f3ead8] border-[#0b1a33]'
+                                        : 'bg-[#fbf8f2] text-[#3a4660] border-[#d9d1c1]'
+                                    }`}
+                                  >
+                                    {obj}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                            <textarea
+                              rows={2}
+                              value={feedbackNotes}
+                              onChange={e => setFeedbackNotes(e.target.value)}
+                              placeholder="Client preferences, price feedback & next follow-up step…"
+                              className="w-full px-3 py-2 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-xs text-[#0b1a33]"
+                            />
+                            <motion.button
+                              whileTap={{ scale: 0.97 }}
+                              onClick={async () => {
+                                await onViewingFeedback(v.id, {
+                                  interest_level: interest,
+                                  decision,
+                                  objections,
+                                  feedback: feedbackNotes || 'Client toured unit and reviewed floor plan.',
+                                })
+                                setFeedbackViewingId(null)
+                                setFeedbackNotes('')
+                                setObjections([])
+                              }}
+                              className="w-full py-2.5 rounded-xl text-[#0b1a33] font-bold text-xs border-0 cursor-pointer"
+                              style={{ background: 'linear-gradient(135deg, #f1e3c2, #c9a96e)' }}
+                            >
+                              Save Outcome & Create CRM Follow-up Task
+                            </motion.button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </motion.div>
+              )
+            })}
           </div>
         )}
-      </div>
+      </motion.div>
 
       {/* 3. Employee Location Privacy Dashboard (Feature #50) */}
-      <div className="rounded-2xl bg-white border border-[#e6ebe7] p-4 shadow-xs space-y-2.5">
+      <motion.div
+        variants={itemRise}
+        className="rounded-3xl bg-white border border-[#e7e1d4] p-4 shadow-xs space-y-2.5"
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Eye size={16} className="text-[#007b52]" />
-            <h3 className="font-bold font-display text-sm text-[#161d1a]">
-              Location Privacy Dashboard (Transparency Log)
+            <Eye size={16} className="text-[#9a7a42]" />
+            <h3 className="font-bold font-display text-sm text-[#0b1a33]">
+              Location Privacy Dashboard (Audit Log)
             </h3>
           </div>
-          <span className="text-[11px] font-semibold text-[#007b52]">Off-Hours Access Blocked</span>
+          <span className="px-2.5 py-0.5 rounded-full bg-[#e3f4ec] text-[#157a52] text-[10px] font-bold">
+            Off-Hours Blocked
+          </span>
         </div>
-        <p className="text-[11px] text-[#53655b]">
-          Every manager lookup of your field duty location is audited below. Lookups outside scheduled duty hours are automatically blocked.
+        <p className="text-[11px] text-[#6b7488]">
+          Every manager lookup of your field duty location is audited below. Lookups outside scheduled duty hours are automatically blocked by SWK OS.
         </p>
         {privacyLogs.length === 0 ? (
-          <div className="p-3 rounded-xl bg-[#f1f6f3] text-xs text-[#53655b]">
-            No manager location lookups recorded. Your off-duty coordinates are private.
+          <div className="p-3 rounded-2xl bg-[#fbf8f2] border border-[#efe9dc] text-xs text-[#6b7488]">
+            No manager location lookups recorded today. Your off-duty coordinates are strictly private.
           </div>
         ) : (
           <div className="space-y-1.5">
             {privacyLogs.slice(0, 6).map((log: any) => (
-              <div key={log.id} className="p-2.5 rounded-xl bg-[#f1f6f3] flex items-center justify-between text-xs">
+              <div
+                key={log.id}
+                className="p-2.5 rounded-2xl bg-[#fbf8f2] border border-[#efe9dc] flex items-center justify-between text-xs"
+              >
                 <div>
-                  <div className="font-semibold text-[#161d1a]">{log.access_outcome}</div>
-                  <div className="text-[10px] text-[#53655b]">{log.exception_reason || 'Standard active-duty coordination'}</div>
+                  <div className="font-bold text-[#0b1a33]">{log.access_outcome}</div>
+                  <div className="text-[10px] text-[#6b7488]">
+                    {log.exception_reason || 'Standard active-duty coordination'}
+                  </div>
                 </div>
-                <span className="text-[10px] font-mono text-[#53655b]">{String(log.accessed_at || '').slice(0, 16)}</span>
+                <span className="text-[10px] font-mono text-[#6b7488]">
+                  {String(log.accessed_at || '').slice(0, 16)}
+                </span>
               </div>
             ))}
           </div>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }
 
 /**
- * TAB 3: Inventory Acquisition, Camera OCR, Duplicate Guard, Key Handover & Developer NOC (Features 28–39)
+ * TAB 3: Inventory Acquisition, Animated Camera OCR, Duplicate Guard, Key Handover & Developer NOC (Features 28–39)
  */
 export function InventoryAndNocTab({
   data,
@@ -406,7 +634,7 @@ export function InventoryAndNocTab({
   const [buildingName, setBuildingName] = useState('')
   const [unitNo, setUnitNo] = useState('')
   const [propertyType, setPropertyType] = useState('Apartment')
-  const [purpose, setPurpose] = useState('Sale')
+  const [purpose] = useState('Sale')
   const [askingPrice, setAskingPrice] = useState('3450000')
   const [areaSqft, setAreaSqft] = useState('1485')
   const [bedrooms, setBedrooms] = useState('2')
@@ -414,16 +642,21 @@ export function InventoryAndNocTab({
   const [ownerPhone, setOwnerPhone] = useState('+971 50 ')
   const [formARef, setFormARef] = useState('')
   const [trakheesiNo, setTrakheesiNo] = useState('')
-  const [conditionNotes, setConditionNotes] = useState('AC tested, freshly painted, balcony view clear, keys verified.')
+  const [conditionNotes, setConditionNotes] = useState(
+    'AC tested, freshly painted, balcony view clear, keys verified.'
+  )
 
   const [dupResult, setDupResult] = useState<any>(null)
   const [ocrStatus, setOcrStatus] = useState<any>(null)
+  const [scanningDoc, setScanningDoc] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   // Key Vault form
   const [keyBuilding, setKeyBuilding] = useState('Marina Gate Tower 1')
   const [keyUnit, setKeyUnit] = useState('3402')
-  const [keyAction, setKeyAction] = useState<'Received from Owner' | 'Checked Out for Viewing' | 'Returned to Office Vault' | 'Handed to Buyer/Tenant'>('Checked Out for Viewing')
+  const [keyAction, setKeyAction] = useState<
+    'Received from Owner' | 'Checked Out for Viewing' | 'Returned to Office Vault' | 'Handed to Buyer/Tenant'
+  >('Checked Out for Viewing')
 
   const handleCheckDup = async (b: string, u: string) => {
     if (b.trim().length > 2 && u.trim().length > 0) {
@@ -435,83 +668,127 @@ export function InventoryAndNocTab({
   }
 
   const handleCameraOcr = async (docType: 'title_deed' | 'form_a' | 'passport') => {
-    const res = await onCameraExtract(docType, buildingName)
-    setOcrStatus(res)
-    if (res?.extracted) {
-      setBuildingName(res.extracted.building_name)
-      setUnitNo(res.extracted.unit_no)
-      setPropertyType(res.extracted.property_type)
-      setAskingPrice(String(res.extracted.asking_price))
-      setAreaSqft(String(res.extracted.area_sqft))
-      setBedrooms(String(res.extracted.bedrooms))
-      setOwnerName(res.extracted.owner_name)
-      setOwnerPhone(res.extracted.owner_phone)
-      setFormARef(res.extracted.source_permission_evidence)
-      setTrakheesiNo(res.extracted.trakheesi_permit_no)
-      await handleCheckDup(res.extracted.building_name, res.extracted.unit_no)
+    setScanningDoc(docType)
+    try {
+      const res = await onCameraExtract(docType, buildingName)
+      setOcrStatus(res)
+      if (res?.extracted) {
+        setBuildingName(res.extracted.building_name)
+        setUnitNo(res.extracted.unit_no)
+        setPropertyType(res.extracted.property_type)
+        setAskingPrice(String(res.extracted.asking_price))
+        setAreaSqft(String(res.extracted.area_sqft))
+        setBedrooms(String(res.extracted.bedrooms))
+        setOwnerName(res.extracted.owner_name)
+        setOwnerPhone(res.extracted.owner_phone)
+        setFormARef(res.extracted.source_permission_evidence)
+        setTrakheesiNo(res.extracted.trakheesi_permit_no)
+        await handleCheckDup(res.extracted.building_name, res.extracted.unit_no)
+      }
+    } finally {
+      setTimeout(() => setScanningDoc(null), 500)
     }
   }
 
   return (
-    <div className="space-y-4">
-      {/* 1. Quick Property Sourcing + Camera-Assisted Entry + Real-Time Duplicate Warning (Features 28–35) */}
-      <div className="rounded-2xl bg-white border border-[#e6ebe7] p-4 shadow-xs space-y-3">
+    <motion.div variants={listStagger} initial="hidden" animate="show" className="space-y-4">
+      {/* 1. Quick Property Sourcing + Animated Camera OCR + Real-Time Duplicate Warning */}
+      <motion.div
+        variants={itemRise}
+        className="rounded-3xl bg-white border border-[#e7e1d4] p-4 shadow-[0_14px_34px_-22px_rgba(11,26,51,0.32)] space-y-3.5"
+      >
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-bold font-display text-sm text-[#161d1a]">
+            <div className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#9a7a42]">
+              Field Inventory Acquisition
+            </div>
+            <h3 className="font-bold font-display text-sm text-[#0b1a33]">
               Quick Property Sourcing (Under 60 Seconds)
             </h3>
-            <p className="text-[11px] text-[#53655b]">
-              Camera OCR extraction · Duplicate unit guard · Owner Form A & Trakheesi check
-            </p>
           </div>
-          <Building2 size={18} className="text-[#007b52]" />
+          <div className="w-9 h-9 rounded-xl bg-[#f3ead8] text-[#7d5f2c] grid place-items-center">
+            <Building2 size={18} />
+          </div>
         </div>
 
-        {/* Camera-Assisted Document Scan Bar (Feature #29 & #35) */}
-        <div className="p-3 rounded-xl bg-[#edf5f0] border border-[#007b52]/25 space-y-2">
-          <div className="text-xs font-bold text-[#025e3d] flex items-center gap-1.5">
-            <Camera size={14} /> Camera-Assisted Entry & Image Quality Assistant
+        {/* Animated Camera-Assisted Document Scan Bar (Feature #29 & #35) */}
+        <div className="relative overflow-hidden p-3.5 rounded-2xl bg-[#0b1a33] text-white border border-[#c9a96e]/40 space-y-2.5">
+          {scanningDoc && (
+            <motion.div
+              className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-[#4fd39a] to-transparent z-20 pointer-events-none"
+              initial={{ top: 0 }}
+              animate={{ top: ['10%', '90%', '10%'] }}
+              transition={{ duration: 1.1, repeat: Infinity, ease: 'linear' }}
+            />
+          )}
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-bold text-[#f3ead8] flex items-center gap-1.5">
+              <Camera size={14} className="text-[#c9a96e]" />
+              Camera-Assisted DLD OCR & Image Sharpness AI
+            </div>
+            <ScanLine size={14} className={scanningDoc ? 'text-[#4fd39a] animate-spin' : 'text-[#c9a96e]'} />
           </div>
           <div className="flex flex-wrap gap-1.5">
-            <button
+            <motion.button
+              whileTap={{ scale: 0.95 }}
               type="button"
               onClick={() => void handleCameraOcr('title_deed')}
-              className="px-3 py-1.5 rounded-full bg-[#007b52] text-white text-[11px] font-semibold border-0 cursor-pointer"
+              className="px-3 py-1.5 rounded-full text-[#0b1a33] text-[11px] font-bold border-0 cursor-pointer"
+              style={{ background: 'linear-gradient(135deg, #f1e3c2, #c9a96e)' }}
             >
               📷 Scan Title Deed / Oqood
-            </button>
-            <button
+            </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
               type="button"
               onClick={() => void handleCameraOcr('form_a')}
-              className="px-3 py-1.5 rounded-full bg-white text-[#007b52] border border-[#007b52]/40 text-[11px] font-semibold cursor-pointer"
+              className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-[#f3ead8] border border-white/20 text-[11px] font-semibold cursor-pointer"
             >
               📄 Scan Signed Form A
-            </button>
-            <button
+            </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
               type="button"
               onClick={() => void handleCameraOcr('passport')}
-              className="px-3 py-1.5 rounded-full bg-white text-[#161d1a] border border-[#cbd6ce] text-[11px] font-semibold cursor-pointer"
+              className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/20 text-[11px] font-semibold cursor-pointer"
             >
               🪪 Scan Owner EID / Passport
-            </button>
+            </motion.button>
           </div>
           {ocrStatus && (
-            <div className="text-[11px] text-[#025e3d] bg-white/80 p-2 rounded-lg">
-              ✓ <b>{ocrStatus.image_quality_check?.verdict}</b> ({ocrStatus.image_quality_check?.resolution}, Sharpness {ocrStatus.image_quality_check?.sharpness_score}%)
-            </div>
+            <motion.div
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-[11px] text-[#8fe3bd] bg-white/10 p-2 rounded-xl border border-[#4fd39a]/30"
+            >
+              ✓ <b>{ocrStatus.image_quality_check?.verdict}</b> ({ocrStatus.image_quality_check?.resolution}, Sharpness{' '}
+              {ocrStatus.image_quality_check?.sharpness_score}%)
+            </motion.div>
           )}
         </div>
 
         {/* Duplicate Warning Banner (Feature #30) */}
-        {dupResult?.duplicate && (
-          <div className="p-3 rounded-xl bg-[#f6e9c3] border border-[#8c4329]/40 text-xs text-[#8c4329] flex items-start gap-2">
-            <AlertTriangle size={16} className="shrink-0 mt-0.5" />
-            <div>
-              <b>Duplicate Unit Warning (Control 3.07):</b> Another broker already registered <b>{buildingName} – Unit {unitNo}</b>. Submitting will place this record in <i>Duplicate / Conflict Hold</i> for manager attribution review.
-            </div>
-          </div>
-        )}
+        <AnimatePresence>
+          {dupResult?.duplicate && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="p-3 rounded-2xl bg-[#fbf0d9] border border-[#c9a96e] text-xs text-[#7d5f2c] flex items-start gap-2">
+                <AlertTriangle size={16} className="shrink-0 mt-0.5 text-[#c4492f]" />
+                <div>
+                  <b>Duplicate Unit Guard (Control 3.07):</b> Another broker already registered{' '}
+                  <b>
+                    {buildingName} – Unit {unitNo}
+                  </b>
+                  . Submitting will place this record in <i>Duplicate / Conflict Hold</i> for manager attribution review.
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <form
           onSubmit={async e => {
@@ -553,7 +830,7 @@ export function InventoryAndNocTab({
                 void handleCheckDup(e.target.value, unitNo)
               }}
               placeholder="Building / Tower *"
-              className="col-span-2 px-3 py-2 rounded-xl border border-[#cbd6ce]"
+              className="col-span-2 px-3 py-2.5 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-[#0b1a33]"
             />
             <input
               type="text"
@@ -564,17 +841,19 @@ export function InventoryAndNocTab({
                 void handleCheckDup(buildingName, e.target.value)
               }}
               placeholder="Unit No. *"
-              className="px-3 py-2 rounded-xl border border-[#cbd6ce]"
+              className="px-3 py-2.5 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-[#0b1a33]"
             />
           </div>
           <div className="grid grid-cols-3 gap-2">
             <select
               value={propertyType}
               onChange={e => setPropertyType(e.target.value)}
-              className="px-2.5 py-2 rounded-xl border border-[#cbd6ce] bg-white"
+              className="px-2.5 py-2.5 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-[#0b1a33]"
             >
               {['Apartment', 'Villa', 'Townhouse', 'Penthouse', 'Studio', 'Office'].map(t => (
-                <option key={t} value={t}>{t}</option>
+                <option key={t} value={t}>
+                  {t}
+                </option>
               ))}
             </select>
             <input
@@ -582,14 +861,14 @@ export function InventoryAndNocTab({
               value={askingPrice}
               onChange={e => setAskingPrice(e.target.value)}
               placeholder="Price (AED)"
-              className="px-3 py-2 rounded-xl border border-[#cbd6ce]"
+              className="px-3 py-2.5 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-[#0b1a33]"
             />
             <input
               type="number"
               value={areaSqft}
               onChange={e => setAreaSqft(e.target.value)}
               placeholder="Area sq ft"
-              className="px-3 py-2 rounded-xl border border-[#cbd6ce]"
+              className="px-3 py-2.5 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-[#0b1a33]"
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -599,14 +878,14 @@ export function InventoryAndNocTab({
               value={ownerName}
               onChange={e => setOwnerName(e.target.value)}
               placeholder="Verified Owner Name *"
-              className="px-3 py-2 rounded-xl border border-[#cbd6ce]"
+              className="px-3 py-2.5 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-[#0b1a33]"
             />
             <input
               type="text"
               value={ownerPhone}
               onChange={e => setOwnerPhone(e.target.value)}
               placeholder="Owner Mobile (+971…)"
-              className="px-3 py-2 rounded-xl border border-[#cbd6ce]"
+              className="px-3 py-2.5 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-[#0b1a33]"
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -615,14 +894,14 @@ export function InventoryAndNocTab({
               value={formARef}
               onChange={e => setFormARef(e.target.value)}
               placeholder="Signed DLD Form A Ref."
-              className="px-3 py-2 rounded-xl border border-[#cbd6ce]"
+              className="px-3 py-2.5 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-[#0b1a33]"
             />
             <input
               type="text"
               value={trakheesiNo}
               onChange={e => setTrakheesiNo(e.target.value)}
               placeholder="Trakheesi Permit No."
-              className="px-3 py-2 rounded-xl border border-[#cbd6ce]"
+              className="px-3 py-2.5 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-[#0b1a33]"
             />
           </div>
           <input
@@ -630,103 +909,152 @@ export function InventoryAndNocTab({
             value={conditionNotes}
             onChange={e => setConditionNotes(e.target.value)}
             placeholder="Property condition checklist & site inspection notes…"
-            className="w-full px-3 py-2 rounded-xl border border-[#cbd6ce]"
+            className="w-full px-3 py-2.5 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-[#0b1a33]"
           />
-          <button
+          <motion.button
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.98 }}
             type="submit"
             disabled={submitting}
-            className="w-full py-3 rounded-full bg-[#007b52] hover:bg-[#025e3d] text-white font-bold text-xs border-0 cursor-pointer"
+            className="w-full py-3 rounded-2xl text-white font-bold text-xs border-0 cursor-pointer shadow-md"
+            style={{ background: 'linear-gradient(135deg, #1b3a6b, #0b1a33)' }}
           >
             {submitting ? 'Submitting to SWK OS…' : 'Submit Sourced Inventory to SWK OS Pipeline'}
-          </button>
+          </motion.button>
         </form>
-      </div>
+      </motion.div>
 
-      {/* 2. My Sourced Inventory Pipeline Dashboard (Features 32, 33, 37, 39) */}
-      <div className="rounded-2xl bg-white border border-[#e6ebe7] p-4 shadow-xs space-y-3">
+      {/* 2. My Sourced Inventory Pipeline Dashboard with Property Photography (Features 32, 33, 37, 39) */}
+      <motion.div
+        variants={itemRise}
+        className="rounded-3xl bg-white border border-[#e7e1d4] p-4 shadow-[0_14px_34px_-22px_rgba(11,26,51,0.32)] space-y-3"
+      >
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-bold font-display text-sm text-[#161d1a]">
+            <h3 className="font-bold font-display text-sm text-[#0b1a33]">
               My Sourced Inventory Pipeline ({submissions.length})
             </h3>
-            <p className="text-[11px] text-[#53655b]">
+            <p className="text-[11px] text-[#6b7488]">
               Submitted → Inventory Verified → Compliance Verified → Published to Stock
             </p>
           </div>
         </div>
 
         {submissions.length === 0 ? (
-          <div className="p-4 rounded-xl bg-[#f1f6f3] text-xs text-[#53655b] text-center">
-            No sourced inventory submitted yet. Use the 60-second sourcing form above.
+          <div className="p-5 rounded-2xl bg-[#fbf8f2] border border-[#efe9dc] text-xs text-[#6b7488] text-center">
+            No sourced inventory submitted yet. Use the 60-second sourcing form or Camera OCR above.
           </div>
         ) : (
-          <div className="space-y-2.5">
-            {submissions.map(sub => (
-              <div key={sub.id} className="p-3.5 rounded-2xl bg-[#f1f6f3] border border-[#e6ebe7] space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="text-[10px] font-mono text-[#53655b]">
-                      {sub.submission_no} · Conflict Check: <b>{sub.conflict_status}</b>
-                    </div>
-                    <div className="font-bold text-sm text-[#161d1a]">
-                      {sub.building_name} – Unit {sub.unit_no} ({sub.property_type})
-                    </div>
-                    <div className="text-xs text-[#007b52] font-bold">
-                      AED {Number(sub.asking_price || 0).toLocaleString()} · {sub.area_sqft} sq ft · Owner: {sub.owner_name}
+          <div className="space-y-3">
+            {submissions.map((sub, idx) => {
+              const photoUrl = resolvePropertyPhoto(sub.building_name, idx)
+              const gateStep =
+                sub.status === 'Published to Stock'
+                  ? 4
+                  : sub.status === 'Compliance Verified'
+                    ? 3
+                    : sub.status === 'Inventory Verified'
+                      ? 2
+                      : 1
+              return (
+                <div
+                  key={sub.id}
+                  className="p-3.5 rounded-2xl bg-[#fbf8f2] border border-[#e7e1d4] space-y-2.5"
+                >
+                  <div className="flex items-start gap-3">
+                    <img
+                      src={photoUrl}
+                      alt={sub.building_name}
+                      className="w-16 h-16 rounded-xl object-cover border border-[#d9d1c1] shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-[10px] font-mono text-[#6b7488]">
+                          {sub.submission_no} · {sub.conflict_status}
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[9.5px] font-bold shrink-0 ${
+                            sub.status === 'Published to Stock'
+                              ? 'bg-[#e3f4ec] text-[#157a52]'
+                              : sub.status === 'Rejected' || sub.status === 'Duplicate / Conflict Hold'
+                                ? 'bg-[#fbe4dd] text-[#a33a22]'
+                                : 'bg-[#f3ead8] text-[#7d5f2c]'
+                          }`}
+                        >
+                          {sub.status}
+                        </span>
+                      </div>
+                      <div className="font-bold font-display text-sm text-[#0b1a33] truncate">
+                        {sub.building_name} – Unit {sub.unit_no} ({sub.property_type})
+                      </div>
+                      <div className="text-xs text-[#14305c] font-bold mt-0.5">
+                        AED {Number(sub.asking_price || 0).toLocaleString()} · {sub.area_sqft} sq ft · Owner:{' '}
+                        {sub.owner_name}
+                      </div>
                     </div>
                   </div>
-                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                    sub.status === 'Published to Stock'
-                      ? 'bg-[#dcf1e6] text-[#025e3d]'
-                      : sub.status === 'Rejected' || sub.status === 'Duplicate / Conflict Hold'
-                        ? 'bg-[#fbe1e4] text-[#c32135]'
-                        : 'bg-[#f6e9c3] text-[#8c4329]'
-                  }`}>
-                    {sub.status}
-                  </span>
-                </div>
 
-                {/* Why listing remains on hold (Feature #37) */}
-                {sub.status !== 'Published to Stock' && (
-                  <div className="p-2 rounded-lg bg-white text-[11px] text-[#3f4f47] border border-[#e6ebe7]">
-                    <b>Publication Gate Status:</b>{' '}
-                    {sub.status === 'Submitted'
-                      ? 'Waiting for Independent Inventory Team Verification of Owner Form A.'
-                      : sub.status === 'Inventory Verified'
-                        ? 'Waiting for Compliance Officer Trakheesi Permit Sign-off.'
-                        : sub.status === 'Compliance Verified'
-                          ? 'Ready for Second-Person Manager Publication Approval.'
-                          : sub.rejection_reason || 'On Hold'}
+                  {/* Animated 4-Gate Progress Indicator */}
+                  <div className="grid grid-cols-4 gap-1 pt-0.5">
+                    {['1. Submitted', '2. Inv Check', '3. Trakheesi', '4. Live Stock'].map((label, sIdx) => (
+                      <div key={label} className="space-y-1">
+                        <div
+                          className={`h-1.5 rounded-full ${
+                            sIdx < gateStep ? 'bg-[#14305c]' : 'bg-[#e7e1d4]'
+                          }`}
+                        />
+                        <div className="text-[9px] font-semibold text-[#6b7488] truncate">{label}</div>
+                      </div>
+                    ))}
                   </div>
-                )}
 
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    onClick={() => void onReconfirmPrice(sub.id, Number(sub.asking_price || 0))}
-                    className="px-3 py-1 rounded-full bg-white text-[#007b52] border border-[#007b52]/40 text-[11px] font-semibold cursor-pointer"
-                  >
-                    ✓ Reconfirm Owner Price ({sub.price_confirmed_date || 'Today'})
-                  </button>
-                  <button
-                    onClick={() => void onOwnerWithdraw(sub.id, 'Owner instructed withdrawal from marketing')}
-                    className="px-3 py-1 rounded-full bg-white text-[#c32135] border border-[#cbd6ce] text-[11px] font-semibold cursor-pointer"
-                  >
-                    Owner Withdrawal Alert
-                  </button>
+                  {sub.status !== 'Published to Stock' && (
+                    <div className="p-2 rounded-xl bg-white text-[11px] text-[#3a4660] border border-[#e7e1d4]">
+                      <b className="text-[#0b1a33]">Publication Gate:</b>{' '}
+                      {sub.status === 'Submitted'
+                        ? 'Waiting for Independent Inventory Team Verification of Owner Form A.'
+                        : sub.status === 'Inventory Verified'
+                          ? 'Waiting for Compliance Officer Trakheesi Permit Sign-off.'
+                          : sub.status === 'Compliance Verified'
+                            ? 'Ready for Second-Person Manager Publication Approval.'
+                            : sub.rejection_reason || 'On Hold'}
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap gap-1.5">
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => void onReconfirmPrice(sub.id, Number(sub.asking_price || 0))}
+                      className="px-3 py-1 rounded-full bg-white text-[#14305c] border border-[#d9d1c1] hover:border-[#c9a96e] text-[11px] font-bold cursor-pointer"
+                    >
+                      ✓ Reconfirm Owner Price ({sub.price_confirmed_date || 'Today'})
+                    </motion.button>
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => void onOwnerWithdraw(sub.id, 'Owner instructed withdrawal from marketing')}
+                      className="px-3 py-1 rounded-full bg-white text-[#c4492f] border border-[#f2bcc3] text-[11px] font-bold cursor-pointer"
+                    >
+                      Owner Withdrawal Alert
+                    </motion.button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
-      </div>
+      </motion.div>
 
-      {/* 3. Property Key Handover Log (Feature #36) */}
-      <div className="rounded-2xl bg-white border border-[#e6ebe7] p-4 shadow-xs space-y-3">
+      {/* 3. Property Key Handover Vault (Feature #36) */}
+      <motion.div
+        variants={itemRise}
+        className="rounded-3xl bg-white border border-[#e7e1d4] p-4 shadow-xs space-y-3"
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <KeyRound size={16} className="text-[#007b52]" />
-            <h3 className="font-bold font-display text-sm text-[#161d1a]">Property Key Handover Vault</h3>
+            <KeyRound size={16} className="text-[#9a7a42]" />
+            <h3 className="font-bold font-display text-sm text-[#0b1a33]">Property Key Handover Vault</h3>
           </div>
+          <span className="text-[10.5px] font-semibold text-[#6b7488]">Audited Custody</span>
         </div>
         <div className="grid grid-cols-3 gap-2 text-xs">
           <input
@@ -734,19 +1062,19 @@ export function InventoryAndNocTab({
             value={keyBuilding}
             onChange={e => setKeyBuilding(e.target.value)}
             placeholder="Building"
-            className="px-2.5 py-2 rounded-xl border border-[#cbd6ce]"
+            className="px-2.5 py-2 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-[#0b1a33]"
           />
           <input
             type="text"
             value={keyUnit}
             onChange={e => setKeyUnit(e.target.value)}
             placeholder="Unit No."
-            className="px-2.5 py-2 rounded-xl border border-[#cbd6ce]"
+            className="px-2.5 py-2 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-[#0b1a33]"
           />
           <select
             value={keyAction}
             onChange={e => setKeyAction(e.target.value as any)}
-            className="px-2 py-2 rounded-xl border border-[#cbd6ce] bg-white"
+            className="px-2 py-2 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-[#0b1a33]"
           >
             <option value="Received from Owner">Received from Owner</option>
             <option value="Checked Out for Viewing">Checked Out for Viewing</option>
@@ -754,53 +1082,78 @@ export function InventoryAndNocTab({
             <option value="Handed to Buyer/Tenant">Handed to Buyer/Tenant</option>
           </select>
         </div>
-        <button
+        <motion.button
+          whileTap={{ scale: 0.97 }}
           onClick={() => void onLogKey({ building_name: keyBuilding, unit_no: keyUnit, action: keyAction })}
-          className="w-full py-2.5 rounded-full bg-[#161d1a] text-white font-semibold text-xs border-0 cursor-pointer"
+          className="w-full py-2.5 rounded-2xl bg-[#0b1a33] text-[#f3ead8] font-bold text-xs border-0 cursor-pointer"
         >
           Record Key Custody Event
-        </button>
+        </motion.button>
         {keyLogs.length > 0 && (
-          <div className="space-y-1 pt-1">
+          <div className="space-y-1.5 pt-1">
             {keyLogs.slice(0, 4).map((k: any) => (
-              <div key={k.id} className="p-2 rounded-xl bg-[#f1f6f3] flex items-center justify-between text-[11px]">
-                <span><b>{k.key_tag}</b> · {k.building_name} #{k.unit_no}</span>
-                <span className="font-semibold text-[#007b52]">{k.action}</span>
+              <div
+                key={k.id}
+                className="p-2.5 rounded-xl bg-[#fbf8f2] border border-[#efe9dc] flex items-center justify-between text-[11px]"
+              >
+                <span className="text-[#0b1a33]">
+                  <b>{k.key_tag}</b> · {k.building_name} #{k.unit_no}
+                </span>
+                <span className="font-bold text-[#9a7a42]">{k.action}</span>
               </div>
             ))}
           </div>
         )}
-      </div>
+      </motion.div>
 
-      {/* 4. Developer NOC Status Tracker (Feature #38) */}
-      <div className="rounded-2xl bg-white border border-[#e6ebe7] p-4 shadow-xs space-y-2.5">
+      {/* 4. Developer NOC Status Tracker with Official Developer Logos (Feature #38) */}
+      <motion.div
+        variants={itemRise}
+        className="rounded-3xl bg-white border border-[#e7e1d4] p-4 shadow-xs space-y-2.5"
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <FileCheck2 size={16} className="text-[#007b52]" />
-            <h3 className="font-bold font-display text-sm text-[#161d1a]">
+            <FileCheck2 size={16} className="text-[#9a7a42]" />
+            <h3 className="font-bold font-display text-sm text-[#0b1a33]">
               Developer NOC Clearance Tracker ({nocRequests.length})
             </h3>
           </div>
         </div>
         {nocRequests.length === 0 ? (
-          <div className="p-3 rounded-xl bg-[#f1f6f3] text-xs text-[#53655b]">
+          <div className="p-3 rounded-2xl bg-[#fbf8f2] border border-[#efe9dc] text-xs text-[#6b7488]">
             No active Developer NOC clearances pending. NOCs are triggered once Form F / Sales Contract is signed.
           </div>
         ) : (
-          nocRequests.map(n => (
-            <div key={n.id} className="p-3 rounded-xl bg-[#f1f6f3] border border-[#e6ebe7] text-xs space-y-1">
-              <div className="flex items-center justify-between">
-                <b>{n.request_no} · {n.transaction_type}</b>
-                <span className="px-2 py-0.5 rounded-full bg-white text-[#007b52] text-[10px] font-bold">{n.status}</span>
+          nocRequests.map((n, idx) => {
+            const devBrand = resolveDeveloperBrand(n.transaction_type || n.notes, idx)
+            return (
+              <div
+                key={n.id}
+                className="p-3.5 rounded-2xl bg-[#fbf8f2] border border-[#e7e1d4] text-xs flex items-center justify-between gap-3"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-12 h-10 rounded-xl bg-white border border-[#efe9dc] p-1.5 flex items-center justify-center shrink-0">
+                    <img src={devBrand.logo} alt={devBrand.name} className="max-h-full max-w-full object-contain" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-bold text-[#0b1a33] truncate">
+                      {n.request_no} · {devBrand.name}
+                    </div>
+                    <div className="text-[11px] text-[#6b7488]">
+                      Service Charges: <b>{n.service_charges_cleared ? 'Cleared ✓' : 'Pending'}</b> · Transfer Gate:{' '}
+                      <b>{n.closing_stage_unlocked ? 'Unlocked' : 'Locked'}</b>
+                    </div>
+                  </div>
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full bg-[#f3ead8] text-[#7d5f2c] text-[10px] font-bold shrink-0">
+                  {n.status}
+                </span>
               </div>
-              <div className="text-[11px] text-[#53655b]">
-                Service Charges Cleared: <b>{n.service_charges_cleared ? 'Yes' : 'Pending'}</b> · Closing Stage Unlocked: <b>{n.closing_stage_unlocked ? 'Unlocked' : 'Locked'}</b>
-              </div>
-            </div>
-          ))
+            )
+          })
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }
 
@@ -836,23 +1189,28 @@ export function CrmAndDealsTab({
   const [langById, setLangById] = useState<Record<number, 'en' | 'ar' | 'ru' | 'zh' | 'fr'>>({})
 
   return (
-    <div className="space-y-4">
+    <motion.div variants={listStagger} initial="hidden" animate="show" className="space-y-4">
       {/* 1. Assigned Business WhatsApp Conversations + Multilingual AI Reply Drafts (Features 51–60) */}
-      <div className="rounded-2xl bg-white border border-[#e6ebe7] p-4 shadow-xs space-y-3">
+      <motion.div
+        variants={itemRise}
+        className="rounded-3xl bg-white border border-[#e7e1d4] p-4 shadow-[0_14px_34px_-22px_rgba(11,26,51,0.32)] space-y-3"
+      >
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-bold font-display text-sm text-[#161d1a]">
+            <div className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#9a7a42]">
+              Supervised Omnichannel Desk
+            </div>
+            <h3 className="font-bold font-display text-sm text-[#0b1a33]">
               Company WhatsApp Business (WABA) Inbox ({communications.length})
             </h3>
-            <p className="text-[11px] text-[#53655b]">
-              Official supervised channel · SLA countdown · Multilingual AI drafts (EN/AR/RU/ZH/FR)
-            </p>
           </div>
-          <MessageSquare size={18} className="text-[#007b52]" />
+          <div className="w-9 h-9 rounded-xl bg-[#def1ef] text-[#17625f] grid place-items-center">
+            <MessageSquare size={18} />
+          </div>
         </div>
 
         {communications.length === 0 ? (
-          <div className="p-4 rounded-xl bg-[#f1f6f3] text-xs text-[#53655b] text-center">
+          <div className="p-4 rounded-2xl bg-[#fbf8f2] border border-[#efe9dc] text-xs text-[#6b7488] text-center">
             No unassigned or open WABA conversations.
           </div>
         ) : (
@@ -861,37 +1219,49 @@ export function CrmAndDealsTab({
               const lang = langById[c.id] || 'en'
               const replyText = replyTextById[c.id] || ''
               return (
-                <div key={c.id} className="p-3.5 rounded-2xl bg-[#f1f6f3] border border-[#e6ebe7] space-y-2.5">
+                <div
+                  key={c.id}
+                  className="p-3.5 rounded-2xl bg-[#fbf8f2] border border-[#e7e1d4] space-y-2.5"
+                >
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <span className="text-[10px] font-mono text-[#53655b]">
+                      <span className="text-[10px] font-mono text-[#6b7488]">
                         {c.comm_no} · {c.business_account_ref}
                       </span>
-                      <div className="font-bold text-sm text-[#161d1a]">{c.customer_phone}</div>
+                      <div className="font-bold font-display text-sm text-[#0b1a33]">{c.customer_phone}</div>
                     </div>
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                      c.status === 'Responded' ? 'bg-[#dcf1e6] text-[#025e3d]' : 'bg-[#f6e9c3] text-[#8c4329]'
-                    }`}>
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                        c.status === 'Responded'
+                          ? 'bg-[#e3f4ec] text-[#157a52]'
+                          : 'bg-[#f3ead8] text-[#7d5f2c]'
+                      }`}
+                    >
                       {c.status} {c.escalation_tag && c.escalation_tag !== 'None' ? `· ${c.escalation_tag}` : ''}
                     </span>
                   </div>
 
-                  <div className="p-2.5 rounded-xl bg-white text-xs text-[#161d1a] border border-[#e6ebe7]">
+                  {/* Client Chat Bubble */}
+                  <div className="p-3 rounded-2xl rounded-tl-xs bg-white text-xs text-[#0b1a33] border border-[#e7e1d4] shadow-2xs">
                     {c.message_summary}
                   </div>
                   {c.ai_summary && (
-                    <div className="text-[11px] text-[#007b52] flex items-center gap-1">
-                      <Sparkles size={12} /> <b>AI Briefing:</b> {c.ai_summary}
+                    <div className="text-[11px] text-[#9a7a42] flex items-center gap-1.5 font-medium">
+                      <Sparkles size={12} className="text-[#c9a96e] shrink-0" />
+                      <span>
+                        <b className="text-[#0b1a33]">AI Briefing:</b> {c.ai_summary}
+                      </span>
                     </div>
                   )}
 
                   {/* Multilingual AI Draft Selector (Features #54 & #55) */}
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-[10px] font-semibold text-[#53655b] flex items-center gap-1">
-                      <Languages size={12} /> AI Draft:
+                    <span className="text-[10px] font-bold text-[#6b7488] flex items-center gap-1">
+                      <Languages size={12} className="text-[#9a7a42]" /> AI Draft:
                     </span>
                     {(['en', 'ar', 'ru', 'zh', 'fr'] as const).map(l => (
-                      <button
+                      <motion.button
+                        whileTap={{ scale: 0.92 }}
                         key={l}
                         type="button"
                         onClick={async () => {
@@ -899,17 +1269,21 @@ export function CrmAndDealsTab({
                           const draft = await onGetAiDraft(c.id, l)
                           setReplyTextById(prev => ({ ...prev, [c.id]: draft }))
                         }}
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold border cursor-pointer ${
-                          lang === l ? 'bg-[#007b52] text-white border-[#007b52]' : 'bg-white text-[#3f4f47] border-[#cbd6ce]'
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border cursor-pointer transition ${
+                          lang === l
+                            ? 'bg-[#0b1a33] text-[#f3ead8] border-[#0b1a33]'
+                            : 'bg-white text-[#3a4660] border-[#d9d1c1]'
                         }`}
                       >
                         {l.toUpperCase()}
-                      </button>
+                      </motion.button>
                     ))}
                     <button
                       type="button"
-                      onClick={() => void onEscalateComm(c.id, `Client Escalation on ${c.comm_no}`, c.message_summary)}
-                      className="ml-auto px-2.5 py-0.5 rounded-full bg-[#fbe1e4] text-[#c32135] text-[10px] font-bold border-0 cursor-pointer"
+                      onClick={() =>
+                        void onEscalateComm(c.id, `Client Escalation on ${c.comm_no}`, c.message_summary)
+                      }
+                      className="ml-auto px-2.5 py-0.5 rounded-full bg-[#fbe4dd] text-[#a33a22] text-[10px] font-bold border-0 cursor-pointer"
                     >
                       Escalate to Supervisor
                     </button>
@@ -921,117 +1295,175 @@ export function CrmAndDealsTab({
                       value={replyText}
                       onChange={e => setReplyTextById(prev => ({ ...prev, [c.id]: e.target.value }))}
                       placeholder="Type official WABA response or tap an AI Draft language above…"
-                      className="flex-1 px-3 py-2 rounded-xl bg-white border border-[#cbd6ce] text-xs"
+                      className="flex-1 px-3 py-2 rounded-xl bg-white border border-[#d9d1c1] text-xs text-[#0b1a33]"
                     />
-                    <button
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
                       type="button"
                       onClick={async () => {
                         if (!replyText.trim()) return
                         await onReplyComm(c.id, replyText, lang)
                         setReplyTextById(prev => ({ ...prev, [c.id]: '' }))
                       }}
-                      className="px-3.5 py-2 rounded-full bg-[#007b52] text-white text-xs font-bold border-0 cursor-pointer flex items-center gap-1"
+                      className="px-4 py-2 rounded-full text-[#0b1a33] text-xs font-bold border-0 cursor-pointer flex items-center gap-1 shadow-xs"
+                      style={{ background: 'linear-gradient(135deg, #f1e3c2, #c9a96e)' }}
                     >
                       <Send size={12} /> Send
-                    </button>
+                    </motion.button>
                   </div>
                 </div>
               )
             })}
           </div>
         )}
-      </div>
+      </motion.div>
 
       {/* 2. Lead Priority Queue, AI Lead Briefing & One-Tap Call Logging (Features 14–16, 56) */}
-      <div className="rounded-2xl bg-white border border-[#e6ebe7] p-4 shadow-xs space-y-3">
-        <div className="flex items-center justify-between">
+      <motion.div
+        variants={itemRise}
+        className="rounded-3xl bg-white border border-[#e7e1d4] p-4 shadow-[0_14px_34px_-22px_rgba(11,26,51,0.32)] space-y-3"
+      >
+        <div className="flex items-center justify-between gap-2">
           <div>
-            <h3 className="font-bold font-display text-sm text-[#161d1a]">
-              Assigned CRM Leads & One-Tap Call Logger ({leads.length})
+            <h3 className="font-bold font-display text-sm text-[#0b1a33]">
+              Assigned CRM Leads & 1-Tap Call Logger ({leads.length})
             </h3>
-            <p className="text-[11px] text-[#53655b]">
-              Tap any call outcome to log activity and progress lead automatically
+            <p className="text-[11px] text-[#6b7488]">
+              Tap any call outcome to log activity and advance lead automatically
             </p>
           </div>
-          <button
+          <motion.button
+            whileTap={{ scale: 0.95 }}
             onClick={onOpenComparison}
-            className="px-3 py-1.5 rounded-full bg-[#edf5f0] text-[#007b52] font-bold text-xs border border-[#007b52]/30 cursor-pointer flex items-center gap-1"
+            className="px-3 py-1.5 rounded-full bg-[#f3ead8] text-[#7d5f2c] font-bold text-xs border border-[#e3d1ad] cursor-pointer flex items-center gap-1 shrink-0"
           >
-            <Scale size={13} /> Compare Properties
-          </button>
+            <Scale size={13} /> Compare Stock
+          </motion.button>
         </div>
 
         <div className="space-y-2.5">
-          {leads.map(l => (
-            <div key={l.id} className="p-3.5 rounded-2xl bg-[#f1f6f3] border border-[#e6ebe7] space-y-2">
-              <div className="flex items-start justify-between">
-                <div>
-                  <span className="text-[10px] font-mono text-[#53655b]">{l.lead_no} · {l.source}</span>
-                  <div className="font-bold text-sm text-[#161d1a]">{l.contact_name || l.company}</div>
-                  <div className="text-xs text-[#007b52] font-semibold">
-                    {l.interest || 'Property Purchase'} · {l.destination || 'Dubai Marina'} · Budget AED {Number(l.est_value || 0).toLocaleString()}
+          {leads.map((l, idx) => {
+            const comm = resolveCommunityMedia(l.destination || l.notes, idx)
+            return (
+              <div
+                key={l.id}
+                className="p-3.5 rounded-2xl bg-[#fbf8f2] border border-[#e7e1d4] space-y-2.5"
+              >
+                <div className="flex items-start gap-3">
+                  <img
+                    src={comm.image}
+                    alt={comm.name}
+                    className="w-12 h-12 rounded-xl object-cover border border-[#d9d1c1] shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-[10px] font-mono text-[#6b7488]">
+                        {l.lead_no} · {l.source}
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-full bg-white text-[#0b1a33] border border-[#d9d1c1] text-[10px] font-bold">
+                        {l.status}
+                      </span>
+                    </div>
+                    <div className="font-bold font-display text-sm text-[#0b1a33] truncate">
+                      {l.contact_name || l.company}
+                    </div>
+                    <div className="text-xs text-[#14305c] font-bold">
+                      {l.interest || 'Property Purchase'} · {l.destination || comm.name} · Budget AED{' '}
+                      {Number(l.est_value || 0).toLocaleString()}
+                    </div>
                   </div>
                 </div>
-                <span className="px-2.5 py-0.5 rounded-full bg-white text-[#161d1a] border border-[#cbd6ce] text-[10px] font-bold">
-                  {l.status}
-                </span>
-              </div>
 
-              {/* AI Lead Briefing (Feature #14) */}
-              {l.notes && (
-                <div className="p-2 rounded-xl bg-white text-[11px] text-[#3f4f47] border border-[#e6ebe7]">
-                  <b className="text-[#007b52]">AI Lead Briefing:</b> {l.notes}
+                {/* AI Lead Briefing (Feature #14) */}
+                {l.notes && (
+                  <div className="p-2.5 rounded-xl bg-white text-[11px] text-[#3a4660] border border-[#e7e1d4]">
+                    <b className="text-[#9a7a42]">AI Lead Briefing:</b> {l.notes}
+                  </div>
+                )}
+
+                {/* One-Tap Call Logging Buttons (Feature #16) */}
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() =>
+                      void onQuickLogLead(
+                        l.id,
+                        'Connected',
+                        'Call',
+                        'Qualified buyer requirements & confirmed viewing slot'
+                      )
+                    }
+                    className="px-3 py-1.5 rounded-full text-white text-[11px] font-bold border-0 cursor-pointer flex items-center gap-1"
+                    style={{ background: 'linear-gradient(135deg, #1b3a6b, #0b1a33)' }}
+                  >
+                    <PhoneCall size={11} className="text-[#c9a96e]" /> Connected – Interested
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() =>
+                      void onQuickLogLead(
+                        l.id,
+                        'Callback requested',
+                        'Call',
+                        'Client in meeting; requested callback at 5 PM'
+                      )
+                    }
+                    className="px-2.5 py-1.5 rounded-full bg-white text-[#0b1a33] border border-[#d9d1c1] text-[11px] font-semibold cursor-pointer"
+                  >
+                    🕒 Callback Queue
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() =>
+                      void onQuickLogLead(l.id, 'No answer', 'Call', 'No answer; sent official WABA brochure')
+                    }
+                    className="px-2.5 py-1.5 rounded-full bg-white text-[#6b7488] border border-[#d9d1c1] text-[11px] cursor-pointer"
+                  >
+                    No Answer
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() =>
+                      void onQuickLogLead(
+                        l.id,
+                        'Quote requested',
+                        'WhatsApp',
+                        'Sent side-by-side comparison & ROI calculation'
+                      )
+                    }
+                    className="px-2.5 py-1.5 rounded-full bg-[#f3ead8] text-[#7d5f2c] border border-[#e3d1ad] text-[11px] font-bold cursor-pointer"
+                  >
+                    💬 WABA Brochure Sent
+                  </motion.button>
                 </div>
-              )}
-
-              {/* One-Tap Call Logging Buttons (Feature #16) */}
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                <button
-                  onClick={() => void onQuickLogLead(l.id, 'Connected', 'Call', 'Qualified buyer requirements & confirmed viewing slot')}
-                  className="px-2.5 py-1 rounded-full bg-[#007b52] text-white text-[11px] font-semibold border-0 cursor-pointer"
-                >
-                  📞 Connected – Interested
-                </button>
-                <button
-                  onClick={() => void onQuickLogLead(l.id, 'Callback requested', 'Call', 'Client in meeting; requested callback at 5 PM')}
-                  className="px-2.5 py-1 rounded-full bg-white text-[#161d1a] border border-[#cbd6ce] text-[11px] font-semibold cursor-pointer"
-                >
-                  🕒 Callback Queue
-                </button>
-                <button
-                  onClick={() => void onQuickLogLead(l.id, 'No answer', 'Call', 'No answer; sent official WABA brochure')}
-                  className="px-2.5 py-1 rounded-full bg-white text-[#53655b] border border-[#cbd6ce] text-[11px] cursor-pointer"
-                >
-                  No Answer
-                </button>
-                <button
-                  onClick={() => void onQuickLogLead(l.id, 'Quote requested', 'WhatsApp', 'Sent side-by-side comparison & ROI calculation')}
-                  className="px-2.5 py-1 rounded-full bg-[#edf5f0] text-[#025e3d] border border-[#007b52]/30 text-[11px] font-semibold cursor-pointer"
-                >
-                  💬 WABA Brochure Sent
-                </button>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
-      </div>
+      </motion.div>
 
       {/* 3. Digital Offer Submission (Feature #23) */}
-      <div className="rounded-2xl bg-white border border-[#e6ebe7] p-4 shadow-xs space-y-3">
+      <motion.div
+        variants={itemRise}
+        className="rounded-3xl bg-white border border-[#e7e1d4] p-4 shadow-xs space-y-3"
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <HandCoins size={16} className="text-[#007b52]" />
-            <h3 className="font-bold font-display text-sm text-[#161d1a]">Digital Offer Submission</h3>
+            <HandCoins size={16} className="text-[#9a7a42]" />
+            <h3 className="font-bold font-display text-sm text-[#0b1a33]">Digital Offer Submission</h3>
           </div>
+          <span className="text-[10px] font-bold text-[#9a7a42] uppercase tracking-wider">DLD Form F Ready</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
           <select
             value={offerPropId}
             onChange={e => setOfferPropId(Number(e.target.value))}
-            className="px-3 py-2 rounded-xl border border-[#cbd6ce] bg-white"
+            className="px-3 py-2.5 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-[#0b1a33]"
           >
             {properties.map(p => (
-              <option key={p.id} value={p.id}>{p.title}</option>
+              <option key={p.id} value={p.id}>
+                {p.title}
+              </option>
             ))}
           </select>
           <input
@@ -1039,19 +1471,20 @@ export function CrmAndDealsTab({
             value={offerPrice}
             onChange={e => setOfferPrice(e.target.value)}
             placeholder="Offer Price (AED)"
-            className="px-3 py-2 rounded-xl border border-[#cbd6ce]"
+            className="px-3 py-2.5 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-[#0b1a33]"
           />
           <select
             value={paymentTerms}
             onChange={e => setPaymentTerms(e.target.value)}
-            className="px-3 py-2 rounded-xl border border-[#cbd6ce] bg-white"
+            className="px-3 py-2.5 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-[#0b1a33]"
           >
             <option value="Cash">Cash Buyer</option>
             <option value="Mortgage">Mortgage Pre-Approved</option>
             <option value="50/50">Developer 50/50 Plan</option>
           </select>
         </div>
-        <button
+        <motion.button
+          whileTap={{ scale: 0.98 }}
           onClick={() =>
             void onSubmitOffer({
               property_id: offerPropId || properties[0]?.id,
@@ -1061,46 +1494,74 @@ export function CrmAndDealsTab({
               subject_to_finance: paymentTerms === 'Mortgage',
             })
           }
-          className="w-full py-2.5 rounded-full bg-[#007b52] text-white font-bold text-xs border-0 cursor-pointer"
+          className="w-full py-3 rounded-2xl text-[#0b1a33] font-bold text-xs border-0 cursor-pointer shadow-sm"
+          style={{ background: 'linear-gradient(135deg, #f1e3c2 0%, #c9a96e 100%)' }}
         >
           Submit Formal Digital Offer to SWK OS
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
       {/* 4. Personal Deal Pipeline, Mortgage Readiness & Closing Checklist (Features 24–27, 60) */}
-      <div className="rounded-2xl bg-white border border-[#e6ebe7] p-4 shadow-xs space-y-2.5">
-        <h3 className="font-bold font-display text-sm text-[#161d1a]">
-          Personal Deal Pipeline & Closing Gate Checklist ({transactions.length})
+      <motion.div
+        variants={itemRise}
+        className="rounded-3xl bg-white border border-[#e7e1d4] p-4 shadow-xs space-y-2.5"
+      >
+        <h3 className="font-bold font-display text-sm text-[#0b1a33]">
+          Personal Deal Pipeline & 4-Gate Closing Checklist ({transactions.length})
         </h3>
-        {transactions.map(t => (
-          <div key={t.id} className="p-3.5 rounded-2xl bg-[#f1f6f3] border border-[#e6ebe7] space-y-2 text-xs">
-            <div className="flex items-center justify-between">
-              <b>{t.transaction_no} · AED {Number(t.deal_value || 0).toLocaleString()}</b>
-              <span className="px-2.5 py-0.5 rounded-full bg-[#dcf1e6] text-[#025e3d] text-[10px] font-bold">{t.stage}</span>
+        {transactions.map(t => {
+          const gatesDone = [
+            t.kyc_cleared,
+            t.forms_completed,
+            t.noc_verified,
+            t.financially_reconciled,
+          ].filter(Boolean).length
+          return (
+            <div
+              key={t.id}
+              className="p-3.5 rounded-2xl bg-[#fbf8f2] border border-[#e7e1d4] space-y-2.5 text-xs"
+            >
+              <div className="flex items-center justify-between">
+                <b className="text-[#0b1a33] font-display">
+                  {t.transaction_no} · AED {Number(t.deal_value || 0).toLocaleString()}
+                </b>
+                <span className="px-2.5 py-0.5 rounded-full bg-[#0b1a33] text-[#f3ead8] text-[10px] font-bold">
+                  {t.stage} ({gatesDone}/4 Gates)
+                </span>
+              </div>
+              <div className="w-full h-1.5 rounded-full bg-[#e7e1d4] overflow-hidden">
+                <motion.div
+                  className="h-full rounded-full"
+                  style={{ background: 'linear-gradient(90deg, #14305c, #c9a96e)' }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(gatesDone / 4) * 100}%` }}
+                  transition={{ duration: 0.7 }}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                <div className="p-2 rounded-xl bg-white border border-[#efe9dc]">
+                  {t.kyc_cleared ? '✅' : '⏳'} Buyer/Seller KYC & AML
+                </div>
+                <div className="p-2 rounded-xl bg-white border border-[#efe9dc]">
+                  {t.forms_completed ? '✅' : '⏳'} RERA Forms A / B / F
+                </div>
+                <div className="p-2 rounded-xl bg-white border border-[#efe9dc]">
+                  {t.noc_verified ? '✅' : '⏳'} Developer NOC Verified
+                </div>
+                <div className="p-2 rounded-xl bg-white border border-[#efe9dc]">
+                  {t.financially_reconciled ? '✅' : '⏳'} Invoice & Bank Receipt
+                </div>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-1.5 text-[11px]">
-              <div className="p-1.5 rounded-lg bg-white">
-                {t.kyc_cleared ? '✅' : '⏳'} Buyer/Seller KYC & AML
-              </div>
-              <div className="p-1.5 rounded-lg bg-white">
-                {t.forms_completed ? '✅' : '⏳'} RERA Forms A / B / F
-              </div>
-              <div className="p-1.5 rounded-lg bg-white">
-                {t.noc_verified ? '✅' : '⏳'} Developer NOC Verified
-              </div>
-              <div className="p-1.5 rounded-lg bg-white">
-                {t.financially_reconciled ? '✅' : '⏳'} Invoice & Bank Receipt
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+          )
+        })}
+      </motion.div>
+    </motion.div>
   )
 }
 
 /**
- * TAB 5: Commissions, HR Wallet, Attendance Corrections, Knowledge Assistant & Coaching (Features 5, 7–13, 59, 61–65)
+ * TAB 5: Commissions, Digital RERA/HR Wallet, Attendance Corrections, Knowledge Assistant & Coaching (Features 5, 7–13, 59, 61–65)
  */
 export function PayHrAndSecurityTab({
   data,
@@ -1138,123 +1599,240 @@ export function PayHrAndSecurityTab({
   const [kbAnswer, setKbAnswer] = useState<string | null>(null)
 
   return (
-    <div className="space-y-4">
-      {/* 1. Personal Commission Tracker — 6 Separate Stage Balances (Feature #62 & Priority #4) */}
-      <div className="rounded-2xl bg-[#025e3d] text-white p-4 shadow-sm space-y-3">
-        <div className="flex items-center justify-between">
+    <motion.div variants={listStagger} initial="hidden" animate="show" className="space-y-4">
+      {/* 1. Personal Commission Tracker — 6 Separate Stage Balances in SWK Midnight & Champagne */}
+      <motion.div
+        variants={itemRise}
+        className="relative overflow-hidden rounded-3xl text-white p-4 shadow-[0_18px_40px_-20px_rgba(11,26,51,0.65)] space-y-3.5 border border-[#c9a96e]/40"
+        style={{ background: 'linear-gradient(145deg, #08142a 0%, #0b1a33 55%, #14305c 100%)' }}
+      >
+        <img
+          src={SWK_BRAND.skylineFront}
+          alt=""
+          aria-hidden
+          className="absolute bottom-0 left-0 right-0 w-full h-16 object-cover opacity-12 pointer-events-none"
+        />
+
+        <div className="relative z-10 flex items-center justify-between">
           <div>
-            <div className="text-[11px] uppercase tracking-wider text-[#d3eee0] font-semibold">
+            <div className="text-[10px] uppercase tracking-[0.2em] text-[#c9a96e] font-bold">
               Commission & Deal Transparency (Control 3.17)
             </div>
-            <h3 className="text-lg font-bold font-display">Personal Commission Tracker</h3>
+            <h3 className="text-lg font-bold font-display text-white">
+              6-Stage Commission Waterfall
+            </h3>
           </div>
-          <Percent size={20} className="text-[#d3eee0]" />
+          <img src={SWK_BRAND.logoWhite} alt="SWK" className="h-7 w-auto opacity-90" />
         </div>
 
-        <div className="grid grid-cols-3 gap-2 text-xs">
-          <div className="p-2.5 rounded-xl bg-white/10">
-            <div className="text-[10px] text-[#d3eee0]">1. Entitlement</div>
-            <div className="font-bold text-sm">AED {Number(commSummary.entitlement_total || 0).toLocaleString()}</div>
+        <div className="relative z-10 grid grid-cols-3 gap-2 text-xs">
+          <div className="p-2.5 rounded-2xl bg-white/[0.07] border border-white/10">
+            <div className="text-[10px] text-[#b8c6de]">1. Entitlement</div>
+            <div className="font-bold font-display text-sm text-white mt-0.5">
+              AED <AnimatedNumber value={Number(commSummary.entitlement_total || 0)} />
+            </div>
           </div>
-          <div className="p-2.5 rounded-xl bg-white/10">
-            <div className="text-[10px] text-[#d3eee0]">2. Earned</div>
-            <div className="font-bold text-sm">AED {Number(commSummary.earned_total || 0).toLocaleString()}</div>
+          <div className="p-2.5 rounded-2xl bg-white/[0.07] border border-white/10">
+            <div className="text-[10px] text-[#b8c6de]">2. Earned</div>
+            <div className="font-bold font-display text-sm text-white mt-0.5">
+              AED <AnimatedNumber value={Number(commSummary.earned_total || 0)} />
+            </div>
           </div>
-          <div className="p-2.5 rounded-xl bg-white/10">
-            <div className="text-[10px] text-[#d3eee0]">3. Invoiced</div>
-            <div className="font-bold text-sm">AED {Number(commSummary.invoiced_total || 0).toLocaleString()}</div>
+          <div className="p-2.5 rounded-2xl bg-white/[0.07] border border-white/10">
+            <div className="text-[10px] text-[#b8c6de]">3. Invoiced</div>
+            <div className="font-bold font-display text-sm text-white mt-0.5">
+              AED <AnimatedNumber value={Number(commSummary.invoiced_total || 0)} />
+            </div>
           </div>
-          <div className="p-2.5 rounded-xl bg-white/10">
-            <div className="text-[10px] text-[#d3eee0]">4. Cash Collected</div>
-            <div className="font-bold text-sm">AED {Number(commSummary.collected_total || 0).toLocaleString()}</div>
+          <div className="p-2.5 rounded-2xl bg-white/[0.07] border border-white/10">
+            <div className="text-[10px] text-[#b8c6de]">4. Cash Collected</div>
+            <div className="font-bold font-display text-sm text-white mt-0.5">
+              AED <AnimatedNumber value={Number(commSummary.collected_total || 0)} />
+            </div>
           </div>
-          <div className="p-2.5 rounded-xl bg-white/15 border border-white/30">
-            <div className="text-[10px] text-[#d3eee0]">5. Net Payable</div>
-            <div className="font-extrabold text-sm text-[#34d399]">AED {Number(commSummary.payable_total || 0).toLocaleString()}</div>
+          <div className="p-2.5 rounded-2xl bg-[#c9a96e]/20 border border-[#c9a96e]">
+            <div className="text-[10px] text-[#f3ead8] font-semibold">5. Net Payable</div>
+            <div className="font-extrabold font-display text-sm text-[#f3ead8] mt-0.5">
+              AED <AnimatedNumber value={Number(commSummary.payable_total || 0)} />
+            </div>
           </div>
-          <div className="p-2.5 rounded-xl bg-white/10">
-            <div className="text-[10px] text-[#d3eee0]">6. Paid Out</div>
-            <div className="font-bold text-sm">AED {Number(commSummary.paid_total || 0).toLocaleString()}</div>
+          <div className="p-2.5 rounded-2xl bg-[#1f9d6b]/20 border border-[#4fd39a]/40">
+            <div className="text-[10px] text-[#8fe3bd]">6. Paid Out</div>
+            <div className="font-bold font-display text-sm text-[#8fe3bd] mt-0.5">
+              AED <AnimatedNumber value={Number(commSummary.paid_total || 0)} />
+            </div>
           </div>
         </div>
 
-        {commissions.map(c => (
-          <div key={c.id} className="p-3 rounded-xl bg-white/10 text-xs space-y-1">
-            <div className="flex items-center justify-between">
-              <b>{c.entitlement_no} · {c.deal_type} ({c.split_pct}% Split)</b>
-              <span className="px-2 py-0.5 rounded-full bg-white text-[#025e3d] text-[10px] font-bold">{c.status}</span>
+        <div className="relative z-10 space-y-2">
+          {commissions.map(c => (
+            <div
+              key={c.id}
+              className="p-3 rounded-2xl bg-white/[0.08] backdrop-blur-xs border border-white/15 text-xs space-y-1"
+            >
+              <div className="flex items-center justify-between">
+                <b className="text-[#f3ead8]">
+                  {c.entitlement_no} · {c.deal_type} ({c.split_pct}% Split)
+                </b>
+                <span className="px-2.5 py-0.5 rounded-full bg-[#c9a96e] text-[#0b1a33] text-[10px] font-bold">
+                  {c.status}
+                </span>
+              </div>
+              <div className="text-[11px] text-[#c8d3e6]">
+                Next Payout Gate: {c.dispute_notes || 'Awaiting bank receipt reconciliation & 3-way treasury sign-off'}
+              </div>
             </div>
-            <div className="text-[11px] text-[#d3eee0]">
-              Why Pending / Next Gate: {c.dispute_notes || 'Awaiting bank receipt reconciliation & 3-way treasury sign-off'}
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      </motion.div>
 
       {/* 2. Verified Activity Score & QA Coaching Feedback (Features 59, 61, 64, 65) */}
-      <div className="rounded-2xl bg-white border border-[#e6ebe7] p-4 shadow-xs space-y-3">
-        <div className="flex items-center justify-between">
+      <motion.div
+        variants={itemRise}
+        className="rounded-3xl bg-white border border-[#e7e1d4] p-4 shadow-xs space-y-3"
+      >
+        <div className="flex items-center justify-between gap-3">
           <div>
-            <h3 className="font-bold font-display text-sm text-[#161d1a]">
+            <div className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#9a7a42]">
+              Audited Performance Index
+            </div>
+            <h3 className="font-bold font-display text-sm text-[#0b1a33]">
               Verified Activity Score & Quality Coaching
             </h3>
-            <p className="text-[11px] text-[#53655b]">{score.policy_note}</p>
+            <p className="text-[11px] text-[#6b7488]">{score.policy_note}</p>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-[#edf5f0] border border-[#007b52] grid place-items-center font-extrabold text-base text-[#007b52]">
+          <div
+            className="w-14 h-14 rounded-2xl border border-[#c9a96e] grid place-items-center font-extrabold font-display text-lg text-[#0b1a33] shrink-0 shadow-xs"
+            style={{ background: 'linear-gradient(135deg, #fbf5e8, #efe2c6)' }}
+          >
             {score.total_score || 92}
           </div>
         </div>
         {qaReviews.map(q => (
-          <div key={q.id} className="p-3 rounded-xl bg-[#f1f6f3] text-xs space-y-1">
+          <div key={q.id} className="p-3 rounded-2xl bg-[#fbf8f2] border border-[#efe9dc] text-xs space-y-1">
             <div className="flex items-center justify-between">
-              <b>{q.qa_no} · {q.channel}</b>
-              <span className="font-bold text-[#007b52]">Overall Score: {q.overall_score}/100</span>
+              <b className="text-[#0b1a33]">
+                {q.qa_no} · {q.channel}
+              </b>
+              <span className="font-bold text-[#14305c]">Score: {q.overall_score}/100</span>
             </div>
-            <div className="text-[11px] text-[#3f4f47]"><b>Findings:</b> {q.findings}</div>
-            {q.coaching_plan && <div className="text-[11px] text-[#007b52]"><b>Coaching:</b> {q.coaching_plan}</div>}
+            <div className="text-[11px] text-[#3a4660]">
+              <b>Findings:</b> {q.findings}
+            </div>
+            {q.coaching_plan && (
+              <div className="text-[11px] text-[#9a7a42]">
+                <b>Coaching:</b> {q.coaching_plan}
+              </div>
+            )}
           </div>
         ))}
-      </div>
+      </motion.div>
 
-      {/* 3. HR Document Wallet & Expiry Reminders (Features 9 & 10) */}
-      <div className="rounded-2xl bg-white border border-[#e6ebe7] p-4 shadow-xs space-y-2.5">
-        <h3 className="font-bold font-display text-sm text-[#161d1a]">
-          HR Document Wallet & Permit Expiry Reminders
-        </h3>
+      {/* 3. Digital RERA Broker Card & HR Document Wallet (Features 9 & 10) */}
+      <motion.div
+        variants={itemRise}
+        className="rounded-3xl bg-white border border-[#e7e1d4] p-4 shadow-xs space-y-3"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <IdCard size={16} className="text-[#9a7a42]" />
+            <h3 className="font-bold font-display text-sm text-[#0b1a33]">
+              Digital RERA Broker Card & HR Document Wallet
+            </h3>
+          </div>
+          <span className="text-[10px] font-bold text-[#157a52] bg-[#e3f4ec] px-2.5 py-0.5 rounded-full">
+            DLD Verified
+          </span>
+        </div>
+
+        {/* Holographic-styled Digital RERA Broker Credential Card */}
+        <div
+          className="relative overflow-hidden rounded-2xl p-4 text-white border border-[#c9a96e]/50 shadow-md"
+          style={{ background: 'linear-gradient(135deg, #14305c 0%, #0b1a33 100%)' }}
+        >
+          <img
+            src={SWK_BRAND.skylineFront}
+            alt=""
+            aria-hidden
+            className="absolute bottom-0 left-0 right-0 w-full h-12 object-cover opacity-15 pointer-events-none"
+          />
+          <div className="relative z-10 flex items-center justify-between mb-3">
+            <div>
+              <div className="text-[9.5px] uppercase tracking-[0.22em] text-[#dcc8a2] font-bold">
+                Dubai Land Department · RERA Pass
+              </div>
+              <div className="font-display font-bold text-sm text-white mt-0.5">
+                {data?.user?.name || 'SWK Certified Broker'}
+              </div>
+            </div>
+            <img src={SWK_BRAND.logoWhite} alt="SWK" className="h-6 w-auto" />
+          </div>
+          <div className="relative z-10 grid grid-cols-3 gap-2 text-[11px] pt-2 border-t border-white/15">
+            <div>
+              <div className="text-[9px] uppercase text-white/60">RERA BRN</div>
+              <div className="font-mono font-bold text-[#f3ead8]">{data?.agent?.rera_brn || 'BRN-51517-DXB'}</div>
+            </div>
+            <div>
+              <div className="text-[9px] uppercase text-white/60">ORN Licence</div>
+              <div className="font-mono font-bold text-white">51517</div>
+            </div>
+            <div>
+              <div className="text-[9px] uppercase text-white/60">Status</div>
+              <div className="font-bold text-[#8fe3bd] flex items-center gap-1">
+                <ShieldCheck size={11} /> Active
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="space-y-2">
           {(hrWallet.expiry_reminders || []).map((doc: any) => (
-            <div key={doc.id} className="p-3 rounded-xl bg-[#f1f6f3] flex items-center justify-between text-xs">
+            <div
+              key={doc.id}
+              className="p-3 rounded-2xl bg-[#fbf8f2] border border-[#efe9dc] flex items-center justify-between text-xs"
+            >
               <div>
-                <div className="font-bold text-[#161d1a]">{doc.title}</div>
-                <div className="text-[11px] font-mono text-[#53655b]">Ref: {doc.ref} · Expires: {doc.expiry_date}</div>
+                <div className="font-bold text-[#0b1a33]">{doc.title}</div>
+                <div className="text-[11px] font-mono text-[#6b7488]">
+                  Ref: {doc.ref} · Expires: {doc.expiry_date}
+                </div>
               </div>
-              <span className="px-2.5 py-0.5 rounded-full bg-[#dcf1e6] text-[#025e3d] text-[10px] font-bold">
+              <span className="px-2.5 py-0.5 rounded-full bg-[#e3f4ec] text-[#157a52] text-[10px] font-bold">
                 {doc.status}
               </span>
             </div>
           ))}
         </div>
-      </div>
+      </motion.div>
 
       {/* 4. Attendance History & Challenge / Correction Request (Feature #5) */}
-      <div className="rounded-2xl bg-white border border-[#e6ebe7] p-4 shadow-xs space-y-2.5">
-        <h3 className="font-bold font-display text-sm text-[#161d1a]">
+      <motion.div
+        variants={itemRise}
+        className="rounded-3xl bg-white border border-[#e7e1d4] p-4 shadow-xs space-y-2.5"
+      >
+        <h3 className="font-bold font-display text-sm text-[#0b1a33]">
           Attendance History & Correction Requests ({attendanceHistory.length})
         </h3>
         <div className="space-y-2">
           {attendanceHistory.slice(0, 5).map(att => (
-            <div key={att.id} className="p-3 rounded-xl bg-[#f1f6f3] text-xs space-y-1.5">
+            <div
+              key={att.id}
+              className="p-3 rounded-2xl bg-[#fbf8f2] border border-[#efe9dc] text-xs space-y-1.5"
+            >
               <div className="flex items-center justify-between">
-                <b>{att.work_date} · {att.terminal_type} ({att.event_no})</b>
+                <b className="text-[#0b1a33]">
+                  {att.work_date} · {att.terminal_type} ({att.event_no})
+                </b>
                 <button
                   onClick={() => setCorrId(corrId === att.id ? null : att.id)}
-                  className="px-2.5 py-0.5 rounded-full bg-white border border-[#cbd6ce] text-[10px] font-semibold cursor-pointer"
+                  className="px-2.5 py-0.5 rounded-full bg-white border border-[#d9d1c1] text-[10px] font-bold text-[#14305c] cursor-pointer"
                 >
                   Challenge / Correct
                 </button>
               </div>
-              <div className="text-[11px] text-[#53655b]">
-                In: {String(att.check_in_at || '').slice(11, 16) || '09:00'} · Out: {String(att.check_out_at || '').slice(11, 16) || 'Active'} · Status: {att.duty_status}
+              <div className="text-[11px] text-[#6b7488]">
+                In: {String(att.check_in_at || '').slice(11, 16) || '09:00'} · Out:{' '}
+                {String(att.check_out_at || '').slice(11, 16) || 'Active'} · Status: {att.duty_status}
               </div>
               {corrId === att.id && (
                 <div className="flex gap-1.5 pt-1">
@@ -1263,7 +1841,7 @@ export function PayHrAndSecurityTab({
                     value={corrReason}
                     onChange={e => setCorrReason(e.target.value)}
                     placeholder="Reason for attendance correction (e.g. client morning meeting at DLD)…"
-                    className="flex-1 px-2.5 py-1.5 rounded-lg bg-white border border-[#cbd6ce] text-xs"
+                    className="flex-1 px-2.5 py-1.5 rounded-xl bg-white border border-[#d9d1c1] text-xs text-[#0b1a33]"
                   />
                   <button
                     onClick={async () => {
@@ -1271,7 +1849,7 @@ export function PayHrAndSecurityTab({
                       setCorrId(null)
                       setCorrReason('')
                     }}
-                    className="px-3 py-1.5 rounded-full bg-[#007b52] text-white text-xs font-bold border-0 cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-full bg-[#0b1a33] text-[#f3ead8] text-xs font-bold border-0 cursor-pointer"
                   >
                     Submit
                   </button>
@@ -1280,53 +1858,69 @@ export function PayHrAndSecurityTab({
             </div>
           ))}
         </div>
-      </div>
+      </motion.div>
 
       {/* 5. Leave Request & Shift Handover (Features #7 & #8) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="rounded-2xl bg-white border border-[#e6ebe7] p-4 shadow-xs space-y-2.5 text-xs">
-          <div className="font-bold font-display text-sm text-[#161d1a] flex items-center gap-1.5">
-            <Plane size={15} className="text-[#007b52]" /> Leave & Emergency Absence
+      <motion.div variants={itemRise} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="rounded-3xl bg-white border border-[#e7e1d4] p-4 shadow-xs space-y-2.5 text-xs">
+          <div className="font-bold font-display text-sm text-[#0b1a33] flex items-center gap-1.5">
+            <Plane size={15} className="text-[#9a7a42]" /> Leave & Emergency Absence
           </div>
           <select
             value={leaveType}
             onChange={e => setLeaveType(e.target.value)}
-            className="w-full px-3 py-2 rounded-xl border border-[#cbd6ce] bg-white"
+            className="w-full px-3 py-2 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-[#0b1a33]"
           >
             <option value="Annual">Annual Leave</option>
             <option value="Sick">Medical / Sick Leave</option>
             <option value="Compassionate">Emergency / Compassionate</option>
           </select>
           <div className="grid grid-cols-2 gap-2">
-            <input type="date" value={leaveFrom} onChange={e => setLeaveFrom(e.target.value)} className="px-2.5 py-2 rounded-xl border border-[#cbd6ce]" />
-            <input type="date" value={leaveTo} onChange={e => setLeaveTo(e.target.value)} className="px-2.5 py-2 rounded-xl border border-[#cbd6ce]" />
+            <input
+              type="date"
+              value={leaveFrom}
+              onChange={e => setLeaveFrom(e.target.value)}
+              className="px-2.5 py-2 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-[#0b1a33]"
+            />
+            <input
+              type="date"
+              value={leaveTo}
+              onChange={e => setLeaveTo(e.target.value)}
+              className="px-2.5 py-2 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-[#0b1a33]"
+            />
           </div>
           <input
             type="text"
             value={leaveReason}
             onChange={e => setLeaveReason(e.target.value)}
             placeholder="Reason & cover notes…"
-            className="w-full px-3 py-2 rounded-xl border border-[#cbd6ce]"
+            className="w-full px-3 py-2 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-[#0b1a33]"
           />
-          <button
-            onClick={() => void onSubmitLeave({ type: leaveType, from_date: leaveFrom, to_date: leaveTo, reason: leaveReason })}
-            className="w-full py-2.5 rounded-full bg-[#007b52] text-white font-bold border-0 cursor-pointer"
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() =>
+              void onSubmitLeave({ type: leaveType, from_date: leaveFrom, to_date: leaveTo, reason: leaveReason })
+            }
+            className="w-full py-2.5 rounded-2xl text-[#0b1a33] font-bold border-0 cursor-pointer"
+            style={{ background: 'linear-gradient(135deg, #f1e3c2, #c9a96e)' }}
           >
             Submit Leave Request
-          </button>
+          </motion.button>
         </div>
 
-        <div className="rounded-2xl bg-white border border-[#e6ebe7] p-4 shadow-xs space-y-2.5 text-xs">
-          <div className="font-bold font-display text-sm text-[#161d1a] flex items-center gap-1.5">
-            <UserCheck size={15} className="text-[#007b52]" /> Shift Handover
+        <div className="rounded-3xl bg-white border border-[#e7e1d4] p-4 shadow-xs space-y-2.5 text-xs">
+          <div className="font-bold font-display text-sm text-[#0b1a33] flex items-center gap-1.5">
+            <UserCheck size={15} className="text-[#9a7a42]" /> Shift Handover
           </div>
           <select
             value={handoverUser}
             onChange={e => setHandoverUser(Number(e.target.value))}
-            className="w-full px-3 py-2 rounded-xl border border-[#cbd6ce] bg-white"
+            className="w-full px-3 py-2 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-[#0b1a33]"
           >
             {colleagues.map(u => (
-              <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+              <option key={u.id} value={u.id}>
+                {u.name} ({u.email})
+              </option>
             ))}
           </select>
           <textarea
@@ -1334,21 +1928,25 @@ export function PayHrAndSecurityTab({
             value={handoverNotes}
             onChange={e => setHandoverNotes(e.target.value)}
             placeholder="Pending viewings, hot leads, or key custody notes for next shift…"
-            className="w-full px-3 py-2 rounded-xl border border-[#cbd6ce]"
+            className="w-full px-3 py-2 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-[#0b1a33]"
           />
-          <button
+          <motion.button
+            whileTap={{ scale: 0.97 }}
             onClick={() => void onShiftHandover(handoverUser, handoverNotes || 'Standard EOD shift handover')}
-            className="w-full py-2.5 rounded-full bg-[#161d1a] text-white font-bold border-0 cursor-pointer"
+            className="w-full py-2.5 rounded-2xl bg-[#0b1a33] text-[#f3ead8] font-bold border-0 cursor-pointer"
           >
             Hand Over Unfinished Work
-          </button>
+          </motion.button>
         </div>
-      </div>
+      </motion.div>
 
       {/* 6. Company Knowledge Assistant (Feature #11) */}
-      <div className="rounded-2xl bg-white border border-[#e6ebe7] p-4 shadow-xs space-y-2.5 text-xs">
-        <div className="font-bold font-display text-sm text-[#161d1a] flex items-center gap-1.5">
-          <BookOpen size={15} className="text-[#007b52]" /> Company Policy & Knowledge Assistant
+      <motion.div
+        variants={itemRise}
+        className="rounded-3xl bg-white border border-[#e7e1d4] p-4 shadow-xs space-y-2.5 text-xs"
+      >
+        <div className="font-bold font-display text-sm text-[#0b1a33] flex items-center gap-1.5">
+          <BookOpen size={15} className="text-[#9a7a42]" /> Company Policy & RERA Knowledge Assistant
         </div>
         <div className="flex gap-2">
           <input
@@ -1356,46 +1954,54 @@ export function PayHrAndSecurityTab({
             value={kbQuery}
             onChange={e => setKbQuery(e.target.value)}
             placeholder="Ask about commission splits, location privacy, NOC rules, WABA policy…"
-            className="flex-1 px-3 py-2 rounded-xl border border-[#cbd6ce]"
+            className="flex-1 px-3 py-2 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-[#0b1a33]"
           />
-          <button
+          <motion.button
+            whileTap={{ scale: 0.95 }}
             onClick={async () => {
               const res = await onAskKnowledge(kbQuery || 'commission policy')
               setKbAnswer(res.answer)
             }}
-            className="px-4 py-2 rounded-full bg-[#007b52] text-white font-bold border-0 cursor-pointer"
+            className="px-4 py-2 rounded-full bg-[#0b1a33] text-[#f3ead8] font-bold border-0 cursor-pointer"
           >
             Ask
-          </button>
+          </motion.button>
         </div>
         {kbAnswer && (
-          <div className="p-3 rounded-xl bg-[#edf5f0] text-[#161d1a] border border-[#007b52]/30">
+          <div className="p-3 rounded-2xl bg-[#fbf8f2] text-[#0b1a33] border border-[#c9a96e]">
             {kbAnswer}
           </div>
         )}
-      </div>
+      </motion.div>
 
       {/* 7. Onboarding & Exit Checklists (Features #12 & #13) */}
-      <div className="rounded-2xl bg-white border border-[#e6ebe7] p-4 shadow-xs space-y-3 text-xs">
-        <h3 className="font-bold font-display text-sm text-[#161d1a]">
+      <motion.div
+        variants={itemRise}
+        className="rounded-3xl bg-white border border-[#e7e1d4] p-4 shadow-xs space-y-3 text-xs"
+      >
+        <h3 className="font-bold font-display text-sm text-[#0b1a33]">
           Employee Onboarding & Asset Exit Checklists
         </h3>
         <div className="space-y-1.5">
           {(workday.onboarding || []).map((item: any) => (
-            <label key={item.id} className="flex items-center gap-2 p-2 rounded-xl bg-[#f1f6f3] cursor-pointer">
+            <label
+              key={item.id}
+              className="flex items-center gap-2.5 p-2.5 rounded-2xl bg-[#fbf8f2] border border-[#efe9dc] cursor-pointer"
+            >
               <input
                 type="checkbox"
+                className="swk-check"
                 checked={!!item.done}
                 onChange={e => void onToggleChecklist('onboarding', item.id, e.target.checked)}
               />
-              <span className={item.done ? 'line-through text-[#53655b]' : 'font-semibold text-[#161d1a]'}>
+              <span className={item.done ? 'line-through text-[#6b7488]' : 'font-semibold text-[#0b1a33]'}>
                 {item.label}
               </span>
-              <span className="ml-auto text-[10px] text-[#007b52] font-semibold">{item.owner}</span>
+              <span className="ml-auto text-[10px] text-[#9a7a42] font-bold">{item.owner}</span>
             </label>
           ))}
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }

@@ -505,6 +505,7 @@ export function getWorkdayState(userId: number, employeeId: number | null) {
       employee_id: employeeId,
       work_date: date,
       presence_mode: 'Office Work',
+      current_mode: 'Office Work',
       break_minutes: 0,
       checklist: DEFAULT_WORKDAY_CHECKLIST,
       onboarding: DEFAULT_ONBOARDING_CHECKLIST,
@@ -516,6 +517,7 @@ export function getWorkdayState(userId: number, employeeId: number | null) {
   }
   return {
     ...row,
+    current_mode: row.presence_mode,
     checklist: safeJson(row.checklist_json, DEFAULT_WORKDAY_CHECKLIST),
     onboarding: safeJson(row.onboarding_json, DEFAULT_ONBOARDING_CHECKLIST),
     exit: safeJson(row.exit_json, DEFAULT_EXIT_CHECKLIST),
@@ -1957,6 +1959,28 @@ export function getSwkOneBootstrap(ctx: Ctx) {
     paid_total: commissions.reduce((s, c) => s + Number(c.paid_amount || 0), 0),
   }
 
+  const suggestedPriorities = [
+    communications.some(c => c.status === 'Open')
+      ? 'Reply to open WhatsApp Business client enquiries before SLA timer expires'
+      : 'Review today’s assigned CRM lead queue and log morning follow-up calls',
+    viewings.length > 0
+      ? `Confirm afternoon viewing at ${viewings[0]?.property_title || 'Marina Gate'} and check out property keys`
+      : 'Schedule property viewings for qualified buyers in your pipeline',
+    inventorySubmissions.length > 0
+      ? 'Reconfirm owner asking price and verify Trakheesi permit status on sourced units'
+      : 'Source and submit new exclusive owner inventory using Camera-Assisted Entry',
+  ]
+  const unreadWhatsappCount = communications.filter(c => c.status === 'Open').length
+  const todayReport = dailyReports.find(d => d.report_date === date) || null
+  const dailyJournal = {
+    ...activitySnap,
+    recent_activities: recentActivities,
+    today_report: todayReport,
+    reports_history: dailyReports,
+  }
+  const qrPreviewRaw = getCurrentReceptionQr(1, ctx)
+  const qrPreview = { ...qrPreviewRaw, token: qrPreviewRaw.token_code }
+
   return {
     server_time: nowIso(),
     work_date: date,
@@ -1966,21 +1990,20 @@ export function getSwkOneBootstrap(ctx: Ctx) {
     authorisation,
     workday,
     morning_briefing: {
+      greeting: 'Good morning',
       viewings_count: openViewingsCount,
       followups_count: urgentFollowupsCount,
       inventory_tasks_count: pendingInventoryCount,
       deal_blockers_count: dealBlockersCount,
-      suggested_priorities: [
-        communications.some(c => c.status === 'Open')
-          ? 'Reply to open WhatsApp Business client enquiries before SLA timer expires'
-          : 'Review today’s assigned CRM lead queue and log morning follow-up calls',
-        viewings.length > 0
-          ? `Confirm afternoon viewing at ${viewings[0]?.property_title || 'Marina Gate'} and check out property keys`
-          : 'Schedule property viewings for qualified buyers in your pipeline',
-        inventorySubmissions.length > 0
-          ? 'Reconfirm owner asking price and verify Trakheesi permit status on sourced units'
-          : 'Source and submit new exclusive owner inventory using Camera-Assisted Entry',
-      ],
+      counts: {
+        viewings_today: openViewingsCount,
+        urgent_follow_ups: urgentFollowupsCount,
+        inventory_tasks: pendingInventoryCount,
+        deal_blockers: dealBlockersCount,
+        unread_whatsapp: unreadWhatsappCount,
+      },
+      suggested_priorities: suggestedPriorities,
+      priorities: suggestedPriorities,
     },
     verified_activity_score: {
       total_score: verifiedScore,
@@ -1998,12 +2021,10 @@ export function getSwkOneBootstrap(ctx: Ctx) {
     active_field_session: activeFieldSession,
     field_sessions: fieldSessions,
     location_privacy_logs: locationPrivacyLogs,
-    daily_journal: {
-      ...activitySnap,
-      recent_activities: recentActivities,
-      today_report: dailyReports.find(d => d.report_date === date) || null,
-      reports_history: dailyReports,
-    },
+    location_access_logs: locationPrivacyLogs,
+    daily_journal: dailyJournal,
+    activity_journal: dailyJournal,
+    today_report: todayReport,
     leads,
     viewings,
     properties,
@@ -2027,6 +2048,7 @@ export function getSwkOneBootstrap(ctx: Ctx) {
     devices,
     colleagues,
     notifications,
-    reception_qr_preview: getCurrentReceptionQr(1, ctx),
+    reception_qr_preview: qrPreview,
+    reception_qr: qrPreview,
   }
 }

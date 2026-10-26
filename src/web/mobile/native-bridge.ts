@@ -32,6 +32,7 @@ const SERVER_URL_KEY = 'swk.one.server_url'
 
 export function isCapacitorAndroid(): boolean {
   if (typeof window === 'undefined') return false
+  if ((window as any).SwkAndroidBridge) return true
   const cap = (window as any).Capacitor
   if (cap?.isNativePlatform?.() && cap?.getPlatform?.() === 'android') return true
   if (new URLSearchParams(window.location.search).get('platform') === 'android') return true
@@ -70,6 +71,25 @@ export function setStoredSessionToken(token: string | null) {
 }
 
 export async function getDeviceIdentity(): Promise<DeviceIdentity> {
+  const swkBridge = typeof window !== 'undefined' ? (window as any).SwkAndroidBridge : null
+  if (swkBridge?.getDeviceIdentityJson) {
+    try {
+      const info = JSON.parse(swkBridge.getDeviceIdentityJson())
+      if (info?.device_id) {
+        localStorage.setItem(DEVICE_STORAGE_KEY, info.device_id)
+        return {
+          device_id: info.device_id,
+          device_name: info.device_name || `${info.manufacturer || 'Android'} ${info.model || 'Handset'}`,
+          model: info.model || 'Android Enterprise Device',
+          manufacturer: info.manufacturer || 'Google',
+          os_version: info.os_version || 'Android 15',
+          app_version: info.app_version || '2.0.0-enterprise',
+          is_native_android: true,
+          biometric_supported: info.biometric_supported !== false,
+        }
+      }
+    } catch { /* fallback below */ }
+  }
   const cap = typeof window !== 'undefined' ? (window as any).Capacitor : null
   const nativePlugin = cap?.Plugins?.SwkNative
   if (nativePlugin?.getDeviceIdentity) {
@@ -120,6 +140,20 @@ export async function getDeviceIdentity(): Promise<DeviceIdentity> {
 export async function authenticateBiometricSession(
   reason = 'Unlock SWK ONE Staff & Agent Workspace',
 ): Promise<{ verified: boolean; method: string }> {
+  const swkBridge = typeof window !== 'undefined' ? (window as any).SwkAndroidBridge : null
+  if (swkBridge?.promptBiometricUnlock) {
+    return new Promise(resolve => {
+      const handler = (ev: any) => {
+        window.removeEventListener('swk:biometric-result', handler)
+        resolve({
+          verified: !!ev?.detail?.verified,
+          method: ev?.detail?.method || 'Android BiometricPrompt',
+        })
+      }
+      window.addEventListener('swk:biometric-result', handler)
+      swkBridge.promptBiometricUnlock(reason)
+    })
+  }
   const cap = typeof window !== 'undefined' ? (window as any).Capacitor : null
   const nativePlugin = cap?.Plugins?.SwkNative
   if (nativePlugin?.authenticateBiometric) {
@@ -187,9 +221,16 @@ export async function startNativeForegroundDutyService(opts: {
   deviceId?: string
   [k: string]: any
 }, _extra?: any): Promise<{ fgServiceActive: boolean; notificationTitle: string }> {
+  const swkBridge = typeof window !== 'undefined' ? (window as any).SwkAndroidBridge : null
+  const title = `SWK ONE: Active Field Duty (${opts.assignedLocation})`
+  if (swkBridge?.startDutyLocationService) {
+    try {
+      swkBridge.startDutyLocationService(Number(opts.sessionId || 1), String(opts.assignedLocation || 'Dubai Field Duty'))
+      return { fgServiceActive: true, notificationTitle: title }
+    } catch { /* fallback */ }
+  }
   const cap = typeof window !== 'undefined' ? (window as any).Capacitor : null
   const nativePlugin = cap?.Plugins?.SwkNative
-  const title = `SWK ONE: Active Field Duty (${opts.assignedLocation})`
   if (nativePlugin?.startDutyLocationService) {
     try {
       await nativePlugin.startDutyLocationService({
@@ -206,6 +247,12 @@ export async function startNativeForegroundDutyService(opts: {
 }
 
 export async function stopNativeForegroundDutyService(_a?: any, _b?: any): Promise<{ stopped: boolean }> {
+  const swkBridge = typeof window !== 'undefined' ? (window as any).SwkAndroidBridge : null
+  if (swkBridge?.stopDutyLocationService) {
+    try {
+      swkBridge.stopDutyLocationService()
+    } catch { /* ignore */ }
+  }
   const cap = typeof window !== 'undefined' ? (window as any).Capacitor : null
   const nativePlugin = cap?.Plugins?.SwkNative
   if (nativePlugin?.stopDutyLocationService) {
@@ -298,7 +345,7 @@ export function clearAllOfflineQueue() {
   } catch { /* ignore */ }
 }
 
-export function openAndroidMapsNavigation(lat?: string | null, lng?: string | null, label?: string) {
+export function openAndroidMapsNavigation(lat?: string | number | null, lng?: string | number | null, label?: string) {
   const q = lat && lng ? `${lat},${lng}` : encodeURIComponent(label || 'Dubai Marina, Dubai, UAE')
   const url = `https://www.google.com/maps/dir/?api=1&destination=${q}&travelmode=driving`
   window.open(url, '_blank', 'noopener,noreferrer')

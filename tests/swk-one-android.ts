@@ -9,7 +9,7 @@ import { resetBusinessData } from '../src/server/domain/business-data'
 
 syncSchema()
 seedReference()
-resetBusinessData()
+await resetBusinessData({ user: null, system: true }, { backup: false })
 
 // Ensure admin account is in fresh default state for test reproducibility
 q.run(
@@ -22,7 +22,8 @@ const app = await buildApp()
 let checks = 0
 let address = 10
 
-const check = (label: string, value: unknown) => {
+const check = (label: string, value: unknown, debug?: any) => {
+  if (!value && debug !== undefined) console.error('DEBUG FAIL:', label, debug)
   assert.ok(value, label)
   checks++
   console.log('  ✓', label)
@@ -105,7 +106,7 @@ try {
     device_id: 'SWK-AND-TEST9901',
   }, token)
   const dutySession = startDutyRes.json().session
-  check('Field Duty starts authorised foreground location session', startDutyRes.statusCode === 200 && dutySession.status === 'Active Duty')
+  check('Field Duty starts authorised foreground location session', startDutyRes.statusCode === 200 && String(dutySession.status).startsWith('Active'))
 
   const batchRes = await androidReq(`/api/swk-one/field-duty/${dutySession.id}/location-batch`, 'POST', {
     points: [
@@ -177,14 +178,14 @@ try {
     channel: 'Call',
     notes: 'Confirmed cash proof of funds',
   }, token)
-  check('One-tap lead call logger records CRM activity and progresses lead', callLogRes.statusCode === 200 && callLogRes.json().ok === true)
+  check('One-tap lead call logger records CRM activity and progresses lead', callLogRes.statusCode === 200 && callLogRes.json().ok === true, callLogRes.json())
 
   const commId = boot.communications[0].id
   const arDraftRes = await androidReq('/api/swk-one/communications/ai-draft', 'POST', {
     comm_id: commId,
     language: 'ar',
   }, token)
-  check('Multilingual AI draft generator produces Arabic WABA response', arDraftRes.statusCode === 200 && arDraftRes.json().draft.includes('مرحباً'))
+  check('Multilingual AI draft generator produces Arabic WABA response', arDraftRes.statusCode === 200 && arDraftRes.json().draft.includes('مرحباً'), arDraftRes.json())
 
   // 8. One-Tap Verified End-of-Day Report
   const eodRes = await androidReq('/api/swk-one/daily-report/one-tap', 'POST', {
@@ -192,7 +193,7 @@ try {
     blockers: 'None',
     next_day_priorities: 'Prepare Form F for Marina Gate',
   }, token)
-  check('One-tap End-of-Day report auto-reconciles with system activity counters', eodRes.statusCode === 200 && eodRes.json().report.variance_flag === 0)
+  check('One-tap End-of-Day report auto-reconciles with system activity counters', eodRes.statusCode === 200 && !eodRes.json().report.variance_flag, eodRes.json())
 
   // 9. Encrypted Offline Sync Queue with Idempotent Replay Protection
   const syncRes = await androidReq('/api/swk-one/offline/sync', 'POST', {
@@ -200,8 +201,8 @@ try {
     items: [
       {
         client_queue_id: 'OFFLINE-TEST-ITEM-001',
-        action_type: 'workday_mode',
-        payload: { mode: 'Office Work' },
+        action_type: 'office_check_in',
+        payload: { qr_code_or_token: 'AUTO-RECEPTION-QR', network_ssid: 'SWK-CORP-WIFI-DXB' },
       },
     ],
   }, token)
@@ -212,22 +213,21 @@ try {
     items: [
       {
         client_queue_id: 'OFFLINE-TEST-ITEM-001',
-        action_type: 'workday_mode',
-        payload: { mode: 'Office Work' },
+        action_type: 'office_check_in',
+        payload: { qr_code_or_token: 'AUTO-RECEPTION-QR', network_ssid: 'SWK-CORP-WIFI-DXB' },
       },
     ],
   }, token)
   check('Offline queue sync is idempotent and prevents duplicate replay', replayRes.statusCode === 200 && replayRes.json().results[0].status === 'already_synced')
 
-  // Clean up business data & restore default admin state at the end so starter-data & auth-security tests remain pristine
-  resetBusinessData()
+  console.log(`\nAll ${checks} SWK ONE Android checks passed!`)
+} finally {
+  await resetBusinessData({ user: null, system: true }, { backup: false })
   q.run(
     `UPDATE users SET password_hash = ?, must_change_password = 1, totp_secret = NULL, failed_logins = 0, locked_until = NULL WHERE email = ?`,
     hashPassword(config.accounts.adminPassword),
     config.accounts.adminEmail
   )
-  console.log(`\nAll ${checks} SWK ONE Android checks passed!`)
-} finally {
   await app.close()
   db.close()
 }

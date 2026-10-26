@@ -24,17 +24,12 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: Install dependencies & build web bundle
+      - name: Install dependencies & sync native Android assets
         run: |
           npm ci
-          npm run build:web
+          npm run android:sync
 
-      - name: Install Capacitor Android & Sync Native Assets
-        run: |
-          npm install --no-save @capacitor/core @capacitor/cli @capacitor/android
-          npx cap copy android || true
-
-      - name: Setup Gradle & Build Debug + Release APKs
+      - name: Setup Gradle & Build SWK ONE Android APK
         uses: gradle/actions/setup-gradle@v4
       - name: Assemble Debug APK
         working-directory: android

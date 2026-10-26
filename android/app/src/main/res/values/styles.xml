@@ -1,14 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- SWK OS "Midnight & Champagne" Native Android Theme -->
     <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <item name="colorPrimary">#007B52</item>
-        <item name="colorPrimaryDark">#025E3D</item>
-        <item name="colorAccent">#007B52</item>
-        <item name="android:statusBarColor">#025E3D</item>
-        <item name="android:navigationBarColor">#FFFFFF</item>
+        <item name="colorPrimary">#14305C</item>
+        <item name="colorPrimaryDark">#08142A</item>
+        <item name="colorAccent">#C9A96E</item>
+        <item name="android:statusBarColor">#08142A</item>
+        <item name="android:navigationBarColor">#0B1A33</item>
+        <item name="android:windowBackground">#08142A</item>
     </style>
 
     <style name="AppTheme.NoActionBarLaunch" parent="AppTheme">
-        <item name="android:background">#025E3D</item>
+        <item name="android:windowBackground">@drawable/swk_launch_splash</item>
     </style>
 </resources>
