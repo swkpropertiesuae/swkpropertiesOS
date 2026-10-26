@@ -5,6 +5,7 @@ import {
   KeyRound, CalendarClock, Wallet, ReceiptText, Wrench, ClipboardCheck, DoorOpen, UserRoundCog, FileBarChart, Percent, Receipt, FileInput,
   Banknote, Scale, BadgeCheck, ScrollText, FileStack, Trophy, IdCard, Clock, Plane, Calculator, FileCode2, BarChart3, Settings,
   ShieldHalf, History, Plug, DatabaseBackup, Building, Gavel, Layers, ShieldAlert, CheckCheck, MapPinned, Briefcase, Star, PackageCheck,
+  Smartphone, QrCode,
 } from 'lucide-react'
 
 export type NavItem = { label: string; to: string; icon: LucideIcon; module?: string; isNew?: boolean; desc?: string }
@@ -14,6 +15,8 @@ export type NavSection = { key: string; label: string; items: NavItem[] }
 export const SWK_NAV: NavSection[] = [
   { key: 'command', label: 'Dashboards', items: [
     { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard, module: 'dashboard', desc: 'Today’s business summary' },
+    { label: 'SWK ONE Android App', to: '/swk-one', icon: Smartphone, isNew: true, desc: 'Dedicated Staff & Agent Android Mobile Workspace' },
+    { label: 'Reception QR Kiosk', to: '/reception-qr', icon: QrCode, isNew: true, desc: 'Office reception rotating QR check-in display' },
     { label: 'Company Operations', to: '/enterprise/master-os', icon: ShieldCheck, isNew: true, desc: 'Daily work, deals, approvals & team checks' },
     { label: 'Market Pulse', to: '/market', icon: LineChart, isNew: true, desc: 'Dubai area prices, yields & supply' },
     { label: 'Deal Pipeline', to: '/pipeline', icon: KanbanSquare, module: 'sales', isNew: true, desc: 'Track deals from enquiry to handover' },
@@ -101,6 +104,8 @@ export const SWK_NAV: NavSection[] = [
     { label: 'Payroll & WPS', to: '/e/payslips', icon: Banknote, module: 'hr', desc: 'Monthly salaries & bank files' },
   ] },
   { key: 'field', label: 'Field Service', items: [
+    { label: 'SWK ONE Android App', to: '/swk-one', icon: Smartphone, isNew: true, desc: 'Launch Staff & Agent Android Mobile Workspace' },
+    { label: 'Reception QR Kiosk', to: '/reception-qr', icon: QrCode, isNew: true, desc: 'Office reception check-in QR terminal' },
     { label: 'Field Visits', to: '/e/field_sessions', icon: MapPinned, module: 'hr', isNew: true, desc: 'Check-ins at viewings & client meetings' },
     { label: 'Daily Work Reports', to: '/e/daily_reports', icon: ClipboardCheck, module: 'hr', isNew: true, desc: 'End-of-day staff work summary' },
     { label: 'Office Check-In', to: '/e/attendance_events', icon: Clock, module: 'hr', isNew: true, desc: 'Office arrival & departure logs' },
@@ -124,6 +129,7 @@ export const SWK_NAV: NavSection[] = [
 ]
 
 export const QUICK_CREATE: { label: string; desc: string; to: string; icon: LucideIcon; module: string }[] = [
+  { label: 'Open SWK ONE Android App', desc: 'Launch Staff & Agent mobile workspace', to: '/swk-one', icon: Smartphone, module: 'dashboard' },
   { label: 'Daily work report', desc: 'Submit today’s calls, viewings & summary', to: '/e/daily_reports?new=1', icon: ClipboardCheck, module: 'hr' },
   { label: 'Submit a property', desc: 'Add a newly found property for review', to: '/e/inventory_submissions?new=1', icon: Building2, module: 'properties' },
   { label: 'New lead', desc: 'Add a buyer or tenant enquiry', to: '/e/leads?new=1', icon: UserPlus, module: 'crm' },
@@ -145,7 +151,7 @@ export function findNav(pathname: string) {
 /** Launcher ("Apps") presentation for each nav section — one simple icon tile per app on the post-sign-in home screen. */
 export type AppTone = 'navy' | 'champ' | 'oasis' | 'ocean' | 'dune' | 'plum'
 export const APP_META: Record<string, { blurb: string; icon: LucideIcon; tone: AppTone }> = {
-  command: { blurb: 'Dashboards, operations, pipeline, calendar & approvals', icon: LayoutDashboard, tone: 'navy' },
+  command: { blurb: 'Dashboards, SWK ONE Android App, operations & approvals', icon: LayoutDashboard, tone: 'navy' },
   inventory: { blurb: 'Listings, new property submissions, buildings & off-plan', icon: Building2, tone: 'ocean' },
   clients: { blurb: 'Leads, contacts, WhatsApp, phone calls & reviews', icon: Users, tone: 'oasis' },
   sales: { blurb: 'Seller mandates, offers, NOCs & property transfers', icon: FileSignature, tone: 'champ' },
@@ -154,7 +160,7 @@ export const APP_META: Record<string, { blurb: string; icon: LucideIcon; tone: A
   finance: { blurb: 'Commissions, invoices, bills, purchases & banking', icon: Percent, tone: 'oasis' },
   compliance: { blurb: 'RERA rules, agent licences, KYC checks & cases', icon: Gavel, tone: 'dune' },
   team: { blurb: 'Staff directory, visas, hiring, leave & payroll', icon: Users, tone: 'ocean' },
-  field: { blurb: 'Field visits, daily work reports & office check-in', icon: MapPinned, tone: 'champ' },
+  field: { blurb: 'SWK ONE Android App, Reception QR, field visits & daily reports', icon: MapPinned, tone: 'champ' },
   tools: { blurb: 'Deal calculators, contract templates & reports', icon: FileStack, tone: 'plum' },
   admin: { blurb: 'Company settings, policies, roles, backups & connections', icon: Settings, tone: 'dune' },
 }

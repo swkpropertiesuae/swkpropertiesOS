@@ -168,7 +168,7 @@ export function getCurrentReceptionQr(branchId = 1, ctx: Ctx = SYSTEM_CTX) {
       expiresAt,
       ctx.user?.id ?? null,
     )
-    active = q.get(`SELECT * FROM reception_qr_tokens WHERE token_code = ?`, tokenCode)
+    active = q.get(`SELECT * FROM reception_qr_tokens WHERE token_code = ?`, tokenCode)!; if (!active) throw bad('QR token unavailable')
   }
 
   const branch = q.get(`SELECT id, code, name, city FROM branches WHERE id = ? AND deleted_at IS NULL`, branchId) || {
@@ -244,7 +244,7 @@ export function registerMobileDevice(
       employee?.id ?? null,
       existing.id,
     )
-    return q.get(`SELECT * FROM mobile_devices WHERE id = ?`, existing.id)
+    return q.get(`SELECT * FROM mobile_devices WHERE id = ?`, existing.id)!
   }
 
   q.run(
@@ -263,7 +263,7 @@ export function registerMobileDevice(
     now,
     now,
   )
-  return q.get(`SELECT * FROM mobile_devices WHERE user_id = ? AND device_id = ?`, userId, devId)
+  return q.get(`SELECT * FROM mobile_devices WHERE user_id = ? AND device_id = ?`, userId, devId)!
 }
 
 /**
@@ -716,7 +716,7 @@ export function triggerFieldEmergencySos(
   const { userId, employee, agent } = resolveStaffContext(ctx, true)
   if (!employee) throw bad('Employee profile required')
   const now = nowIso().slice(0, 16)
-  let session: Rec | null = payload.session_id
+  let session: Rec | null | undefined = payload.session_id
     ? q.get(`SELECT * FROM field_sessions WHERE id = ? AND deleted_at IS NULL`, payload.session_id)
     : q.get(`SELECT * FROM field_sessions WHERE employee_id = ? AND status = 'Active (On Duty)' AND deleted_at IS NULL ORDER BY id DESC LIMIT 1`, employee.id)
 

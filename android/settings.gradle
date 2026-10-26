@@ -1,0 +1,8 @@
+include ':app'
+rootProject.name = "SWK-ONE-Android"
+
+def capacitorAndroidDir = new File(rootProject.projectDir, '../node_modules/@capacitor/android/capacitor')
+if (capacitorAndroidDir.exists()) {
+    include ':capacitor-android'
+    project(':capacitor-android').projectDir = capacitorAndroidDir
+}

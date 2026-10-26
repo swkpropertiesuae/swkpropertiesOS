@@ -27,6 +27,7 @@ import { PrintPage } from './print/PrintPage'
 import { StudioHome, StudioEditor } from './pages/StudioPage'
 import { NewInvoicePage } from './pages/NewInvoicePage'
 import { Loading, ErrorBox } from './ui/kit'
+import { isCapacitorAndroid } from './mobile/native-bridge'
 
 // SWK real-estate modules (code-split)
 const MarketPage = lazy(() => import('./pages/swk/MarketPage'))
@@ -39,6 +40,8 @@ const AgentsPage = lazy(() => import('./pages/swk/AgentsPage'))
 const ReraCentre = lazy(() => import('./pages/swk/ReraCentre'))
 const Owner360 = lazy(() => import('./pages/swk/Owner360'))
 const EnterpriseMasterOsPage = lazy(() => import('./pages/swk/EnterpriseMasterOsPage'))
+const SwkOneApp = lazy(() => import('./mobile/SwkOneApp'))
+const ReceptionQrPage = lazy(() => import('./pages/swk/ReceptionQrPage'))
 
 function Guard({ module, children }: { module: string; children: ReactNode }) {
   const { can } = useMeta()
@@ -49,6 +52,7 @@ const Statements = () => <ReportsPage fixed={['trial_balance', 'profit_loss', 'b
 export default function App() {
   const { me, loading } = useMeta()
   const loc = useLocation()
+  const defaultLanding = isCapacitorAndroid() ? '/swk-one' : '/home'
   if (loc.pathname.startsWith('/t/')) return <Routes><Route path="/t/:token" element={<PublicTrack />} /></Routes>
   if (loading) return <div className="h-full grid place-items-center"><Loading label="Starting SWK OS…" /></div>
   if (!me) return <Routes><Route path="/login" element={<Login />} /><Route path="*" element={<Navigate to="/login" replace state={{ from: loc.pathname }} />} /></Routes>
@@ -56,12 +60,14 @@ export default function App() {
   return (
     <Suspense fallback={<Loading />}>
       <Routes>
-        <Route path="/login" element={<Navigate to="/home" replace />} />
+        <Route path="/login" element={<Navigate to={defaultLanding} replace />} />
+        <Route path="/swk-one" element={<SwkOneApp />} />
         <Route element={<Shell />}>
-          <Route index element={<Navigate to="/home" replace />} />
+          <Route index element={<Navigate to={defaultLanding} replace />} />
           <Route path="/home" element={<Launcher />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/enterprise/master-os" element={<EnterpriseMasterOsPage />} />
+          <Route path="/reception-qr" element={<ReceptionQrPage />} />
           <Route path="/workspaces" element={<Workspaces />} />
           <Route path="/market" element={<MarketPage />} />
           <Route path="/toolkit" element={<ToolkitPage />} />
