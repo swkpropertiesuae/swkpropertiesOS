@@ -43,7 +43,7 @@ Font families remain **Instrument Sans** for body text and controls and **Plus J
 
 Some existing compact text retains its individual size: compact buttons 12.5px. Dashboard introductions are 15px, table cells 14px, panel headings 16px and status badges 12px. The refinement does not claim that every label is 16px.
 
-The palette continues to use the existing emerald (`#007b52`), graphite (`#161d1a`) and module chart colors defined in `index.css` and `Dashboard.tsx`. `reference.css` retains its existing neutral surface overrides. The header retains `/brand/logo-primary.png`. The footer retains **A product of SWK OS**, `/brand/digitalburj-business-os.png` and its [SWK OS product link](https://digitalburj.com/business-os).
+The palette continues to use the existing emerald (`#007b52`), graphite (`#161d1a`) and module chart colors defined in `index.css` and `Dashboard.tsx`. `reference.css` retains its existing neutral surface overrides. The header retains `/brand/logo-primary.png`.
 
 ## Related implementation and guidance
 
