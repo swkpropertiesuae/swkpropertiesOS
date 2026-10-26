@@ -4,7 +4,7 @@ export interface FooterCompany {
 }
 export function corporateFooterDetails(s: FooterCompany) {
   return {
-    name: s.company_name || 'ELVORA SHIPPING L.L.C',
+    name: s.company_name || 'SWK Properties L.L.C',
     address: s.company_address || 'Bur Dubai, Dubai, UAE',
     phone: s.company_phone || '',
     email: s.company_info_email || s.company_email || '',

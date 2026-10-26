@@ -18,8 +18,6 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "tsx --env-file-if-exists=.env tests/smoke.ts",
     "test:integrations": "tsx --env-file-if-exists=.env tests/phase2.ts",
-    "docs:build": "node tools/docs/build.mjs && node tools/docs/build-all.mjs && node tools/docs/readme.mjs && node --import tsx tools/docs/studio-export.mjs",
-    "docs:studio": "node --import tsx tools/docs/studio-export.mjs",
     "data:reset": "tsx --env-file-if-exists=.env tools/data/reset-business-data.ts",
     "test:compliance": "tsx --env-file-if-exists=.env tests/compliance.ts",
     "test:documents": "node tests/documents-ui.mjs",

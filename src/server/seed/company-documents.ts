@@ -9,7 +9,7 @@ export function seedCompanyDocuments() {
   if (!address || ['Dubai, United Arab Emirates', 'Naif, Dubai, United Arab Emirates (Parcel ID 118-157)'].includes(address))
     patch.company_address = 'Office F101-3, Ibrahim Mohammed Sharif Balsalah building, Naif, Dubai, United Arab Emirates'
   const facts = {
-    company_name_ar: 'إلفورا للشحن ش.ذ.م.م',
+    company_name_ar: 'إس دبليو كي العقارية ش.ذ.م.م',
     company_address_ar: 'مكتب رقم F101-3، ملك ابراهيم محمد شريف بالسلح، نايف، دبي، الإمارات العربية المتحدة',
     company_trade_license: '1645802', dcci_no: '697774', commercial_register_no: '2911510',
     licence_issue_date: '2026-08-17', licence_expiry_date: '2027-08-16',
@@ -19,7 +19,6 @@ export function seedCompanyDocuments() {
     ct_application_status: 'Submitted - awaiting FTA decision',
   }
   for (const [key, value] of Object.entries(facts)) if (!getSetting(key)) patch[key] = value
-  if (getSetting('company_name') === 'ELVORA SHIPPING L.L.C') patch.company_name = 'SWK Properties L.L.C'
   setSettings(patch)
   const items = [
     { type: 'ICP establishment card', name: 'ICP establishment card', reference_no: '2/1/1336642', status: 'Active', expiry_date: '2027-08-16', notes: 'Electronic establishment card supplied by SWK Properties. Not evidence of MOHRE/WPS enrolment.' },

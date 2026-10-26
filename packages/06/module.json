@@ -5,6 +5,5 @@
   "category": "operations",
   "key_features": ["suppliers", "purchase-requests", "approvals", "rfqs", "comparisons", "purchase-orders", "goods-receipts", "supplier-bills", "returns", "supplier-scoring", "contract-management"],
   "brand": "SWKPROPOS",
-  "os": "SWK OS",
-  "elvora_design": true
+  "os": "SWK OS"
 }

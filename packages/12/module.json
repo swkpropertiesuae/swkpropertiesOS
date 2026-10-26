@@ -5,6 +5,5 @@
   "category": "automation",
   "key_features": ["triggers", "conditions", "actions", "delays", "escalations", "retries", "overdue-reminders", "lead-assignment", "stock-alerts", "licence-alerts", "execution-history", "auditability", "business-controls"],
   "brand": "SWKPROPOS",
-  "os": "SWK OS",
-  "elvora_design": true
+  "os": "SWK OS"
 }

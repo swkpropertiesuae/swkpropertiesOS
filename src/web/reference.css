@@ -172,7 +172,7 @@ table.grid tbody tr:last-child td { border-bottom: 0; }
 @media print { .workspace-rail, .primary-pills { display: none; } .workspace-frame { height: auto; overflow: visible; } .card, .panel { box-shadow: none; } }
 
 
-/* Daily logistics work: readable labels, explicit actions and a manual workflow carousel. */
+/* Daily work: readable labels, explicit actions and a manual workflow carousel. */
 body { font-size: 16px; }
 .btn { font-size: 14px; min-height: 40px; }
 .input, .select, .textarea { font-size: 16px; }

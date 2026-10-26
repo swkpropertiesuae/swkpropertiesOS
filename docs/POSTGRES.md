@@ -14,7 +14,7 @@ Set `DATABASE_URL` and the app stores everything in PostgreSQL instead of the lo
 | Backups | There is no file to copy: *Backup* now writes a gzip NDJSON snapshot of every table (`.json.gz`). Supabase's own backups (paid plans) and point-in-time recovery are the real safety net. |
 
 ## Trade-off to know about
-Each query blocks the Node process for one network round trip, so **host the app in the same region as the database** (Supabase project `odejxqdftnbhtuvxqiwx` is `ap-southeast-1`, Singapore). At ~1–3 ms per query this is imperceptible for a freight-forwarding team; from another continent (150–250 ms) pages would crawl. The planned next step if load grows is an incremental async migration of the hottest paths.
+Each query blocks the Node process for one network round trip, so **host the app in the same region as the database** (the Supabase project `khrthpwjjbpjmzhxgqgg` is in `ap-south-1`, Mumbai). At ~1–3 ms per query this is imperceptible for a freight-forwarding team; from another continent (150–250 ms) pages would crawl. The planned next step if load grows is an incremental async migration of the hottest paths.
 
 ## Configuration
 * `DATABASE_URL` – Supabase **session pooler** (port 5432, user `postgres.<ref>`) or direct connection. Not the transaction pooler (6543): the app relies on `SET search_path` and multi-statement transactions on one session.

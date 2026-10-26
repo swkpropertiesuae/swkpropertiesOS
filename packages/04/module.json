@@ -5,6 +5,5 @@
   "category": "finance",
   "key_features": ["chart-of-accounts", "general-ledger", "journals", "ar-ap", "bank-reconciliation", "advances", "partial-payments", "credit-notes", "multicurrency", "cost-centres", "budgets", "fixed-assets", "accruals", "consolidation", "p-and-l", "balance-sheet", "cash-flow", "trial-balance", "ageing"],
   "brand": "SWKPROPOS",
-  "os": "SWK OS",
-  "elvora_design": true
+  "os": "SWK OS"
 }

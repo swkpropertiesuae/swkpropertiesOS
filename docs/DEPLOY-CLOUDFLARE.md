@@ -108,7 +108,7 @@ The first start also creates all tables in Supabase (schema `swk`) and can take 
 Open your address. Sign in as `admin@swkpropertiesuae.com` with the `ADMIN_PASSWORD` you set. The app makes you choose a personal password, then:
 1. *Profile → Two-step verification* → turn it on.
 2. Do the same for `manager@swkpropertiesuae.com`.
-3. *Administration → Company Settings → UAE compliance*: confirm the licence details, enter your **TRN** once you have it, and read `docs/UAE-COMPLIANCE.md`.
+3. *Administration → Company Settings → UAE compliance*: confirm the licence details, enter your **TRN** once you have it.
 
 ## 8. Permanent file storage with R2 (do this before real use)
 

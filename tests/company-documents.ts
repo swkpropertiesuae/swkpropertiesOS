@@ -9,9 +9,9 @@ import { mergeCompanyTokens, presentDocumentHtml } from '../src/shared/studio-ht
 syncSchema()
 // Simulate an existing installation whose original compliance seed already ran.
 q.run("INSERT INTO settings(key,value,updated_at) VALUES ('seed:compliance','1',?)", new Date().toISOString())
-setSettings({ company_name: 'ELVORA SHIPPING L.L.C', company_address: 'Naif, Dubai, United Arab Emirates (Parcel ID 118-157)', company_email: 'accounts@example.test', company_trn: '100123456700003' })
+setSettings({ company_name: 'SWK Properties L.L.C.', company_address: 'Naif, Dubai, United Arab Emirates (Parcel ID 118-157)', company_email: 'accounts@example.test', company_trn: '100123456700003' })
 seedReference()
-assert.equal(getSetting('company_name'), 'SWK Properties L.L.C')
+assert.equal(getSetting('company_name'), 'SWK Properties L.L.C.')
 assert.equal(getSetting('company_address'), 'Bur Dubai, Dubai, UAE')
 assert.equal(getSetting('company_email'), 'accounts@example.test')
 assert.equal(getSetting('company_trn'), '100123456700003')

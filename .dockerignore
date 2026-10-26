@@ -7,6 +7,5 @@ data
 .github
 deploy
 tests
-corporate-templates
 docs
 **/.wrangler

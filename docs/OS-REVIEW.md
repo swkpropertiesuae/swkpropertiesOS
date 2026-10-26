@@ -6,7 +6,7 @@ This review combined code inspection of document generation, settings, dashboard
 
 | Area | Result |
 | --- | --- |
-| Documents | Recipient appears before the title. Every print layout includes a system-generated notice independently of custom footer text. Invoices explicitly require no signature; customer/delivery acknowledgements and carrier-original controls are retained. |
+| Documents | Recipient appears before the title. Every print layout includes a system-generated notice independently of custom footer text. Invoices explicitly require no signature. |
 | Company seal | Original PNG/JPEG upload, administrator-controlled default, and per-document choice for print, downloaded PDF and emailed PDF. No company seal is fabricated; upload the original stamp in Company settings → Document text. |
 | PDF readiness | Server export waits for record/related data, fonts and decoded images. Failed records cannot become printable error sheets. Each document in a multi-job print has its own letterhead. |
 | Letterhead/VAT | Metadata now includes VAT-registration status, Arabic company name, information email, trade licence and licensing authority used by print layouts. |

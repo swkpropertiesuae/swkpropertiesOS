@@ -123,7 +123,7 @@ export const people: EntityDef[] = [
     ],
     defaultSort: { field: 'due_date', dir: 'asc' },
   },
-  // ---------------- Assets (Office equipment, not logistics)
+  // ---------------- Assets (Office equipment)
   {
     key: 'fixed_assets', label: 'Asset', plural: 'Fixed assets', module: 'assets', icon: 'Armchair', title: ['asset_no', 'name'], titleSep: ' – ', panel: true,
     numbering: { field: 'asset_no', pattern: 'AST{seq:5}' },
