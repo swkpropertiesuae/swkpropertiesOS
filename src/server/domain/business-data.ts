@@ -56,7 +56,7 @@ export async function backupBeforeReset(label = 'before-reset'): Promise<string>
   return name
 }
 
-export async function resetBusinessData(ctx: Ctx, opts: { backup?: boolean } = {}): Promise<{ backup: string; deleted: Record<string, number>; files_removed: number; total: number }> {
+export async function resetBusinessData(ctx: Ctx = SYSTEM_CTX, opts: { backup?: boolean; [k: string]: any } = {}): Promise<{ backup: string; deleted: Record<string, number>; files_removed: number; total: number }> {
   if (inDemo()) throw bad('The demo workspace cannot be reset here. Use "Reset demo now".')
   const backup = opts.backup === false ? '' : await backupBeforeReset()
   const tables = businessTables()
