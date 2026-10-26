@@ -15,9 +15,8 @@ const me = (await admin.api('/api/auth/me')).data
 const branch = (await admin.api('/api/e/branches')).data.rows[0]
 const customer = await admin.create('parties', { name: 'Calendar customer', is_customer: true })
 const other = await admin.create('parties', { name: 'Other calendar customer', is_customer: true })
-const job = await admin.create('jobs', { client_id: customer.id, branch_id: branch.id, department: 'AIR EXPORT', etd: '2026-02-01T10:00', eta: '2026-02-02T12:00', children: { containers: [{ container_no: 'MSCU1234566', free_time_until: '2026-02-01' }] } })
-const otherJob = await admin.create('jobs', { client_id: other.id, branch_id: branch.id, department: 'AIR EXPORT', etd: '2026-02-01T14:00' })
-const container = (await admin.api(`/api/e/jobs/${job.id}`)).data.children.containers[0]
+const job = await admin.create('jobs', { deal_name: 'Calendar sale', deal_type: 'Sale', client_id: customer.id, branch_id: branch.id, deal_date: '2026-01-15', target_close: '2026-02-01' })
+const otherJob = await admin.create('jobs', { deal_name: 'Other calendar sale', deal_type: 'Sale', client_id: other.id, branch_id: branch.id, deal_date: '2026-01-15', target_close: '2026-02-01' })
 const employee = await admin.create('employees', { name: 'Calendar employee', join_date: '2025-01-01' })
 const leave = await admin.create('leave_requests', { employee_id: employee.id, type: 'Annual', from_date: '2026-01-30', to_date: '2026-02-03', reason: 'Calendar overlap check' })
 const meeting = await admin.create('activities', { subject: 'Spanning month boundary', type: 'Meeting', start_at: '2026-01-31T10:00', end_at: '2026-02-02T11:00', status: 'Planned', owner_id: me.id })
@@ -28,9 +27,8 @@ await admin.create('tasks', { title: 'Completed calendar task', due_date: '2026-
 const project = await admin.create('projects', { name: 'Spanning project', start_date: '2026-01-25', end_date: '2026-02-05' })
 const events = (await admin.api('/api/calendar?from=2026-02-01&to=2026-02-01')).data as CalendarEvent[]
 check(Array.isArray(events), 'calendar response remains an array')
-check(events.some(e => e.entity === 'job_containers' && e.id === container.id && e.deadline && e.link === `/jobs/${job.id}`), 'container deadline links to parent job')
+check(events.some(e => e.entity === 'jobs' && e.id === job.id && e.deadline && e.link === `/e/jobs/${job.id}`), 'deal closing date is a deadline linking to the deal file')
 check(events.some(e => e.entity === 'leave_requests' && e.id === leave.id && e.title.includes('Calendar employee')), 'overlapping leave shows employee name')
-check(events.some(e => e.type === 'ETD' && e.id === job.id), 'shipment departure retained')
 check(events.some(e => e.entity === 'activities' && e.id === meeting.id), 'overlapping meeting included even when it starts outside range')
 check(events.some(e => e.entity === 'projects' && e.id === project.id), 'project duration overlaps range')
 check(events.some(e => e.title.includes('Single call without end')), 'activity without end included')
@@ -50,8 +48,8 @@ const portalRole = (await admin.api('/api/e/roles')).data.rows.find((r: any) => 
 await admin.create('users', { name: 'Calendar portal', email: 'calendar-portal@example.test', password: 'Calendar@Test2026', role_id: portalRole.id, party_id: customer.id, active: true })
 const portal = new Client(); await portal.login('calendar-portal@example.test', 'Calendar@Test2026')
 const portalEvents = (await portal.api('/api/calendar?from=2026-02-01&to=2026-02-01')).data as CalendarEvent[]
-check(portalEvents.some(e => e.entity === 'jobs' && e.id === job.id), 'portal sees its own shipment')
-check(!portalEvents.some(e => e.entity === 'jobs' && e.id === otherJob.id), 'portal cannot see another customer shipment')
+check(portalEvents.some(e => e.entity === 'jobs' && e.id === job.id), 'portal sees its own deal')
+check(!portalEvents.some(e => e.entity === 'jobs' && e.id === otherJob.id), 'portal cannot see another customer deal')
 check(!portalEvents.some(e => ['activities', 'tasks', 'projects'].includes(e.entity)), 'portal cannot see internal schedules')
 check((await admin.api('/api/calendar?from=2026-02-30&to=2026-03-01')).status === 400, 'invalid dates rejected')
 check((await admin.api('/api/calendar?from=2026-03-02&to=2026-03-01')).status === 400, 'reversed range rejected')

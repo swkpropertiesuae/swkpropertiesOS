@@ -9,9 +9,9 @@ import { mergeCompanyTokens, presentDocumentHtml } from '../src/shared/studio-ht
 syncSchema()
 // Simulate an existing installation whose original compliance seed already ran.
 q.run("INSERT INTO settings(key,value,updated_at) VALUES ('seed:compliance','1',?)", new Date().toISOString())
-setSettings({ company_name: 'SWK Properties L.L.C.', company_address: 'Naif, Dubai, United Arab Emirates (Parcel ID 118-157)', company_email: 'accounts@example.test', company_trn: '100123456700003' })
+setSettings({ company_name: 'ELVORA SHIPPING L.L.C', company_address: 'Naif, Dubai, United Arab Emirates (Parcel ID 118-157)', company_email: 'accounts@example.test', company_trn: '100123456700003' })
 seedReference()
-assert.equal(getSetting('company_name'), 'ELVORA SHIPPING L.L.C')
+assert.equal(getSetting('company_name'), 'SWK Properties L.L.C')
 assert.equal(getSetting('company_address'), 'Bur Dubai, Dubai, UAE')
 assert.equal(getSetting('company_email'), 'accounts@example.test')
 assert.equal(getSetting('company_trn'), '100123456700003')
@@ -44,8 +44,8 @@ assert.ok(!presentDocumentHtml(contact, 'Proforma Invoice').includes('1001234567
 assert.equal(presentDocumentHtml('<p>Office F101-3, Ibrahim Mohammed Sharif Balsalah building, Naif, Dubai, United Arab Emirates</p>'), '<p>Bur Dubai, Dubai, UAE</p>')
 console.log('English presentation passed: no Arabic or general identifiers, preserved required tax fields and contact cells, legacy address replacement.')
 
-const footer = corporatePdfFooter({ company_name: 'ELVORA <Shipping>', company_address: 'Bur Dubai, Dubai, UAE', company_phone: '+971 50 422 1950', company_info_email: 'info@swkpropertiesuae.com', company_website: 'https://www.swkpropertiesuae.com' })
-assert.ok(footer.includes('ELVORA &lt;Shipping&gt;') && footer.includes('Bur Dubai, Dubai, UAE'))
+const footer = corporatePdfFooter({ company_name: 'SWK <Properties>', company_address: 'Bur Dubai, Dubai, UAE', company_phone: '+971 50 422 1950', company_info_email: 'info@swkpropertiesuae.com', company_website: 'https://www.swkpropertiesuae.com' })
+assert.ok(footer.includes('SWK &lt;Properties&gt;') && footer.includes('Bur Dubai, Dubai, UAE'))
 assert.ok(footer.includes('www.swkpropertiesuae.com') && footer.includes('pageNumber') && footer.includes('totalPages'))
 assert.ok(!corporatePdfFooter({}, { pageNumbers: false }).includes('pageNumber'))
 assert.ok(corporatePdfFooter({}, { footerText: '<script>bad()</script>' }).includes('&lt;script&gt;'))
