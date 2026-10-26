@@ -6,14 +6,14 @@ const BASE = process.env.BASE_URL ?? 'http://localhost:8080'
 let cookie = '', calls = 0
 const bad: string[] = []
 async function get(path: string): Promise<{ status: number; data: any }> {
-  const res = await fetch(BASE + path, { headers: { 'x-digitalburj-client': 'web', cookie } })
+  const res = await fetch(BASE + path, { headers: { 'x-swk-client': 'web', cookie } })
   calls++
   const text = await res.text(); let data: any; try { data = JSON.parse(text) } catch { data = text }
   if (res.status >= 500) bad.push(`${res.status} ${path} → ${String(data?.error ?? text).slice(0, 200)}`)
   return { status: res.status, data }
 }
 async function main() {
-  const res = await fetch(BASE + '/api/auth/login', { method: 'POST', headers: { 'content-type': 'application/json', 'x-digitalburj-client': 'web' }, body: JSON.stringify({ email: 'demo@swkpropertiesuae.com', password: 'Demo@DigitalBurj2026' }) })
+  const res = await fetch(BASE + '/api/auth/login', { method: 'POST', headers: { 'content-type': 'application/json', 'x-swk-client': 'web' }, body: JSON.stringify({ email: 'demo@swkpropertiesuae.com', password: 'Demo@SWK2026' }) })
   cookie = (res.headers.get('set-cookie') ?? '').split(';')[0]
   if (!cookie) { console.error('Demo login failed – is the demo workspace enabled and ready?'); process.exit(2) }
 
