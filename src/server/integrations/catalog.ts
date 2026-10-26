@@ -53,6 +53,7 @@ export const CATALOG: Section[] = [
       { key: 'voice_enabled', label: 'Enable the voice gateway', type: 'bool' },
       { key: 'voice_transfer_number', label: 'Staff number for call transfers (leave empty to take call-backs instead)', type: 'text', placeholder: '+9714XXXXXXX' },
       { key: 'voice_record_notice', label: 'Tell callers the call may be recorded (PDPL transparency – keep on if the platform records)', type: 'bool' },
+      { key: 'voice_retention_days', label: 'Delete call transcripts after this many days (0 = keep forever)', type: 'number', help: 'Removes what callers said from the call log and the AI activity log. The call record, outcome and summary stay as your CRM history.' },
       { key: 'voice_greeting_en', label: 'Opening line – English (blank = default)', type: 'textarea', help: 'Always say that the caller is speaking with an AI assistant.' },
       { key: 'voice_greeting_ar', label: 'Opening line – Arabic (blank = default)', type: 'textarea' },
     ] },

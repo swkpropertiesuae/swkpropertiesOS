@@ -7,10 +7,10 @@ const check = (condition: unknown, message: string) => { assert.ok(condition, me
 class Client {
   cookie = ''
   async login(email: string, password: string) { const r = await signInReady(base, { email, password }); check(r.ok, 'sign-in succeeds'); this.cookie = r.headers.get('set-cookie')!.split(';')[0] }
-  async api(path: string, body?: unknown) { const r = await fetch(base + path, { method: body ? 'POST' : 'GET', headers: { 'content-type': 'application/json', 'x-digitalburj-client': 'web', cookie: this.cookie }, body: body ? JSON.stringify(body) : undefined }); return { status: r.status, data: await r.json() as any } }
+  async api(path: string, body?: unknown) { const r = await fetch(base + path, { method: body ? 'POST' : 'GET', headers: { 'content-type': 'application/json', 'x-swk-client': 'web', cookie: this.cookie }, body: body ? JSON.stringify(body) : undefined }); return { status: r.status, data: await r.json() as any } }
   async create(entity: string, body: unknown) { const r = await this.api('/api/e/' + entity, body); assert.equal(r.status, 201, JSON.stringify(r.data)); checks++; return r.data }
 }
-const admin = new Client(); await admin.login('admin@swkpropertiesuae.com', 'DigitalBurj@Admin2026')
+const admin = new Client(); await admin.login('admin@swkpropertiesuae.com', 'SWK@Admin2026')
 const me = (await admin.api('/api/auth/me')).data
 const branch = (await admin.api('/api/e/branches')).data.rows[0]
 const customer = await admin.create('parties', { name: 'Calendar customer', is_customer: true })

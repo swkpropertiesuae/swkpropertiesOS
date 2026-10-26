@@ -8,7 +8,8 @@ import { ensureAgents } from '../src/server/ai/agents'
 import { toolByName } from '../src/server/ai/tools'
 import { toolPolicy } from '../src/server/ai/policy'
 import { withCall, type VoiceCallState } from '../src/server/ai/voice-context'
-import { voiceTurn, voiceEnd, forSpeech, greeting } from '../src/server/integrations/voice'
+import { voiceTurn, voiceEnd, forSpeech, greeting, purgeVoiceData } from '../src/server/integrations/voice'
+import { getDef as def, insertRow } from '../src/server/engine'
 import { buildApp } from '../src/server/app'
 
 syncSchema(); seedReference(); ensureAgents()
@@ -130,6 +131,24 @@ try {
   assert.equal(forSpeech('* one\n* two **bold** `x` https://a.b/c'), 'one two bold x')
   assert.match(greeting().en, /AI assistant.*recorded/); assert.match(greeting().ar, /المساعد الذكي/)
 
+  // ================================================================ retention: what callers said is removed, the CRM record stays
+  const agentId = row1(`SELECT id FROM ai_agents WHERE role_key = 'ai-receptionist'`).id
+  insertRow(def('voice_calls'), { call_id: 'old1', started_at: '2025-01-01T10:00', ended_at: '2025-01-01T10:05', status: 'Completed', summary: 'Asked about Marina rentals', outcome: 'Lead captured', transcript: [{ role: 'user', content: 'my passport number is X123', at: '2025-01-01T10:00' }] })
+  insertRow(def('voice_calls'), { call_id: 'old-never-ended', started_at: '2025-01-02T10:00', status: 'In progress', transcript: [{ role: 'user', content: 'hello', at: '2025-01-02T10:00' }] })
+  insertRow(def('ai_runs'), { agent_id: agentId, started_at: '2025-01-01T10:00', trigger: 'voice', status: 'ok', input: 'my passport number is X123', output: 'Thanks' })
+  insertRow(def('ai_runs'), { agent_id: agentId, started_at: '2025-01-01T10:00', trigger: 'chat', status: 'ok', input: 'internal question', output: 'internal answer' })
+  setSettings({ voice_retention_days: 0 })
+  assert.deepEqual(purgeVoiceData(), { calls: 0, runs: 0 }, '0 means keep everything')
+  setSettings({ voice_retention_days: 90 })
+  const purged = purgeVoiceData()
+  assert.equal(purged.calls, 2, 'old calls lose their transcript, including calls whose end was never reported'); assert.equal(purged.runs, 1)
+  const old = row1(`SELECT * FROM voice_calls WHERE call_id = 'old1'`)
+  assert.equal(old.transcript, '[]'); assert.equal(old.summary, 'Asked about Marina rentals'); assert.equal(old.outcome, 'Lead captured')
+  assert.equal(row1(`SELECT input FROM ai_runs WHERE ai_runs.trigger = 'voice' AND started_at = '2025-01-01T10:00'`).input, null, 'the copy in the AI activity log is removed too')
+  assert.equal(row1(`SELECT input FROM ai_runs WHERE ai_runs.trigger = 'chat' AND started_at = '2025-01-01T10:00'`).input, 'internal question', 'other AI runs are untouched')
+  assert.equal(JSON.parse(row1(`SELECT transcript FROM voice_calls WHERE call_id = 'c1'`).transcript).length, 6, 'recent calls keep their transcript')
+  assert.deepEqual(purgeVoiceData(), { calls: 0, runs: 0 }, 'a second run finds nothing more to remove')
+
   // ================================================================ HTTP surface: secret, aliases, staff-only endpoints
   const app = await buildApp()
   const post = (url: string, payload: any) => app.inject({ method: 'POST', url, payload })
@@ -146,5 +165,5 @@ try {
   assert.equal((await post('/api/voice/test', { text: 'hi' })).statusCode, 401, 'the test console needs a signed-in user')
   await app.close()
 
-  console.log('Voice checks passed: listings privacy, lead dedupe, caller-ID precedence, escalation, tool policy, multi-turn calls, transfer, summary, failure fallback and the secret-protected gateway. No external service called.')
+  console.log('Voice checks passed: listings privacy, lead dedupe, caller-ID precedence, escalation, tool policy, multi-turn calls, transfer, summary, failure fallback, transcript retention and the secret-protected gateway. No external service called.')
 } finally { globalThis.fetch = original }

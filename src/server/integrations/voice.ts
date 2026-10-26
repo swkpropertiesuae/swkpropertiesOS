@@ -1,7 +1,7 @@
 import { q } from '../db'
 import { getSetting } from '../settings'
 import { getDef, insertRow, SYSTEM_CTX } from '../engine'
-import { nowLocal, safeJson } from '../util'
+import { addDays, nowLocal, safeJson, todayStr } from '../util'
 import { logIntegration } from './log'
 import { findPartyByPhone, normalizePhone } from './whatsapp'
 import { notifyRole } from '../notify'
@@ -97,6 +97,21 @@ export function voiceEnd(o: { call_id: string; duration_sec?: number; transcript
     nowLocal(), Math.max(0, Math.round(Number(o.duration_sec) || 0)), JSON.stringify(turns), spoke ? (row.outcome ?? 'Information given') : 'Abandoned', row.id)
   void summarise(row.id).catch(e => logIntegration('voice', 'summary', false, String(e?.message ?? e)))
   return { ok: true, id: row.id }
+}
+
+/**
+ * Data minimisation: after `voice_retention_days` the words callers said are removed, both from the call log and from the
+ * AI activity log (which holds a copy of each utterance). The call record, outcome and summary remain as CRM history.
+ * Run nightly by the scheduler; 0 keeps everything.
+ */
+export function purgeVoiceData(): { calls: number; runs: number } {
+  const days = Math.floor(Number(getSetting('voice_retention_days')))
+  if (!(days > 0)) return { calls: 0, runs: 0 }
+  const cutoff = addDays(todayStr(), -days)
+  const calls = q.run(`UPDATE voice_calls SET transcript = '[]' WHERE transcript IS NOT NULL AND transcript <> '[]' AND substr(COALESCE(ended_at, started_at), 1, 10) < ?`, cutoff).changes
+  const runs = q.run(`UPDATE ai_runs SET input = NULL, output = NULL WHERE ai_runs.trigger = 'voice' AND (input IS NOT NULL OR output IS NOT NULL) AND substr(started_at, 1, 10) < ?`, cutoff).changes
+  if (calls || runs) logIntegration('voice', 'retention', true, `Removed the words spoken on ${calls} call(s) and ${runs} AI run(s) older than ${days} days`)
+  return { calls, runs }
 }
 
 async function summarise(id: number) {

@@ -42,7 +42,7 @@ const server = http.createServer((req, res) => {
 })
 
 async function api(method: string, path: string, body?: any, raw = false): Promise<any> {
-  const res = path === '/api/auth/login' ? await signInReady(BASE, body) : await fetch(BASE + path, { method, headers: { 'content-type': 'application/json', 'x-digitalburj-client': 'web', ...(cookie ? { cookie } : {}) }, body: body !== undefined ? JSON.stringify(body) : undefined })
+  const res = path === '/api/auth/login' ? await signInReady(BASE, body) : await fetch(BASE + path, { method, headers: { 'content-type': 'application/json', 'x-swk-client': 'web', ...(cookie ? { cookie } : {}) }, body: body !== undefined ? JSON.stringify(body) : undefined })
   const sc = res.headers.get('set-cookie'); if (sc && path.includes('/auth/login')) cookie = sc.split(';')[0]
   if (raw) return res
   const text = await res.text(); let data: any; try { data = JSON.parse(text) } catch { data = text }
@@ -56,7 +56,7 @@ const waPost = (value: any) => fetch(BASE + '/api/public/whatsapp', { method: 'P
 
 async function main() {
   await new Promise<void>(r => server.listen(9099, r))
-  let r = await api('POST', '/api/auth/login', { email: 'admin@swkpropertiesuae.com', password: 'DigitalBurj@Admin2026' }); ok('admin signs in', r.status === 200, r.data)
+  let r = await api('POST', '/api/auth/login', { email: 'admin@swkpropertiesuae.com', password: 'SWK@Admin2026' }); ok('admin signs in', r.status === 200, r.data)
 
   sec('Bootstrap (production workspace starts empty)')
   await api('PUT', '/api/admin/settings', { company_trn: '100123456700003' })
@@ -214,7 +214,7 @@ async function main() {
   sec('R2 storage & Supabase replica')
   await api('PUT', '/api/admin/settings', { storage_provider: 'r2' })
   const fd = new FormData(); fd.append('link_entity', 'parties'); fd.append('link_id', String(party.id)); fd.append('file', new Blob(['hello r2 world'], { type: 'text/plain' }), 'note.txt')
-  let up = await fetch(BASE + '/api/files', { method: 'POST', headers: { cookie, 'x-digitalburj-client': 'web' }, body: fd }); const upj: any = await up.json(); ok('upload stored in R2', up.status === 200 && Object.keys(r2).some(k => k.includes('/uploads/')), upj)
+  let up = await fetch(BASE + '/api/files', { method: 'POST', headers: { cookie, 'x-swk-client': 'web' }, body: fd }); const upj: any = await up.json(); ok('upload stored in R2', up.status === 200 && Object.keys(r2).some(k => k.includes('/uploads/')), upj)
   const down = await fetch(BASE + `/api/files/${upj[0].id}/download`, { headers: { cookie } }); ok('download streams from R2', (await down.text()) === 'hello r2 world')
   r = await api('POST', '/api/integrations/backup-r2'); ok('backup uploaded to R2', r.status === 200 && Object.keys(r2).some(k => k.includes('/backups/')), r.data)
   r = await api('POST', '/api/integrations/supabase/sync', { full: true }); ok('Supabase sync pushes rows', r.data.ok && r.data.rows > 100 && sbRows['parties'] > 0 && sbRows['invoices'] > 0, r.data)
@@ -224,7 +224,7 @@ async function main() {
   r = await api('GET', '/api/integrations/supabase/schema.sql', undefined, true); const sql = await r.text(); ok('Supabase schema SQL generated with RLS', sql.includes('create table if not exists public."invoices"') && sql.includes('enable row level security') && !sql.includes('password_hash'))
 
   sec('Permissions')
-  r = await api('POST', '/api/auth/login', { email: 'manager@swkpropertiesuae.com', password: 'DigitalBurj@Manager2026' }); ok('manager sees AI team', (await api('GET', '/api/ai/status')).status === 200)
+  r = await api('POST', '/api/auth/login', { email: 'manager@swkpropertiesuae.com', password: 'SWK@Manager2026' }); ok('manager sees AI team', (await api('GET', '/api/ai/status')).status === 200)
   cookie = ''
   r = await api('GET', '/api/ai/status'); ok('AI API requires sign-in', r.status === 401)
   r = await api('POST', '/api/public/tracking/x', {}); ok('public webhooks do not leak when unconfigured', r.status === 404 || r.status === 401)

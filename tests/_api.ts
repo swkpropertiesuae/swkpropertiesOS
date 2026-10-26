@@ -9,13 +9,13 @@ export const finish = () => { console.log(`\n${pass} passed, ${fail} failed`); i
 
 export class Api {
   cookie = ''
-  async login(email = 'admin@swkpropertiesuae.com', password = 'DigitalBurj@Admin2026') {
+  async login(email = 'admin@swkpropertiesuae.com', password = 'SWK@Admin2026') {
     const res = await signInReady(BASE, { email, password })
     const sc = res.headers.get('set-cookie'); if (sc) this.cookie = sc.split(';')[0]
     return res.status === 200
   }
   async call(method: string, path: string, body?: any): Promise<{ status: number; data: any }> {
-    const res = await fetch(BASE + path, { method, headers: { 'content-type': 'application/json', 'x-digitalburj-client': 'web', ...(this.cookie ? { cookie: this.cookie } : {}) }, body: body !== undefined ? JSON.stringify(body) : undefined })
+    const res = await fetch(BASE + path, { method, headers: { 'content-type': 'application/json', 'x-swk-client': 'web', ...(this.cookie ? { cookie: this.cookie } : {}) }, body: body !== undefined ? JSON.stringify(body) : undefined })
     const text = await res.text(); let data: any; try { data = JSON.parse(text) } catch { data = text }
     return { status: res.status, data }
   }
@@ -23,5 +23,5 @@ export class Api {
   post = (p: string, b?: any) => this.call('POST', p, b ?? {})
   put = (p: string, b?: any) => this.call('PUT', p, b ?? {})
   del = (p: string) => this.call('DELETE', p)
-  async raw(path: string): Promise<Response> { return fetch(BASE + path, { headers: { 'x-digitalburj-client': 'web', ...(this.cookie ? { cookie: this.cookie } : {}) } }) }
+  async raw(path: string): Promise<Response> { return fetch(BASE + path, { headers: { 'x-swk-client': 'web', ...(this.cookie ? { cookie: this.cookie } : {}) } }) }
 }

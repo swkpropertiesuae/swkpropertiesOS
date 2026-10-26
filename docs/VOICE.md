@@ -29,7 +29,7 @@ SWK OS never handles audio. A **voice platform** sits between the carrier and th
 
 ## Set it up in SWK OS
 
-1. *Integrations → Voice*: tick **Enable the voice gateway**, enter the **staff number for transfers** (optional), review the opening lines, then **Generate** the base URL. Copy it now, it is shown once.
+1. *Integrations → Voice*: tick **Enable the voice gateway**, enter the **staff number for transfers** (optional), choose the **transcript retention period**, review the opening lines, then **Generate** the base URL. Copy it now, it is shown once.
 2. *AI → Employees*: switch **AI Receptionist** on. It starts switched off like every AI employee.
 3. *AI → Voice*: use **Try the receptionist** to rehearse calls in text before any telephone is connected. Leads and tickets it creates are real.
 4. Give the base URL to your voice platform and map the three endpoints below.
@@ -83,7 +83,8 @@ Anything that sends a message to an outsider (e-mail, WhatsApp) still needs huma
 - **Never:** quotes fees or commission, negotiates, promises a price, availability or viewing time, gives legal/tax/mortgage advice, discusses other customers, or accepts card, bank, Emirates ID or passport details by phone.
 - **Callers are untrusted.** Speech is treated as untrusted input, and the receptionist can only use the seven tools above.
 - **Emergencies.** For danger to life the receptionist tells callers to call 999, 998 or 997 and logs the problem for the duty team.
-- **UAE rules to check with your adviser:** PDPL (what you tell callers, how long transcripts and recordings are kept), TDRA rules for routing calls through third-party platforms, and, for any outbound calling you add later, the TDRA do-not-call rules. There is no automatic transcript retention job yet; delete or anonymise old rows in *AI → Voice calls* according to your retention policy.
+- **UAE rules to check with your adviser:** PDPL (what you tell callers, how long transcripts and recordings are kept), TDRA rules for routing calls through third-party platforms, and, for any outbound calling you add later, the TDRA do-not-call rules.
+- **Retention.** Each night (02:00–05:00 Dubai) the OS removes what callers said once a call is older than *Delete call transcripts after this many days* (default **90**; set 0 to keep everything). It clears the transcript on the call and the copy of each utterance in the AI activity log. The call record (number, name, outcome, duration) and the AI summary stay as CRM history, so keep the receptionist's rule against collecting ID and card numbers switched on. 90 days is a default, not legal advice: set the period your adviser recommends. Recordings made by the voice platform are stored by that platform; set their retention there.
 
 ## Limits to know about
 
@@ -94,4 +95,4 @@ Anything that sends a message to an outsider (e-mail, WhatsApp) still needs huma
 
 ## Tests
 
-`npm run test:all` includes the `voice` suite (`tests/voice.ts`): listing privacy, lead de-duplication, caller-ID precedence, tool policy, multi-turn calls with a scripted model, transfer, summary, failure fallback and the secret-protected endpoints. It calls no external service.
+`npm run test:all` includes the `voice` suite (`tests/voice.ts`): listing privacy, lead de-duplication, caller-ID precedence, tool policy, multi-turn calls with a scripted model, transfer, summary, failure fallback, transcript retention and the secret-protected endpoints. It calls no external service.

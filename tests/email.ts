@@ -18,11 +18,11 @@ await new Promise<void>(r => mock.listen(0, '127.0.0.1', r))
 process.env.RESEND_API_URL = `http://127.0.0.1:${(mock.address() as any).port}`
 const check = (label: string, value: unknown) => { assert.ok(value, label); checks++; console.log('  ✓', label) }
 let cookie = ''
-const request = (url: string, method = 'GET', payload?: any, bearer?: string) => app.inject({ url, method: method as any, payload, headers: { 'x-digitalburj-client': 'web', ...(bearer ? { authorization: `Bearer ${bearer}` } : { cookie }) } })
+const request = (url: string, method = 'GET', payload?: any, bearer?: string) => app.inject({ url, method: method as any, payload, headers: { 'x-swk-client': 'web', ...(bearer ? { authorization: `Bearer ${bearer}` } : { cookie }) } })
 const waitStatus = async (id: number, status: string) => { for (let i = 0; i < 100; i++) { if (q.val('SELECT status FROM email_outbox WHERE id=?', id) === status) return true; await new Promise(r => setTimeout(r, 20)) } return false }
 try {
   const login = await request('/api/auth/login', 'POST', { email: config.accounts.adminEmail, password: config.accounts.adminPassword })
-  cookie = 'digitalburj_sid=' + login.cookies.find(c => c.name === 'digitalburj_sid')!.value
+  cookie = 'swk_sid=' + login.cookies.find(c => c.name === 'swk_sid')!.value
   await request('/api/auth/change-password', 'POST', { current: config.accounts.adminPassword, next: 'Mail-Regression2026!' })
   const account = (email: string) => ({ email, provider: 'resend', host: '', port: 465, secure: true, user: '', password: '', apiKey: 'mock-private-key', enabled: true })
   check('five company addresses are available', (await request('/api/email/senders')).json().length === 5)
