@@ -171,6 +171,8 @@ export function getCurrentReceptionQr(branchId = 1, ctx: Ctx = SYSTEM_CTX) {
     active = q.get(`SELECT * FROM reception_qr_tokens WHERE token_code = ?`, tokenCode)!; if (!active) throw bad('QR token unavailable')
   }
 
+  if (!active) throw bad('Reception QR token could not be generated. Please retry.')
+
   const branch = q.get(`SELECT id, code, name, city FROM branches WHERE id = ? AND deleted_at IS NULL`, branchId) || {
     id: 1,
     code: 'DXB',
@@ -307,6 +309,7 @@ export function officeQrCheckIn(
   const now = nowIso()
   const isExpired = qrRow ? new Date(qrRow.expires_at).getTime() < Date.now() - 120_000 : false
   const device = registerMobileDevice({ device_id: payload.device_id || `AND-SWK-${userId}` }, ctx)
+  if (!device) throw bad('Device registration failed. Please retry.')
   const trustedNetwork = !payload.network_ssid || /swk|office|dxb|corp|wifi/i.test(payload.network_ssid)
   const verified = !!qrRow && !isExpired && device?.status === 'Trusted' && trustedNetwork
 

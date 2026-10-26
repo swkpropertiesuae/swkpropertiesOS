@@ -13,7 +13,7 @@ await resetBusinessData({ user: null, system: true }, { backup: false })
 
 // Ensure admin account is in fresh default state for test reproducibility
 q.run(
-  `UPDATE users SET password_hash = ?, must_change_password = 1, totp_secret = NULL, failed_logins = 0, locked_until = NULL WHERE email = ?`,
+  `UPDATE users SET active = 1, password_hash = ?, must_change_password = 1, totp_secret = NULL, failed_logins = 0, locked_until = NULL WHERE email = ?`,
   hashPassword(config.accounts.adminPassword),
   config.accounts.adminEmail
 )
@@ -224,7 +224,7 @@ try {
 } finally {
   await resetBusinessData({ user: null, system: true }, { backup: false })
   q.run(
-    `UPDATE users SET password_hash = ?, must_change_password = 1, totp_secret = NULL, failed_logins = 0, locked_until = NULL WHERE email = ?`,
+    `UPDATE users SET active = 1, password_hash = ?, must_change_password = 1, totp_secret = NULL, failed_logins = 0, locked_until = NULL WHERE email = ?`,
     hashPassword(config.accounts.adminPassword),
     config.accounts.adminEmail
   )

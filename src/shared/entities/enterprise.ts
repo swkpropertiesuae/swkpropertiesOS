@@ -279,6 +279,8 @@ export const enterprise: EntityDef[] = [
       T('appointment_ref', 'Appointment reference', { list: true }),
       DT('site_arrival_at', 'Site arrival time', { section: 'Arrival & Safety' }),
       DT('site_departure_at', 'Site departure timestamp'),
+      DT('last_location_at', 'Last location sample (UTC)', { readonly: true, list: true }),
+      DT('last_location_received_at', 'Location received by server (UTC)', { readonly: true }),
       T('last_lat', 'Last duty latitude'),
       T('last_lng', 'Last duty longitude'),
       N('gps_accuracy_m', 'GPS accuracy (meters)', { list: true }),

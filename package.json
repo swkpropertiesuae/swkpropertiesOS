@@ -18,6 +18,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "tsx --env-file-if-exists=.env tests/smoke.ts",
     "test:swk-one": "tsx --env-file-if-exists=.env tests/swk-one-android.ts",
+    "test:mobile": "tsx --env-file-if-exists=.env tests/mobile.ts",
     "test:integrations": "tsx --env-file-if-exists=.env tests/phase2.ts",
     "data:reset": "tsx --env-file-if-exists=.env tools/data/reset-business-data.ts",
     "test:compliance": "tsx --env-file-if-exists=.env tests/compliance.ts",
