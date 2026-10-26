@@ -4,8 +4,8 @@
 
 | Purpose | E-mail | Initial password | Data |
 |---|---|---|---|
-| **Administrator** – all features | admin@swkpropertiesuae.com | SWK@Admin2026 | Production workspace, **clean (zero mock data)** |
-| **Manager** – all features | manager@swkpropertiesuae.com | SWK@Manager2026 | Production workspace, **clean (zero mock data)** |
+| **Administrator** – all features | admin@swkpropertiesuae.com | the `ADMIN_PASSWORD` you configured (or the one-time password printed in the server log at first start) | Production workspace, **clean (zero mock data)** |
+| **Manager** – all features | manager@swkpropertiesuae.com | the `MANAGER_PASSWORD` you configured (or the one-time password printed in the server log at first start) | Production workspace, **clean (zero mock data)** |
 
 * Administrator and Manager have full access to every module. Both can administer users, roles, settings, compliance, and integrations.
 * On first sign-in each account is required to set a personal password before any business APIs can be accessed. Rotate initial passwords by setting `ADMIN_PASSWORD` / `MANAGER_PASSWORD` in `.env` before the first start if desired.

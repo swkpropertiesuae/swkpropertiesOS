@@ -94,7 +94,7 @@ function leadsSummary(): string {
 // ------------------------------------------------------------------ inbound
 export function verifySignature(raw: string, header: string | undefined): boolean {
   const secret = String(getSetting('wa_app_secret') || '')
-  if (!secret) return true
+  if (!secret) return false // never accept unsigned inbound traffic: without the app secret anyone could impersonate a staff number
   if (!header?.startsWith('sha256=')) return false
   const h = crypto.createHmac('sha256', secret).update(raw).digest('hex')
   const a = Buffer.from(header.slice(7)), b = Buffer.from(h)

@@ -16,8 +16,8 @@ const config: CapacitorConfig = {
   webDir: 'dist/web',
   server: {
     androidScheme: 'https',
-    cleartext: true,
-    allowNavigation: ['*'],
+    cleartext: false,
+    allowNavigation: ['os.swkpropertiesuae.com'],
   },
   plugins: {
     SwkNative: {

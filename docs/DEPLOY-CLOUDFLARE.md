@@ -90,9 +90,8 @@ The first run takes **5–15 minutes**: it builds the app image, uploads it to C
 
 ```bash
 curl https://swk-os.<your-subdomain>.workers.dev/api/health
-curl https://swk-os.<your-subdomain>.workers.dev/api/health/db
 ```
-The second one answers like `{"driver":"postgresql","avg_query_ms":4.1,"verdict":"excellent"}`.
+The second address (`/api/health/db`) needs an administrator session: open `https://swk-os.<your-subdomain>.workers.dev/api/health/db` in the browser while signed in. It answers like `{"driver":"postgresql","avg_query_ms":4.1,"verdict":"excellent"}`.
 
 | `avg_query_ms` | Meaning |
 |---|---|

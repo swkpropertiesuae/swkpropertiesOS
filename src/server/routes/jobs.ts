@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { randomBytes } from 'crypto'
 import { z } from 'zod'
+import { config } from '../config'
 import { inDemo, q, tx } from '../db'
 import { assertCan, createRecord, deleteRecord, getDef, getRecord, listRecords, patchRecord, SYSTEM_CTX, updateRecord, audit } from '../engine'
 import { bad, notFound, nowLocal } from '../util'
@@ -93,9 +94,16 @@ export default async function (app: FastifyInstance) {
       const owner = q.val<number>(`SELECT client_id FROM jobs WHERE id = ? AND deleted_at IS NULL`, id)
       if (owner !== req.user!.party_id) throw bad('You can only share your own deals')
     } else assertCan(req.ctx, 'sales', 'view')
-    const token = (inDemo() ? 'demo-' : '') + randomBytes(16).toString('hex')
-    q.run(`INSERT INTO job_tracking_tokens (job_id, token, created_at) VALUES (?, ?, ?) ON CONFLICT(job_id) DO UPDATE SET token = excluded.token, created_at = excluded.created_at`, id, token, nowLocal())
-    return { token, url: `${req.protocol}://${req.headers.host}/t/${token}` }
+    // Re-opening the share dialog must not break links already sent or printed as QR codes: reuse the token unless a new one is explicitly requested.
+    const rotate = (req.body as any)?.rotate === true
+    let token = rotate ? undefined : q.val<string>(`SELECT token FROM job_tracking_tokens WHERE job_id = ?`, id) ?? undefined
+    if (!token) {
+      token = (inDemo() ? 'demo-' : '') + randomBytes(16).toString('hex')
+      q.run(`INSERT INTO job_tracking_tokens (job_id, token, created_at) VALUES (?, ?, ?) ON CONFLICT(job_id) DO UPDATE SET token = excluded.token, created_at = excluded.created_at`, id, token, nowLocal())
+    }
+    // Build the link from the configured public address, never from the Host header the caller supplied.
+    const base = (config.baseUrl || `${req.protocol}://${req.headers.host}`).replace(/\/+$/, '')
+    return { token, url: `${base}/t/${token}` }
   })
 
   // Client-facing deal status (no financials) for /t/<token> links and document QR codes.

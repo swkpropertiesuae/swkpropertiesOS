@@ -10,6 +10,7 @@ import { config } from './config'
 import { HttpError } from './util'
 import { userFromToken, userFromApiKey } from './auth'
 import { enterDb, q } from './db'
+import { can } from './engine'
 import { getDemoDb } from './demo/workspace'
 import type { Ctx, SessionUser } from './engine'
 import { ZodError } from 'zod'
@@ -20,7 +21,7 @@ declare module 'fastify' {
 
 export const COOKIE = 'swk_sid'
 export const DEMO_PREFIX = 'demo.'
-const PUBLIC = [/^\/api\/demo\/status$/, /^\/api\/health$/, /^\/api\/health\/db$/, /^\/api\/auth\/login$/, /^\/api\/public\//, /^\/api\/auth\/branding$/]
+const PUBLIC = [/^\/api\/demo\/status$/, /^\/api\/health$/, /^\/api\/auth\/login$/, /^\/api\/public\//, /^\/api\/auth\/branding$/]
 /**
  * Everything a customer-portal user may call. The record API (/api/e) is scoped to their company by the engine; the rest read their own data only.
  * Any other endpoint is company-wide (bank balances, rate cards, other customers' open items) and stays closed to portal accounts, whatever module permissions the portal role carries.
@@ -32,7 +33,10 @@ const PORTAL_OK = [
 const PASSWORD_SETUP = new Set(['/api/auth/me', '/api/meta', '/api/auth/change-password', '/api/auth/logout', '/api/auth/sessions', '/api/auth/login-history'])
 
 export async function buildApp(): Promise<FastifyInstance> {
-  const app = Fastify({ logger: config.isProd ? { level: 'info' } : { level: 'warn' }, trustProxy: config.trustProxy, bodyLimit: 12 * 1024 * 1024 })
+  // Webhook secrets and tracking tokens travel in the URL path; keep them out of the request log.
+  const redactUrl = (u: string) => u.replace(/^(\/api\/public\/(?:bank|voice|tracking|track|deal)\/)[^/?#]+/, '$1[redacted]')
+  const logger = { level: config.isProd ? 'info' : 'warn', serializers: { req: (r: any) => ({ method: r.method, url: redactUrl(String(r.url ?? '')), host: r.host, remoteAddress: r.ip, remotePort: r.socket?.remotePort }) } }
+  const app = Fastify({ logger, trustProxy: config.trustProxy, bodyLimit: 12 * 1024 * 1024 })
 
   // tolerate empty JSON bodies (action endpoints such as POST .../post)
   app.removeContentTypeParser('application/json')
@@ -115,7 +119,7 @@ export async function buildApp(): Promise<FastifyInstance> {
       req.log.warn({ err }, 'constraint')
       return reply.status(409).send({ error: /UNIQUE/.test(err.message) || err.code === '23505' || /duplicate key/.test(err.message) ? 'A record with the same unique value already exists' : 'The change conflicts with existing data' })
     }
-    req.log.error({ err, url: req.url }, 'unhandled')
+    req.log.error({ err, url: redactUrl(req.url) }, 'unhandled')
     return reply.status(500).send({ error: config.isProd ? 'Unexpected server error' : String(err?.message ?? err) })
   })
 
@@ -129,7 +133,8 @@ export async function buildApp(): Promise<FastifyInstance> {
   for (const m of mods) await app.register(m.default)
   app.get('/api/health', async () => ({ ok: true, time: new Date().toISOString() }))
   // Database round-trip time. The app talks to PostgreSQL synchronously, so this is the number that decides whether the host is close enough to the database.
-  app.get('/api/health/db', { config: { rateLimit: { max: 12, timeWindow: '1 minute' } } }, async () => {
+  app.get('/api/health/db', { config: { rateLimit: { max: 12, timeWindow: '1 minute' } } }, async (req) => {
+    if (req.user!.party_id || !can(req.user, 'admin', 'view')) throw new HttpError(403, 'Administrators only')
     const { q, isPg } = await import('./db')
     const t = process.hrtime.bigint(); const n = 10
     for (let i = 0; i < n; i++) q.val('SELECT 1')
@@ -140,7 +145,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   // static web app
   const webDir = path.resolve('dist/web')
   if (fs.existsSync(webDir)) {
-    await app.register(fstatic, { root: webDir, wildcard: false, cacheControl: false, setHeaders(res, p) { if (/\/assets\//.test(p)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'); else res.setHeader('Cache-Control', 'no-cache') } })
+    await app.register(fstatic, { root: webDir, wildcard: false, cacheControl: false, setHeaders(res, p) { if (/\/assets\//.test(p)) res.header('Cache-Control', 'public, max-age=31536000, immutable'); else res.header('Cache-Control', 'no-cache') } })
     app.setNotFoundHandler((req, reply) => {
       if (req.url.startsWith('/api/')) return reply.status(404).send({ error: 'Not found' })
       return reply.sendFile('index.html')

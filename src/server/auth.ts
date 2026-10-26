@@ -36,6 +36,7 @@ export function createSession(userId: number, ip?: string, ua?: string) {
   return { token, expires: exp }
 }
 export function destroySession(token: string) { q.run(`DELETE FROM sessions WHERE id = ?`, sha(token)) }
+export function destroySessionByHash(hash: string) { q.run(`DELETE FROM sessions WHERE id = ?`, hash) }
 export function destroyUserSessions(userId: number, exceptHash?: string) { q.run(`DELETE FROM sessions WHERE user_id = ? AND id <> ?`, userId, exceptHash ?? '') }
 export const sessionHash = sha
 

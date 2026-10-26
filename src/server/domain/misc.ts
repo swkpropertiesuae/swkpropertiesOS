@@ -2,13 +2,20 @@ import crypto from 'node:crypto'
 import { q } from '../db'
 import type { Hooks } from '../hooks'
 import { bad, r2, todayStr, nowLocal, addDays, safeJson } from '../util'
-import { labelsFor, type Rec } from '../engine'
+import { labelsFor, type Rec, type Perms } from '../engine'
 import { hashPassword, destroyUserSessions, validatePasswordStrength, newApiKey } from '../auth'
 import { notify } from '../notify'
 import { MODULE_DEFS } from '../../shared/entities'
 import { ACTIONS } from '../../shared/types'
 
 // ---------------------------------------------------------------- users & roles
+/** True when everything in `target` is already held by `actor`: nobody can hand out rights they do not have themselves. */
+export function permissionsWithin(actor: Perms, target: Perms): boolean {
+  if (actor === '*') return true
+  if (target === '*') return false
+  return Object.entries(target).every(([m, acts]) => (acts as string[]).every(a => actor[m]?.includes('*') || actor[m]?.includes(a)))
+}
+const rolePerms = (roleId: unknown): Perms => safeJson(q.val<string>(`SELECT permissions FROM roles WHERE id = ?`, roleId), {}) as Perms
 function adminCount(excludeId?: number) {
   const rows = q.all(`SELECT u.id, r.permissions FROM users u JOIN roles r ON r.id = u.role_id WHERE u.deleted_at IS NULL AND u.active = 1 AND u.id <> ?`, excludeId ?? 0)
   return rows.filter(r => safeJson(r.permissions, {}) === '*').length
@@ -21,6 +28,11 @@ export const userHooks: Hooks = {
     else if (isNew) throw bad('Set an initial password for the new user')
     delete rec.password
     if (rec.party_id) { const role = q.get(`SELECT name FROM roles WHERE id = ?`, rec.role_id); if (role?.name !== 'Customer Portal') throw bad('Portal company can only be set for users with the "Customer Portal" role') }
+    if (!ctx.system && ctx.user && ctx.user.permissions !== '*') {
+      // A limited administrator may not touch full administrators or assign rights beyond their own.
+      if (old && rolePerms(old.role_id) === '*') throw bad('Only a full administrator can change a full administrator')
+      if (!permissionsWithin(ctx.user.permissions, rolePerms(rec.role_id))) throw bad('You cannot assign a role with more access than you have')
+    }
     if (old && ctx.user && old.id === ctx.user.id && rec.active === false) throw bad('You cannot deactivate your own account')
     if (old) {
       const wasAdmin = safeJson(q.val<string>(`SELECT permissions FROM roles WHERE id = ?`, old.role_id), {}) === '*' && old.active
@@ -31,7 +43,7 @@ export const userHooks: Hooks = {
   afterSave({ rec }) { if ((rec as any).__pw) destroyUserSessions(rec.id) },
 }
 export const roleHooks: Hooks = {
-  beforeSave({ rec, old }) {
+  beforeSave({ rec, old, ctx }) {
     if (old?.is_system && rec.name !== old.name) throw bad('System roles cannot be renamed')
     let p = rec.permissions
     if (old?.is_system && JSON.stringify(p) !== JSON.stringify(old.permissions)) throw bad('Permissions of system roles cannot be changed — create a new role instead')
@@ -44,6 +56,7 @@ export const roleHooks: Hooks = {
         if (!Array.isArray(acts) || acts.some(a => !(ACTIONS as readonly string[]).includes(a))) throw bad(`Invalid actions for ${m}`)
       }
     }
+    if (!ctx.system && ctx.user && !permissionsWithin(ctx.user.permissions, p)) throw bad('You cannot grant more access than you have')
     rec.permissions = p
   },
   beforeDelete({ rec }) { if (rec.is_system) throw bad('System roles cannot be deleted') },

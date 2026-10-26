@@ -50,7 +50,9 @@ export async function seedReference(opts: { users?: boolean; demo?: boolean } = 
     const a = config.accounts
     const dxb = idOf('branches', 'code', 'DXB')
     for (const [email, name, pw, role] of [[a.adminEmail, a.adminName, a.adminPassword, 'Admin'], [a.managerEmail, a.managerName, a.managerPassword, 'Manager']] as const) {
-      if (!idOf('users', 'lower(email)', email)) mk('users', { name, email, password: pw, role_id: idOf('roles', 'name', role), branch_id: dxb, department_id: idOf('departments', 'code', role === 'Admin' ? 'MGT' : 'OPS'), active: true, must_change_password: true })
+      if (idOf('users', 'lower(email)', email)) continue
+      if (role === 'Admin' ? a.adminPasswordGenerated : a.managerPasswordGenerated) console.warn(`[first start] ${role} account ${email} created with a generated one-time password: ${pw}\n  Sign in and change it now (set ADMIN_PASSWORD / MANAGER_PASSWORD to choose your own).`)
+      mk('users', { name, email, password: pw, role_id: idOf('roles', 'name', role), branch_id: dxb, department_id: idOf('departments', 'code', role === 'Admin' ? 'MGT' : 'OPS'), active: true, must_change_password: true })
     }
     mark('users')
   }
