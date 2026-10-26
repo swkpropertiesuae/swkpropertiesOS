@@ -1,0 +1,66 @@
+name: Deploy to Cloudflare
+# Builds the app image and deploys the Worker + container (deploy/cloudflare/wrangler.jsonc).
+# Needs two repository secrets: CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID.
+# Runtime secrets (DATABASE_URL, APP_SECRET, ADMIN_PASSWORD, MANAGER_PASSWORD, PG_CA_CERT) live on the Worker, not here.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.ts'
+      - 'tsconfig.json'
+      - 'Dockerfile'
+      - 'deploy/cloudflare/**'
+      - '.github/workflows/deploy-cloudflare.yml'
+  workflow_dispatch:
+
+# One deploy at a time; never cancel one that is already running.
+concurrency:
+  group: deploy-cloudflare
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: deploy/cloudflare/package-lock.json
+      - name: Check deploy secrets
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::Missing repository secret CLOUDFLARE_API_TOKEN"; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::Missing repository secret CLOUDFLARE_ACCOUNT_ID"; exit 1; }
+      - name: Install Worker dependencies
+        working-directory: deploy/cloudflare
+        run: npm ci
+      - name: Typecheck Worker
+        working-directory: deploy/cloudflare
+        run: npm run typecheck
+      - name: Deploy (builds the image from ../../Dockerfile)
+        working-directory: deploy/cloudflare
+        run: npx wrangler deploy
+      - name: Wait for the app to answer
+        # The container cold-starts after a new image; allow up to 15 minutes.
+        run: |
+          for i in $(seq 1 45); do
+            code=$(curl -s -o /dev/null -m 30 -w '%{http_code}' https://os.swkpropertiesuae.com/api/health || true)
+            echo "attempt $i: HTTP $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 20
+          done
+          echo "::error::App did not return 200 from /api/health within 15 minutes"
+          exit 1
