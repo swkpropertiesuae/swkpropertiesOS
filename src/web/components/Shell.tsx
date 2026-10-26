@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'motion/react'
-import { Bell, Search, Plus, Check, ChevronDown, ChevronRight, LogOut, UserRound, LifeBuoy, LayoutGrid, Languages, Download, RefreshCw } from 'lucide-react'
+import { Bell, Search, Plus, Check, ChevronDown, ChevronRight, LogOut, UserRound, LifeBuoy, LayoutGrid, Languages, Download, RefreshCw, ArrowLeft } from 'lucide-react'
 import { useMeta } from '../lib/meta'
 import { get, post } from '../lib/api'
 import { cls, fmtIsoStamp } from '../lib/format'
@@ -53,7 +53,7 @@ function QuickCreate() {
   if (!items.length) return null
   return (
     <div className="relative" ref={ref}>
-      <button className="swk-create" onClick={() => setOpen(o => !o)} aria-haspopup="menu" aria-expanded={open}><Plus size={16} /><span className="swk-hide-sm">Create</span><ChevronDown size={14} className="opacity-70 swk-hide-sm" /></button>
+      <button className="swk-create" onClick={() => setOpen(o => !o)} aria-haspopup="menu" aria-expanded={open}><Plus size={16} /><span className="swk-hide-sm">Quick Add</span><ChevronDown size={14} className="opacity-70 swk-hide-sm" /></button>
       <AnimatePresence>{open && (
         <motion.div role="menu" className="swk-menu" initial={{ opacity: 0, y: -6, scale: .98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: .98 }} transition={{ duration: .18 }}>
           {items.map((i, idx) => (
@@ -65,28 +65,48 @@ function QuickCreate() {
   )
 }
 
-/** The current app's pages, shown under the top bar in place of a sidebar. */
-function AppNav({ pathname }: { pathname: string }) {
+/** Dedicated left sidebar for the currently opened app. */
+function AppSidebar({ pathname }: { pathname: string }) {
   const { can } = useMeta()
   const here = findNav(pathname)
   const items = useMemo(() => (here?.section.items ?? []).filter(i => !i.module || can(i.module, 'view')), [here, can])
   if (!here || items.length < 1) return null
   const meta = APP_META[here.section.key]
   return (
-    <nav className="swk-subnav no-print" aria-label={`${here.section.label} pages`}>
-      <Link to="/home" className="app" title="Back to all apps">{meta && <meta.icon size={15} />}<span>{here.section.label}</span></Link>
-      <span className="div" aria-hidden />
-      <div className="scroll">
-        {items.map(i => {
-          const isActive = here.item.to === i.to
-          return (
-            <NavLink key={i.to} to={i.to} className={cls('lnk', isActive && 'active')} aria-current={isActive ? 'page' : undefined}>
-              {isActive && <motion.span layoutId="swk-subnav-ind" className="ind" transition={{ type: 'spring', stiffness: 380, damping: 32 }} />}
-              <i.icon size={15} /><span>{i.label}</span>{i.isNew && <em>NEW</em>}
-            </NavLink>)
-        })}
-      </div>
-    </nav>
+    <aside className="swk-app-sidebar no-print">
+      <nav className="swk-sidebar-nav" aria-label={`${here.section.label} pages`}>
+        <div className="swk-sidebar-head">
+          <Link to="/home" className="swk-sidebar-back" title="Back to all apps">
+            <ArrowLeft size={14} />
+            <span>All apps</span>
+          </Link>
+          <div className="swk-sidebar-app">
+            <span className={`swk-sidebar-app-ic tone-${meta?.tone ?? 'navy'}`}>{meta && <meta.icon size={18} />}</span>
+            <div className="min-w-0">
+              <div className="swk-sidebar-app-name">{here.section.label}</div>
+              <div className="swk-sidebar-app-count">{items.length} {items.length === 1 ? 'page' : 'pages'}</div>
+            </div>
+          </div>
+        </div>
+        <div className="swk-sidebar-list">
+          {items.map(i => {
+            const isActive = here.item.to === i.to
+            return (
+              <NavLink key={i.to} to={i.to} className={cls('swk-sidebar-link', isActive && 'active')} aria-current={isActive ? 'page' : undefined}>
+                <span className="swk-sidebar-link-ic"><i.icon size={16} /></span>
+                <span className="swk-sidebar-link-tx">
+                  <span className="swk-sidebar-link-row">
+                    <b>{i.label}</b>
+                    {i.isNew && <em>NEW</em>}
+                  </span>
+                  {i.desc && <small>{i.desc}</small>}
+                </span>
+              </NavLink>
+            )
+          })}
+        </div>
+      </nav>
+    </aside>
   )
 }
 
@@ -117,9 +137,9 @@ export function Shell() {
       <div className="swk-main-col">
         <header className="swk-top no-print">
           <Link to="/home" className="swk-brand" aria-label="SWK OS home"><img src="/brand/swk-logo-ink.png" alt="SWK Properties" /></Link>
-          <Link to="/home" className={cls('swk-apps-btn', isHome && 'on')} aria-label="All apps" title="All apps"><LayoutGrid size={17} /><span className="swk-hide-sm">Apps</span></Link>
+          <Link to="/home" className={cls('swk-apps-btn', isHome && 'on')} aria-label="All apps" title="All apps"><LayoutGrid size={17} /><span className="swk-hide-sm">All apps</span></Link>
           <div className="swk-top-title">
-            <div className="crumb"><Link to="/home">SWK OS</Link>{here && <><ChevronRight size={11} /><span>{here.section.label}</span></>}</div>
+            <div className="crumb"><Link to="/home">All apps</Link>{here && <><ChevronRight size={11} /><span>{here.section.label}</span></>}</div>
             <div className="page">{pageTitle}</div>
           </div>
           <div className="flex-1" />
@@ -134,10 +154,10 @@ export function Shell() {
               <motion.div className="swk-menu" style={{ minWidth: 250 }} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: .16 }}>
                 <div className="px-3 py-2"><div className="font-semibold text-ink text-[14px] truncate">{me?.name}</div><div className="text-xs text-muted truncate">{me?.email}</div></div>
                 <div className="sep" />
-                <Link to="/profile" onClick={() => setUserMenu(false)}><span className="ic"><UserRound size={16} /></span>My profile & security</Link>
+                <Link to="/profile" onClick={() => setUserMenu(false)}><span className="ic"><UserRound size={16} /></span>My profile & password</Link>
                 <Link to="/workspace-tools" onClick={() => setUserMenu(false)}><span className="ic"><Languages size={16} /></span>Language & preferences</Link>
                 <Link to="/home" onClick={() => setUserMenu(false)}><span className="ic"><LayoutGrid size={16} /></span>All apps</Link>
-                <button className="item" onClick={() => { setUserMenu(false); setGuide(true) }}><span className="ic"><LifeBuoy size={16} /></span>Quick guide</button>
+                <button className="item" onClick={() => { setUserMenu(false); setGuide(true) }}><span className="ic"><LifeBuoy size={16} /></span>Help guide</button>
                 {!pwa.installed && (pwa.canInstall || ios) && <button className="item" onClick={install}><span className="ic"><Download size={16} /></span>Install app</button>}
                 <div className="sep" />
                 <button className="item" onClick={logout}><span className="ic"><LogOut size={16} /></span>Sign out</button>
@@ -145,26 +165,28 @@ export function Shell() {
           </div>
         </header>
         {pwa.updateReady && <div className="no-print" role="status" style={{ position: 'fixed', left: 16, right: 16, bottom: 16, zIndex: 80, maxWidth: 440, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 12, background: '#0f1714', color: '#e8efe9', boxShadow: '0 8px 30px rgba(0,0,0,.3)' }}><RefreshCw size={16} /><span style={{ flex: 1, fontSize: 13.5 }}>A new version of SWK OS is ready.</span><button className="btn sm" onClick={applyUpdate}>Reload</button></div>}
-        {!isHome && <AppNav pathname={loc.pathname} />}
-        {me?.demo && <div className="demo-notice no-print"><span><strong>Demo workspace</strong> · fictional data · external sending disabled</span><details><summary>Details</summary><p>Isolated from production. Resets every night. External e-mail, WhatsApp and integrations are switched off.</p><button className="btn outline sm" onClick={async () => { if (confirm('Restore the demo to its original state and sign out?')) { await post('/api/demo/reset'); window.location.href = '/login' } }}>Reset demo</button></details></div>}
+        {me?.demo && <div className="demo-notice no-print"><span><strong>Demo workspace</strong> · sample data · external messages switched off</span><details><summary>Details</summary><p>Safe practice environment. Resets every night. External email and WhatsApp messages are disabled.</p><button className="btn outline sm" onClick={async () => { if (confirm('Restore the demo to its original state and sign out?')) { await post('/api/demo/reset'); window.location.href = '/login' } }}>Reset demo</button></details></div>}
         {me?.defaultPassword && !me?.demo && <div className="no-print bg-[#f3e6c4] text-[#6b4a00] px-5 py-2 text-sm font-semibold flex items-center gap-3 flex-wrap">You are signed in with the default password. <Link to="/profile" className="underline">Change it now</Link></div>}
-        <main className="swk-main" id="main">
-          <AnimatePresence mode="wait">
-            <motion.div key={loc.pathname} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: .28, ease: [0.16, 1, 0.3, 1] }}>
-              <Outlet context={{ openGuide: () => setGuide(true), openSearch: () => setPalette(true), logout }} />
-            </motion.div>
-          </AnimatePresence>
-        </main>
+        <div className={cls('swk-body', !isHome && !!here && 'has-sidebar')}>
+          {!isHome && <AppSidebar pathname={loc.pathname} />}
+          <main className="swk-main" id="main">
+            <AnimatePresence mode="wait">
+              <motion.div key={loc.pathname} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: .24, ease: [0.16, 1, 0.3, 1] }}>
+                <Outlet context={{ openGuide: () => setGuide(true), openSearch: () => setPalette(true), logout }} />
+              </motion.div>
+            </AnimatePresence>
+          </main>
+        </div>
       </div>
       {palette && <CommandPalette onClose={() => setPalette(false)} />}
-      <Modal open={guide} onClose={() => setGuide(false)} title="SWK OS quick guide" width={660}>
+      <Modal open={guide} onClose={() => setGuide(false)} title="How to use SWK OS" width={660}>
         <div className="grid gap-4 text-sm">
-          <div><b className="font-display text-ink">Search anything</b> — press <kbd className="border border-line rounded px-1.5">Ctrl</kbd> + <kbd className="border border-line rounded px-1.5">K</kbd> for properties, leads, deals, leases, cheques and invoices.</div>
-          <div><b className="font-display text-ink">Sales journey</b> — Lead → Form B → Viewing → Offer → Form F (MOU) → Developer NOC → Mortgage → DLD transfer at the trustee office → Commission invoice.</div>
-          <div><b className="font-display text-ink">Leasing journey</b> — Form A mandate → Viewing → Offer → Tenancy contract → Ejari → PDC cheques → Rent collection → 90-day renewal notice (RERA index check).</div>
-          <div><b className="font-display text-ink">Off-plan</b> — EOI → Booking → SPA → Oqood registration → Construction instalments → Handover & snagging.</div>
-          <div><b className="font-display text-ink">Compliance</b> — every listing needs a valid Form A, Trakheesi permit and an active BRN. The RERA Centre flags anything expiring.</div>
-          <div className="text-muted">{meta?.settings.company_name} · RERA ORN 51517 · times shown in Gulf Standard Time</div>
+          <div><b className="font-display text-ink">All apps & sidebar</b> — Click <b>All apps</b> in the top bar to switch between departments. Inside any app, use the left sidebar to switch between its pages.</div>
+          <div><b className="font-display text-ink">Quick search</b> — Press <kbd className="border border-line rounded px-1.5">Ctrl</kbd> + <kbd className="border border-line rounded px-1.5">K</kbd> anytime to find properties, leads, deals, leases, cheques, and invoices.</div>
+          <div><b className="font-display text-ink">Selling a property</b> — Lead → Viewing → Buyer Offer → Sales Contract (Form F) → Developer NOC → DLD Transfer → Commission Invoice.</div>
+          <div><b className="font-display text-ink">Leasing a property</b> — Owner Agreement → Viewing → Offer → Tenancy Contract → Ejari → Rent Cheques → Receipts & Renewal.</div>
+          <div><b className="font-display text-ink">Off-plan sales</b> — Booking → SPA → Oqood Registration → Payment Plan → Handover.</div>
+          <div className="text-muted">{meta?.settings.company_name} · Dubai, UAE · Gulf Standard Time</div>
         </div>
       </Modal>
     </div>

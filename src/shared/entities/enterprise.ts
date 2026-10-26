@@ -99,11 +99,11 @@ export const enterprise: EntityDef[] = [
 
   // ---------------- 3.01 Corporate Governance
   {
-    key: 'corporate_governance_items', label: 'Governance record', plural: 'Corporate governance', module: 'admin', icon: 'Landmark',
+    key: 'corporate_governance_items', label: 'Company Policy & Approval Limit', plural: 'Company Policies & Approval Limits', module: 'admin', icon: 'Landmark',
     title: ['item_no', 'title'], titleSep: ' – ',
     numbering: { field: 'item_no', pattern: 'GOV-{YY}{seq:4}' },
     panel: true, statusField: 'status', noDelete: true,
-    description: 'Board and owner decisions, delegated signature authorities, department budgets, corporate bank signatory mandates, authorised representatives register, and business continuity plans (BCP).',
+    description: 'Company policies, spending limits, authorised signers, department budgets, and emergency plans.',
     fields: [
       T('item_no', 'Governance No.', { readonly: true, list: true, search: true, section: 'Governance' }),
       T('title', 'Title', { required: true, list: true, search: true, span: 2 }),
@@ -131,11 +131,11 @@ export const enterprise: EntityDef[] = [
 
   // ---------------- 3.03 Visa, Immigration & PRO (Aggregate: immigration_cases)
   {
-    key: 'immigration_cases', label: 'Immigration / PRO case', plural: 'Visa, immigration & PRO', module: 'hr', icon: 'Plane',
+    key: 'immigration_cases', label: 'Staff Visa Case', plural: 'Staff Visas & Work Permits', module: 'hr', icon: 'Plane',
     title: ['case_no', 'case_type'], titleSep: ' – ',
     numbering: { field: 'case_no', pattern: 'PRO-{YY}{seq:5}' },
     panel: true, statusField: 'status', noDelete: true,
-    description: 'Employee visa, work-permit and Emirates ID workflow. Separates application submission, official government approval and internal completion, and escalates delayed cases.',
+    description: 'Track staff visas, work permits, medical tests, and Emirates IDs step by step.',
     fields: [
       T('case_no', 'PRO Case No.', { readonly: true, list: true, search: true, section: 'Visa & Work Permit' }),
       R('employee_id', 'Employee', 'employees', { required: true, list: true }),
@@ -180,11 +180,11 @@ export const enterprise: EntityDef[] = [
 
   // ---------------- 3.04 Broker Licensing & Agent Lifecycle (Aggregate: agent_authorisations)
   {
-    key: 'agent_authorisations', label: 'Agent authorisation', plural: 'Broker authorisations', module: 'compliance', icon: 'BadgeCheck',
+    key: 'agent_authorisations', label: 'Agent RERA Card', plural: 'Agent RERA Cards & Approvals', module: 'compliance', icon: 'BadgeCheck',
     title: ['auth_no', 'brn_number'], titleSep: ' – ',
     numbering: { field: 'auth_no', pattern: 'AUT-{YY}{seq:5}' },
     panel: true, statusField: 'status', noDelete: true,
-    description: 'Independent validation of employment, work authorisation, RERA BRN practice card, mandatory AML/conduct training, and conflict declarations before regulated brokerage duties.',
+    description: 'Check work visas, RERA Broker Cards (BRN), exam pass dates, and AML training before activating an agent.',
     fields: [
       T('auth_no', 'Authorisation No.', { readonly: true, list: true, search: true, section: 'Broker Credentials' }),
       R('agent_id', 'Broker / Agent', 'agents', { required: true, list: true }),
@@ -221,11 +221,11 @@ export const enterprise: EntityDef[] = [
 
   // ---------------- 3.05 Attendance, Leave & Field Duty (Aggregate: attendance_events)
   {
-    key: 'attendance_events', label: 'Attendance & field event', plural: 'Attendance & field events', module: 'hr', icon: 'Clock',
+    key: 'attendance_events', label: 'Attendance Record', plural: 'Attendance & Check-Ins', module: 'hr', icon: 'Clock',
     title: ['event_no', 'work_date'], titleSep: ' – ',
     numbering: { field: 'event_no', pattern: 'ATT-{YY}{seq:6}' },
     panel: true, statusField: 'duty_status', noDelete: true,
-    description: 'Controlled office kiosk, dynamic QR, and appointment-linked field check-in/check-out events with server timestamps, shift grace periods, and audited corrections.',
+    description: 'Office and appointment check-in and check-out times, work shifts, and overtime records.',
     fields: [
       T('event_no', 'Event No.', { readonly: true, list: true, search: true, section: 'Check-In & Shift' }),
       R('employee_id', 'Employee', 'employees', { required: true, list: true }),
@@ -258,11 +258,11 @@ export const enterprise: EntityDef[] = [
 
   // ---------------- 3.10 Work-hours Field Presence (Aggregate: field_sessions & location_access_logs)
   {
-    key: 'field_sessions', label: 'Field presence session', plural: 'Work-hours field presence', module: 'hr', icon: 'MapPinned',
+    key: 'field_sessions', label: 'Field Visit', plural: 'Field Visits & Viewings', module: 'hr', icon: 'MapPinned',
     title: ['session_no', 'assigned_location'], titleSep: ' – ',
     numbering: { field: 'session_no', pattern: 'FLD-{YY}{seq:5}' },
     panel: true, statusField: 'status', noDelete: true,
-    description: 'Transparent, duty-based work-hours location sharing tied to scheduled viewings and field assignments. Automatically stops off-duty; anomalies trigger human review, never automatic discipline.',
+    description: 'Work-hours appointment check-ins for property viewings and client meetings. Automatically turns off outside work hours.',
     fields: [
       T('session_no', 'Session No.', { readonly: true, list: true, search: true, section: 'Field Assignment' }),
       R('employee_id', 'Employee', 'employees', { required: true, list: true }),
@@ -293,9 +293,9 @@ export const enterprise: EntityDef[] = [
     defaultSort: { field: 'id', dir: 'desc' },
   },
   {
-    key: 'location_access_logs', label: 'Location access log', plural: 'Location access audit logs', module: 'compliance', icon: 'Eye',
+    key: 'location_access_logs', label: 'Location Privacy Log', plural: 'Location Privacy Logs', module: 'compliance', icon: 'Eye',
     title: ['access_outcome', 'accessed_at'], titleSep: ' · ', readonlyApi: true, noDelete: true, statusField: 'access_outcome',
-    description: 'Immutable privacy audit log of every attempt to view employee field location, enforcing off-hours access blocking and security review.',
+    description: 'Privacy log showing when field visit locations were checked during work hours or blocked after hours.',
     fields: [
       R('field_session_id', 'Field session', 'field_sessions', { list: true }),
       R('employee_id', 'Employee', 'employees', { list: true }),
@@ -311,11 +311,11 @@ export const enterprise: EntityDef[] = [
 
   // ---------------- 3.06 Daily Staff Accountability & 4.01 (Aggregate: daily_reports)
   {
-    key: 'daily_reports', label: 'Daily accountability report', plural: 'Daily staff accountability', module: 'hr', icon: 'ClipboardCheck',
+    key: 'daily_reports', label: 'Daily Work Report', plural: 'Daily Work Reports', module: 'hr', icon: 'ClipboardCheck',
     title: ['report_no', 'report_date'], titleSep: ' – ',
     numbering: { field: 'report_no', pattern: 'DAR-{YY}{seq:6}' },
     panel: true, statusField: 'status', noDelete: true,
-    description: 'Daily workday accountability report. System-populated activity counts from CRM/calls/tasks/viewings are immutable and kept strictly separate from the employee narrative. Submitted versions are frozen and line-manager reviews are versioned.',
+    description: 'Daily staff work reports combining automatic call, viewing, and task counts with each staff member\'s written summary.',
     fields: [
       T('report_no', 'Report No.', { readonly: true, list: true, search: true, section: 'Workday Identity' }),
       R('employee_id', 'Employee', 'employees', { required: true, list: true }),
@@ -350,11 +350,11 @@ export const enterprise: EntityDef[] = [
 
   // ---------------- 3.07 Daily Inventory Acquisition & 4.02 (Aggregate: inventory_submissions)
   {
-    key: 'inventory_submissions', label: 'Inventory submission', plural: 'Daily inventory acquisition', module: 'properties', icon: 'Building2',
+    key: 'inventory_submissions', label: 'New Property Submission', plural: 'New Property Submissions', module: 'properties', icon: 'Building2',
     title: ['submission_no', 'building_name', 'unit_no'], titleSep: ' – ',
     numbering: { field: 'submission_no', pattern: 'INV-{YY}{seq:5}' },
     panel: true, statusField: 'status', noDelete: true,
-    description: 'Daily property inventory acquisition queue. Enforces building/tower/unit duplicate detection, independent inventory verification, compliance Trakheesi permit check, and second-person manager publication approval.',
+    description: 'Submit newly sourced properties, check for duplicates, verify owner documents and Trakheesi permits, and approve for listing.',
     fields: [
       T('submission_no', 'Submission No.', { readonly: true, list: true, search: true, section: 'Unit & Source Identity' }),
       R('community_id', 'Community', 'communities', { list: true }),
@@ -402,11 +402,11 @@ export const enterprise: EntityDef[] = [
 
   // ---------------- 3.12 Listing Mandates & Price Governance (Aggregate: listing_mandates)
   {
-    key: 'listing_mandates', label: 'Listing mandate governance', plural: 'Listing mandates & price logs', module: 'mandates', icon: 'FileSignature',
+    key: 'listing_mandates', label: 'Owner Agreement & Permit', plural: 'Owner Agreements & Permits', module: 'mandates', icon: 'FileSignature',
     title: ['listing_mandate_no', 'form_a_ref'], titleSep: ' – ',
     numbering: { field: 'listing_mandate_no', pattern: 'LMD-{YY}{seq:5}' },
     panel: true, statusField: 'status', noDelete: true,
-    description: 'Canonical verified listing mandate register with restricted ownership evidence, Trakheesi permit validation, second-person publication sign-off, and audited price-change history.',
+    description: 'Approved owner agreements (Form A), Trakheesi advertising permits, and approved price updates.',
     fields: [
       T('listing_mandate_no', 'Listing Mandate No.', { readonly: true, list: true, search: true, section: 'Mandate & Authority' }),
       R('property_id', 'Property', 'properties', { required: true, list: true }),
@@ -435,11 +435,11 @@ export const enterprise: EntityDef[] = [
 
   // ---------------- 3.08 Developer NOC & Clearance & 4.03 (Aggregate: developer_requests)
   {
-    key: 'developer_requests', label: 'Developer NOC request', plural: 'Developer NOC & clearances', module: 'transactions', icon: 'FileCheck2',
+    key: 'developer_requests', label: 'Developer NOC Request', plural: 'Developer NOC Requests', module: 'transactions', icon: 'FileCheck2',
     title: ['request_no', 'transaction_type'], titleSep: ' – ',
     numbering: { field: 'request_no', pattern: 'NOC-{YY}{seq:5}' },
     panel: true, statusField: 'status', noDelete: true,
-    description: 'Transaction-specific Developer NOC & clearance workflow. Never triggered by inventory sourcing. Requires a qualifying transaction, buyer/seller verification, service-charge clearance, portal reference, and independent reviewer verification before unlocking closing.',
+    description: 'Track developer NOC applications, service-charge clearances, and uploaded NOC certificates required before property transfer.',
     fields: [
       T('request_no', 'NOC Request No.', { readonly: true, list: true, search: true, section: 'Qualifying Transaction & Parties' }),
       R('developer_id', 'Developer', 'developers', { required: true, list: true }),
@@ -481,11 +481,11 @@ export const enterprise: EntityDef[] = [
 
   // ---------------- 3.09 WhatsApp Business Supervision & 4.07 (Aggregate: communications & supervisor_access_logs)
   {
-    key: 'communications', label: 'Supervised communication', plural: 'Supervised communications', module: 'crm', icon: 'MessageSquare',
+    key: 'communications', label: 'Company Chat Log', plural: 'Company WhatsApp & Chat Logs', module: 'crm', icon: 'MessageSquare',
     title: ['comm_no', 'customer_phone'], titleSep: ' – ',
     numbering: { field: 'comm_no', pattern: 'COM-{YY}{seq:6}' },
     panel: true, statusField: 'status', noDelete: true,
-    description: 'Approved company-channel business communications (WhatsApp Business, AI Voice, Company Email). Enforces reply SLAs, ownership handoff, commitment task extraction, and personal WhatsApp diversion flagging.',
+    description: 'Client conversations on official company WhatsApp, phone, and email lines with response timers and follow-up tasks.',
     fields: [
       T('comm_no', 'Communication No.', { readonly: true, list: true, search: true, section: 'Channel & Routing' }),
       S('channel', 'Company channel', ['WhatsApp Business', 'Inbound Phone / AI Voice', 'Company Email', 'Customer Portal'], { required: true, default: 'WhatsApp Business', list: true }),
@@ -516,9 +516,9 @@ export const enterprise: EntityDef[] = [
     defaultSort: { field: 'id', dir: 'desc' },
   },
   {
-    key: 'supervisor_access_logs', label: 'Supervisor access log', plural: 'Supervisor access logs', module: 'compliance', icon: 'Shield',
+    key: 'supervisor_access_logs', label: 'Manager Chat Review Log', plural: 'Manager Chat Review Logs', module: 'compliance', icon: 'Shield',
     title: ['action_type', 'accessed_at'], titleSep: ' · ', readonlyApi: true, noDelete: true,
-    description: 'Mandatory audit log of all supervisory reviews, quality inspections, and conversation ownership transfers on company communication channels.',
+    description: 'Automatic log of every manager quality check or chat handover with recorded reasons.',
     fields: [
       R('communication_id', 'Communication record', 'communications', { list: true }),
       R('accessed_by', 'Supervisor / reviewer', 'users', { list: true }),
@@ -532,11 +532,11 @@ export const enterprise: EntityDef[] = [
 
   // ---------------- 3.11 & 3.31 Lead Ownership Protection (Aggregate: lead_assignment_logs)
   {
-    key: 'lead_assignment_logs', label: 'Lead assignment log', plural: 'Lead ownership history', module: 'crm', icon: 'History',
+    key: 'lead_assignment_logs', label: 'Lead Assignment Log', plural: 'Lead Assignment History', module: 'crm', icon: 'History',
     title: ['log_no', 'assignment_mode'], titleSep: ' – ',
     numbering: { field: 'log_no', pattern: 'LAL-{YY}{seq:6}' },
     readonlyApi: true, noDelete: true,
-    description: 'Immutable audit trail of lead ownership, automated routing, approved reassignments, exit handovers, and co-broker attribution.',
+    description: 'Complete history of who each lead was assigned to and why.',
     fields: [
       T('log_no', 'Log No.', { list: true, search: true }),
       R('lead_id', 'Lead', 'leads', { required: true, list: true }),
@@ -557,11 +557,11 @@ export const enterprise: EntityDef[] = [
 
   // ---------------- 3.13 Secondary Sales, 3.14 Off-Plan & 4.04/4.05 (Aggregate: transactions)
   {
-    key: 'transactions', label: 'Enterprise transaction', plural: 'Enterprise transactions', module: 'transactions', icon: 'Briefcase',
+    key: 'transactions', label: 'Property Sale & Transfer', plural: 'Property Sales & Transfers', module: 'transactions', icon: 'Briefcase',
     title: ['transaction_no', 'transaction_category'], titleSep: ' – ',
     numbering: { field: 'transaction_no', pattern: 'TXN-{YY}{seq:5}' },
     panel: true, statusField: 'stage', noDelete: true,
-    description: 'Canonical secondary sales and off-plan transaction register enforcing stage-gate preconditions (KYC, Form F, verified Developer NOC, external transfer/title-deed evidence, invoice & receipt reconciliation) and handling all 11 secondary sale exception states.',
+    description: 'Track property sales and off-plan deals from offer to title deed transfer, including ID checks, developer NOCs, and special cases.',
     fields: [
       T('transaction_no', 'Transaction No.', { readonly: true, list: true, search: true, section: 'Transaction & Parties' }),
       S('transaction_category', 'Category', ['Secondary Sale', 'Off-Plan Reservation & Sale', 'Commercial Sale', 'Leasing Transaction'], { required: true, default: 'Secondary Sale', list: true }),
@@ -610,11 +610,11 @@ export const enterprise: EntityDef[] = [
 
   // ---------------- 3.17 Commissions & Disputes, 3.32 Developer Commission Assurance & 4.08 (Aggregate: commission_entitlements)
   {
-    key: 'commission_entitlements', label: 'Commission entitlement', plural: 'Commissions, entitlements & disputes', module: 'finance', icon: 'Percent',
+    key: 'commission_entitlements', label: 'Commission Payout', plural: 'Commission Payouts', module: 'finance', icon: 'Percent',
     title: ['entitlement_no', 'deal_type'], titleSep: ' – ',
     numbering: { field: 'entitlement_no', pattern: 'CEN-{YY}{seq:5}' },
     panel: true, statusField: 'status', noDelete: true,
-    description: 'Tracks Earned, Invoiced, Collected, Payable and Paid commission separately. Enforces co-broker dispute arbitration, developer clawback recalculation, payee IBAN change two-person verification, and 3-way segregation of duties (initiator != approver != payer).',
+    description: 'Track earned, collected, and paid agent commissions clearly with three-step payout sign-off and bank change protection.',
     fields: [
       T('entitlement_no', 'Entitlement No.', { readonly: true, list: true, search: true, section: 'Entitlement & Agreement' }),
       R('transaction_id', 'Enterprise transaction', 'transactions', { list: true }),
@@ -662,11 +662,11 @@ export const enterprise: EntityDef[] = [
 
   // ---------------- 3.20, 3.29 Fraud & Collusion, 3.30 DLP & Insider Risk, 4.09 Client Complaints (Aggregate: compliance_cases)
   {
-    key: 'compliance_cases', label: 'Compliance & risk case', plural: 'Risk, fraud, DLP & complaints', module: 'compliance', icon: 'ShieldAlert',
+    key: 'compliance_cases', label: 'Compliance Review & Complaint', plural: 'Compliance Reviews & Complaints', module: 'compliance', icon: 'ShieldAlert',
     title: ['case_no', 'title'], titleSep: ' – ',
     numbering: { field: 'case_no', pattern: 'CAS-{YY}{seq:5}' },
     panel: true, statusField: 'status', noDelete: true,
-    description: 'Independent investigation register for client complaints, fraud/collusion leads, bulk CRM export (DLP) alerts, and ethical monitoring reviews. Automated flags are leads for human review only, never automatic guilt; implicated managers cannot decide a case.',
+    description: 'Fair human review for customer complaints and compliance alerts, with full support for staff explanations and appeals.',
     fields: [
       T('case_no', 'Case No.', { readonly: true, list: true, search: true, section: 'Case Classification & Independence' }),
       T('title', 'Case headline', { required: true, list: true, search: true, span: 2 }),
@@ -708,11 +708,11 @@ export const enterprise: EntityDef[] = [
 
   // ---------------- 3.27 Universal Task & Approval Engine (Aggregate: universal_approvals)
   {
-    key: 'universal_approvals', label: 'Universal approval', plural: 'Universal approval engine', module: 'projects', icon: 'CheckCheck',
+    key: 'universal_approvals', label: 'Manager Approval Request', plural: 'Manager Approval Requests', module: 'projects', icon: 'CheckCheck',
     title: ['approval_no', 'title'], titleSep: ' – ',
     numbering: { field: 'approval_no', pattern: 'APR-{YY}{seq:5}' },
     panel: true, statusField: 'status', noDelete: true,
-    description: 'Cross-department configurable approval engine with SLA timers, four-eyes sequential approval for high-risk actions, delegated authority with expiry, and manager substitution.',
+    description: 'Two-person manager approval requests for deals, pricing changes, payments, and special cases.',
     fields: [
       T('approval_no', 'Approval No.', { readonly: true, list: true, search: true, section: 'Approval Request' }),
       T('title', 'Request summary', { required: true, list: true, search: true, span: 2 }),
@@ -746,11 +746,11 @@ export const enterprise: EntityDef[] = [
 
   // ---------------- 3.02 Employee 360, 3.26 Recruitment & Offboarding, 4.10 Separation (Aggregate: hr_lifecycle_cases)
   {
-    key: 'hr_lifecycle_cases', label: 'HR lifecycle & separation case', plural: 'Recruitment, transfers & offboarding', module: 'hr', icon: 'UserCheck',
+    key: 'hr_lifecycle_cases', label: 'Hiring & Handover Case', plural: 'Hiring, Onboarding & Staff Handover', module: 'hr', icon: 'UserCheck',
     title: ['lifecycle_no', 'case_type'], titleSep: ' – ',
     numbering: { field: 'lifecycle_no', pattern: 'HRL-{YY}{seq:5}' },
     panel: true, statusField: 'status', noDelete: true,
-    description: 'Manages manpower requisitions, recruitment onboarding, branch/department transfers, confidential disciplinary cases, and 4.10 employee separation / emergency removal (revoking sessions, preserving history, and reassigning leads, WhatsApp, viewings and NOC tasks).',
+    description: 'Manage candidate hiring, new joiner onboarding, and departing staff account and client handovers.',
     fields: [
       T('lifecycle_no', 'Case No.', { readonly: true, list: true, search: true, section: 'HR Lifecycle Event' }),
       S('case_type', 'Lifecycle type', [
@@ -788,11 +788,11 @@ export const enterprise: EntityDef[] = [
 
   // ---------------- 3.25 Procurement, Assets & Facilities
   {
-    key: 'procurement_requests', label: 'Procurement & facility request', plural: 'Procurement, devices & facilities', module: 'finance', icon: 'PackageCheck',
+    key: 'procurement_requests', label: 'Office Purchase & Equipment', plural: 'Office Purchases & Equipment', module: 'finance', icon: 'PackageCheck',
     title: ['req_no', 'title'], titleSep: ' – ',
     numbering: { field: 'req_no', pattern: 'PRC-{YY}{seq:5}' },
     panel: true, statusField: 'status',
-    description: 'Purchase requisitions, quotations, POs, employee device/SIM assignments, company vehicles, office access cards, DEWA/utilities, and portal SaaS subscriptions.',
+    description: 'Track office purchases, staff laptops and phones, company cars, access cards, and portal subscriptions.',
     fields: [
       T('req_no', 'Request No.', { readonly: true, list: true, search: true, section: 'Requisition & Asset' }),
       T('title', 'Item / service description', { required: true, list: true, search: true, span: 2 }),
@@ -820,11 +820,11 @@ export const enterprise: EntityDef[] = [
 
   // ---------------- 3.33 Quality Assurance & Client Reviews
   {
-    key: 'qa_reviews', label: 'QA & client review', plural: 'Quality assurance & reviews', module: 'support', icon: 'Star',
+    key: 'qa_reviews', label: 'Quality Review', plural: 'Quality Reviews', module: 'support', icon: 'Star',
     title: ['qa_no', 'channel'], titleSep: ' – ',
     numbering: { field: 'qa_no', pattern: 'QAR-{YY}{seq:5}' },
     panel: true, statusField: 'status', noDelete: true,
-    description: 'Regular sampling of sales conversations, complaint-driven call reviews, property description accuracy checks, etiquette scoring, follow-up commitment audits, and broker right to challenge.',
+    description: 'Helpful quality scores and feedback for calls, chats, and property listings.',
     fields: [
       T('qa_no', 'QA Review No.', { readonly: true, list: true, search: true, section: 'Review Scope' }),
       R('agent_id', 'Reviewed broker', 'agents', { required: true, list: true }),
@@ -851,11 +851,11 @@ export const enterprise: EntityDef[] = [
 
   // ---------------- 3.35 Infrastructure, Cybersecurity & DR
   {
-    key: 'dr_exercises', label: 'DR & security exercise', plural: 'DR, backup & release drills', module: 'admin', icon: 'DatabaseBackup',
+    key: 'dr_exercises', label: 'System Backup Check', plural: 'System Backup Checks', module: 'admin', icon: 'DatabaseBackup',
     title: ['exercise_no', 'title'], titleSep: ' – ',
     numbering: { field: 'exercise_no', pattern: 'DRX-{YY}{seq:4}' },
     panel: true, statusField: 'status', noDelete: true,
-    description: 'Verified backup restoration exercises, database failover simulations, provider outage drills, security/penetration tests, and production release approvals with RTO/RPO evidence.',
+    description: 'Regular backup restore tests and system checks to keep company records safe.',
     fields: [
       T('exercise_no', 'Drill No.', { readonly: true, list: true, search: true, section: 'Drill & Environment' }),
       T('title', 'Exercise / release title', { required: true, list: true, search: true, span: 2 }),
@@ -881,9 +881,9 @@ export const enterprise: EntityDef[] = [
     defaultSort: { field: 'id', dir: 'desc' },
   },
   {
-    key: 'audit_events', label: 'Enterprise audit event', plural: 'Enterprise audit events', module: 'admin', icon: 'History',
+    key: 'audit_events', label: 'System Activity Log', plural: 'System Activity Log', module: 'admin', icon: 'History',
     title: ['event_type', 'entity_key'], titleSep: ' · ', readonlyApi: true, noDelete: true,
-    description: 'Canonical immutable enterprise workflow and security control event log across all 35 capabilities.',
+    description: 'Automatic log of important actions, approvals, and updates across the system.',
     fields: [
       DT('occurred_at', 'Timestamp', { list: true }),
       T('module_code', 'Module (3.01–3.35)', { list: true, search: true }),

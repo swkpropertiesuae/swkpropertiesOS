@@ -53,18 +53,18 @@ jobs:
           docker build --platform linux/amd64 \
             --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
             --label "org.opencontainers.image.revision=$SOURCE_SHA" \
-            -t "ghcr.io/swkpropertiesuaellc/swkpropertiesos:sha-$SOURCE_SHA" \
-            -t ghcr.io/swkpropertiesuaellc/swkpropertiesos:latest .
+            -t "ghcr.io/swkpropertiesuae/swkpropertiesos:sha-$SOURCE_SHA" \
+            -t ghcr.io/swkpropertiesuae/swkpropertiesos:latest .
 
       - name: Upload application image
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SOURCE_SHA: ${{ steps.release.outputs.sha }}
         run: |
-          docker push "ghcr.io/swkpropertiesuaellc/swkpropertiesos:sha-$SOURCE_SHA"
+          docker push "ghcr.io/swkpropertiesuae/swkpropertiesos:sha-$SOURCE_SHA"
           current_sha=$(gh api "repos/${{ github.repository }}/git/ref/heads/main" --jq '.object.sha')
           if [ "$current_sha" = "$SOURCE_SHA" ]; then
-            docker push ghcr.io/swkpropertiesuaellc/swkpropertiesos:latest
+            docker push ghcr.io/swkpropertiesuae/swkpropertiesos:latest
           else
             echo 'Main advanced during this build; keeping the versioned image without replacing latest.'
           fi
