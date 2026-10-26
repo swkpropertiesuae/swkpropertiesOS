@@ -38,6 +38,7 @@ const PipelinePage = lazy(() => import('./pages/swk/PipelinePage'))
 const AgentsPage = lazy(() => import('./pages/swk/AgentsPage'))
 const ReraCentre = lazy(() => import('./pages/swk/ReraCentre'))
 const Owner360 = lazy(() => import('./pages/swk/Owner360'))
+const EnterpriseMasterOsPage = lazy(() => import('./pages/swk/EnterpriseMasterOsPage'))
 
 function Guard({ module, children }: { module: string; children: ReactNode }) {
   const { can } = useMeta()
@@ -60,6 +61,7 @@ export default function App() {
           <Route index element={<Navigate to="/home" replace />} />
           <Route path="/home" element={<Launcher />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/enterprise/master-os" element={<EnterpriseMasterOsPage />} />
           <Route path="/workspaces" element={<Workspaces />} />
           <Route path="/market" element={<MarketPage />} />
           <Route path="/toolkit" element={<ToolkitPage />} />
@@ -108,5 +110,3 @@ export default function App() {
   )
 }
 void lazy
-
-

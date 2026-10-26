@@ -5,6 +5,7 @@ import { optValue, recordTitle, type EntityDef, type FieldDef } from '../../shar
 import { attachLabels, createRecord, deleteRecord, getDef, getRecord, labelsFor, listRecords, rowToApi, updateRecord, can, assertCan, titleCols, customFieldsFor, invalidateCustomFields, type Ctx } from '../engine'
 import { bad, forbidden, notFound, parseCsv, safeJson, toCsv, nowLocal, todayStr } from '../util'
 import { body, idOf, parseListParams } from './helpers'
+import { checkBulkExportDlp } from '../domain/enterprise'
 
 function guard(def: EntityDef) {
   if (def.child) throw notFound('Unknown record type')
@@ -78,6 +79,7 @@ export default async function (app: FastifyInstance) {
     assertCan(req.ctx, def.module, 'export')
     const p = parseListParams(req.query as any)
     const res = listRecords(def, { ...p, page: 1, pageSize: 100000 }, req.ctx)
+    checkBulkExportDlp(def.key, res.rows.length, req.ctx)
     const fields = def.fields.filter(f => !f.secret && !f.virtual && f.type !== 'json' && !f.hidden || f.list)
     const csv = toCsv(['ID', ...fields.map(f => f.label)], res.rows.map(r => [r.id, ...fields.map(f => cell(f, r))]))
     reply.header('content-type', 'text/csv; charset=utf-8').header('content-disposition', `attachment; filename="${def.key}-${todayStr()}.csv"`)

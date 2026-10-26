@@ -35,7 +35,7 @@ export function assertCan(ctx: Ctx, module: string, action: Action) {
 
 // Portal users (customers) are restricted to their own company's records.
 const SCOPE: Record<string, string> = {
-  jobs: 'client_id', invoices: 'party_id', quotations: 'customer_id', receipts: 'party_id', parties: 'id', tickets: 'customer_id', contracts: 'party_id',
+  jobs: 'client_id', invoices: 'party_id', quotations: 'customer_id', receipts: 'party_id', parties: 'id', tickets: 'customer_id', contracts: 'party_id', owner_statements: 'owner_id', mandates: 'owner_id', leases: 'tenant_id', transactions: 'buyer_id',
 }
 
 // ------------------------------------------------------------------ custom fields

@@ -24,7 +24,7 @@ export interface Turn { role: 'user' | 'assistant'; content: string; at: string 
 export interface VoiceReply { call_id: string; reply: string; action: 'none' | 'transfer'; transfer_to?: string }
 
 const MAX_TURNS = 80
-const ARABIC = /[؀-ۿ]/
+const ARABIC = /[؀-ۿ]/, HINDI_URDU = /[\u0900-\u097F]|\b(namaste|shukriya|chahiye|kiraye|makaan)\b/i
 const transferNumber = () => String(getSetting('voice_transfer_number') || '').trim()
 
 /** Plain text a text-to-speech voice can read: no markdown, links or emoji. */
@@ -36,7 +36,9 @@ export function greeting() {
   const name = String(getSetting('company_name') || 'SWK Properties'), nameAr = String(getSetting('company_name_ar') || name), notice = !!getSetting('voice_record_notice')
   const en = String(getSetting('voice_greeting_en') || '').trim() || `Thank you for calling ${name}. You are speaking with our AI assistant${notice ? ', and this call may be recorded to help us serve you' : ''}. How can I help you today?`
   const ar = String(getSetting('voice_greeting_ar') || '').trim() || `شكراً لاتصالكم بـ ${nameAr}. أنتم تتحدثون مع المساعد الذكي${notice ? '، وقد يتم تسجيل هذه المكالمة لتحسين خدمتنا' : ''}. كيف يمكنني مساعدتكم؟`
-  return { en, ar, record_notice: notice, transfer_configured: !!transferNumber() }
+  const hi = `Namaste, ${name} mein call karne ke liye dhanyavaad. Aap hamare AI assistant se baat kar rahe hain${notice ? ', aur yeh call quality ke liye record ki ja sakti hai' : ''}. Main aapki kya madad kar sakta hoon?`
+  const ur = `Assalam-o-Alaikum, ${name} mein call karne ka shukriya. Aap hamare AI assistant se baat kar rahe hain${notice ? ', aur behtar service ke liye yeh call record ki ja sakti hai' : ''}. Main aapki kya madad kar sakta hoon?`
+  return { en, ar, hi, ur, record_notice: notice, transfer_configured: !!transferNumber() }
 }
 
 const receptionist = () => { ensureAgents(); return q.get(`SELECT * FROM ai_agents WHERE role_key = ? AND deleted_at IS NULL ORDER BY id LIMIT 1`, RECEPTIONIST_KEY) }
@@ -81,7 +83,7 @@ export async function voiceTurn(o: { call_id: string; from?: string; to?: string
   const now = nowLocal()
   turns.push({ role: 'user', content: text, at: now }, { role: 'assistant', content: reply, at: now })
   q.run(`UPDATE voice_calls SET transcript = ?, outcome = ?, lead_id = ?, ticket_id = ?, handoff = ?, language = ?, error = NULL WHERE id = ?`,
-    JSON.stringify(turns.slice(-MAX_TURNS)), state.outcome ?? row.outcome ?? 'Information given', state.leadId, state.ticketId, state.handoff || row.handoff ? 1 : 0, ARABIC.test(text) ? 'Arabic' : (row.language ?? 'English'), row.id)
+    JSON.stringify(turns.slice(-MAX_TURNS)), state.outcome ?? row.outcome ?? 'Information given', state.leadId, state.ticketId, state.handoff || row.handoff ? 1 : 0, HINDI_URDU.test(text) ? 'Hindi / Urdu' : ARABIC.test(text) ? 'Arabic' : (row.language ?? 'English'), row.id)
   if (state.handoff) notifyRole('crm', `Call transferred to staff${row.caller_name ? ': ' + row.caller_name : ''}`, state.handoff.reason, '/e/voice_calls', 'alert')
   return state.handoff ? { call_id: callId, reply, action: 'transfer', transfer_to: transferNumber() } : { call_id: callId, reply, action: 'none' }
 }

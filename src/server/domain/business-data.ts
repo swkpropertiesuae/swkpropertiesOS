@@ -13,7 +13,7 @@ export const BUSINESS_ENTITIES: { group: string; keys: string[] }[] = [
   { group: 'Properties, deals and mandates', keys: ['properties', 'units', 'mandates', 'viewings', 'offers', 'jobs', 'sales_contracts', 'escrow_accounts', 'escrow_transactions', 'leases', 'rent_schedules', 'rent_receipts', 'service_charges', 'maintenance', 'inspections', 'handovers', 'snagging_items', 'property_visits'] },
   { group: 'Invoices, bills and banking', keys: ['invoices', 'bills', 'receipts', 'payments', 'bank_transactions', 'expenses', 'purchase_orders', 'owner_statements', 'agent_commissions'] },
   { group: 'People and HR', keys: ['employees', 'agents', 'leave_requests', 'attendance', 'payslips'] },
-  { group: 'Support, work and AI', keys: ['tickets', 'claims', 'tasks', 'work_items', 'ai_runs', 'ai_actions', 'voice_calls', 'workflow_runs', 'email_outbox'] },
+  { group: 'Support, work and AI', keys: ['tickets', 'claims', 'qa_reviews', 'compliance_cases', 'universal_approvals', 'corporate_governance_items', 'dr_exercises', 'audit_events', 'agent_authorisations', 'immigration_cases', 'attendance_events', 'field_sessions', 'location_access_logs', 'daily_reports', 'inventory_submissions', 'listing_mandates', 'developer_requests', 'communications', 'supervisor_access_logs', 'lead_assignment_logs', 'transactions', 'commission_entitlements', 'hr_lifecycle_cases', 'procurement_requests', 'tasks', 'work_items', 'ai_runs', 'ai_actions', 'voice_calls', 'workflow_runs', 'email_outbox'] },
 ]
 
 const SYSTEM_TABLES_BY_RECORD = ['comments', 'record_refs', 'record_tags', 'record_links', 'record_likes', 'video_calls']

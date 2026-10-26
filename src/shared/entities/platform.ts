@@ -3,7 +3,7 @@ import { T, TA, I, B, E, PH, S, R, DT, D, J, U, N } from '../dsl'
 
 export const MODULE_DEFS = [
   ['dashboard', 'Dashboard'], ['crm', 'CRM'], ['sales', 'Sales & Listings'], ['properties', 'Properties & Units'],
-  ['mandates', 'Mandates & Viewings'], ['transactions', 'Transactions'], ['leases', 'Leases & Property Mgmt'], ['finance', 'Accounts & Finance'],
+  ['mandates', 'Mandates & Viewings'], ['transactions', 'Transactions'], ['leases', 'Leases & Property Mgmt'], ['finance', 'Accounts & Finance'], ['assets', 'Assets & Procurement'],
   ['hr', 'HR & Payroll'], ['support', 'Support & Claims'], ['projects', 'Projects & Tasks'], ['documents', 'Documents'],
   ['compliance', 'Compliance & Legal'], ['ai', 'AI Team & Automation'], ['reports', 'Reports & KPI'], ['masters', 'Master Data'], ['admin', 'Administration'],
 ] as const

@@ -181,7 +181,7 @@ export default function ListingsStudio() {
         subtitle="Score every listing like Property Finder & Bayut do, clear the Trakheesi gate, and syndicate with confidence."
         actions={<>
           <button className="swk-btn swk-btn-ghost" disabled={!listings.length} onClick={() => filtered[0] && setPanel({ id: filtered[0].p.id, tab: 'copy' })}><Sparkles size={16} /> AI listing copy</button>
-          {can('properties', 'create') && <Link to="/e/properties/new" className="swk-btn swk-btn-primary"><Rows3 size={16} /> New listing</Link>}
+          {can('properties', 'create') && <Link to="/e/properties?new=1" className="swk-btn swk-btn-primary"><Rows3 size={16} /> New listing</Link>}
         </>} />
 
       <Reveal className="grid gap-4 grid-cols-2 md:grid-cols-3 xl:grid-cols-5">

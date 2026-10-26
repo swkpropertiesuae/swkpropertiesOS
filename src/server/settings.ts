@@ -42,6 +42,8 @@ export const SETTING_DEFAULTS: Record<string, any> = {
   wa_enabled: false, wa_phone_number_id: '', wa_access_token: '', wa_verify_token: '', wa_app_secret: '', wa_owner_numbers: '', wa_default_country_code: '971',
   wa_template_lang: 'en', wa_tpl_notify: '', wa_tpl_reminder: '', wa_tpl_report: '',
   wa_auto_leads: true, wa_auto_milestones: false, wa_auto_overdue: false, wa_owner_daily_report: false, wa_staff_bot: true, wa_customer_bot: true,
+  // --- Voice (AI receptionist over a SIP trunk, e.g. du)
+  voice_enabled: false, voice_secret: '', voice_transfer_number: '', voice_greeting_en: '', voice_greeting_ar: '', voice_record_notice: true, voice_retention_days: 90,
   // --- AI
   ai_enabled: false, ai_provider: 'groq', ai_base_url: '', ai_api_key: '', ai_model: '', ai_fallback_provider: '', ai_fallback_base_url: '', ai_fallback_api_key: '', ai_fallback_model: '', ai_company_context: '',
   // --- tracking

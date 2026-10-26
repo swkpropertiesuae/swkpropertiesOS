@@ -160,7 +160,7 @@ export default function PipelinePage() {
         actions={<>
           <Link to="/e/viewings?new=1" className="swk-btn swk-btn-ghost"><Eye size={15} />Book viewing</Link>
           <Link to="/e/offers?new=1" className="swk-btn swk-btn-ghost"><HandCoins size={15} />Log offer</Link>
-          <Link to="/e/jobs/new" className="swk-btn swk-btn-gold"><FileSignature size={15} />New deal file</Link>
+          <Link to="/e/jobs?new=1" className="swk-btn swk-btn-gold"><FileSignature size={15} />New deal file</Link>
         </>} />
 
       <Reveal className="grid gap-4 grid-cols-2 xl:grid-cols-4">
