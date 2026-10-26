@@ -22,11 +22,11 @@ function initial(def: MetaEntity, record: Row | null, presets: Row | undefined, 
   return { ...v, ...(presets ?? {}) }
 }
 
-export function sectionsOf(fields: FieldDef[]): { name: string; fields: FieldDef[] }[] {
+export function sectionsOf(fields: FieldDef[], allFields?: FieldDef[]): { name: string; fields: FieldDef[] }[] {
   const out: { name: string; fields: FieldDef[] }[] = []
   let cur = ''
-  for (const f of fields) {
-    if (f.section) cur = f.section
+  const vis = new Set(fields.map(f => f.name)); for (const f of (allFields ?? fields)) {
+    if (f.section) cur = f.section; if (!vis.has(f.name)) continue
     let s = out.find(x => x.name === (cur || 'Details'))
     if (!s) { s = { name: cur || 'Details', fields: [] }; out.push(s) }
     s.fields.push(f)
@@ -57,7 +57,7 @@ export function EntityForm({ def, record, presets, onSaved, onCancel, lockedOnEd
     if (!edit && (f.readonly || f.computed)) return false
     return true
   }), [def, edit])
-  const sections = useMemo(() => sectionsOf(fields), [fields])
+  const sections = useMemo(() => sectionsOf(fields, def.fields), [fields, def.fields])
   const kidDefs = (def.children ?? []).filter(c => !childKeys || childKeys.includes(c.key))
   const set = (name: string, v: any, label?: string) => { setVals(x => ({ ...x, [name]: v })); setErrors(e => (e[name] ? { ...e, [name]: false } : e)); if (label !== undefined) setLabels(l => ({ ...l, [name]: label })) }
   const parentView = { ...vals, __currency: vals.currency }
@@ -96,30 +96,32 @@ export function EntityForm({ def, record, presets, onSaved, onCancel, lockedOnEd
       {banner && <div role="alert" className="mb-4 px-3 py-2.5 rounded-lg bg-blush border border-[#f2bcc3] text-[#8f1325] text-sm font-medium">{banner}</div>}
       {def.description && !edit && <p className="text-sm text-muted mb-4 mt-0">{def.description}</p>}
       {sections.map((s, si) => (
-        <fieldset key={s.name} className={cls('border-0 p-0 m-0', si > 0 && 'mt-5')}>
-          {(sections.length > 1 || s.name !== 'Details') && <legend className="font-display font-extrabold text-[13px] uppercase tracking-wider text-fold mb-2 pb-1 border-b border-line w-full">{s.name}</legend>}
-          <div className="grid gap-x-5 gap-y-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+        <div key={s.name} className={cls('swk-form-section', si > 0 && 'mt-6')}>
+          {(sections.length > 1 || s.name !== 'Details') && <div className="swk-form-section-title">{s.name}</div>}
+          <div className="swk-form-grid">
             {s.fields.map(f => {
               const ro = f.computed || f.readonly
               return (
-                <div key={f.name} className={cls(f.span === 3 && 'md:col-span-2 xl:col-span-3', f.span === 2 && 'md:col-span-2')}>
+                <div key={f.name} className={cls('swk-form-field', f.span === 3 && 'span-3', f.span === 2 && 'span-2')}>
                   <label className="label" htmlFor={`f-${f.name}`}>{f.label}{f.required && !ro && <span className="req">*</span>}</label>
-                  {ro || locked(f) ? <div className="min-h-[36px] flex items-center font-bold text-ink text-[14px] px-0.5"><CellValue f={f} rec={{ ...vals, _labels: labels }} /></div>
-                    : <FieldInput writingModule={def.module} f={f} value={vals[f.name]} label={labels[f.name]} invalid={errors[f.name]} onChange={(v, l) => set(f.name, v, l)} />}
-                  {f.help && <div className="help">{f.help}</div>}
+                  <div className="swk-control-wrap">
+                    {ro || locked(f) ? <div className="min-h-[42px] flex items-center font-bold text-ink text-[14px] px-3 rounded-xl bg-soft border border-line"><CellValue f={f} rec={{ ...vals, _labels: labels }} /></div>
+                      : <FieldInput writingModule={def.module} f={f} value={vals[f.name]} label={labels[f.name]} invalid={errors[f.name]} onChange={(v, l) => set(f.name, v, l)} />}
+                  </div>
+                  <div className="swk-field-foot">{f.help && <div className="help">{f.help}</div>}</div>
                 </div>
               )
             })}
           </div>
-        </fieldset>
+        </div>
       ))}
       {customDefs.length > 0 && (
-        <fieldset className="border-0 p-0 m-0 mt-5">
-          <legend className="font-display font-extrabold text-[13px] uppercase tracking-wider text-fold mb-2 pb-1 border-b border-line w-full">Custom fields</legend>
-          <div className="grid gap-x-5 gap-y-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-            {customDefs.map(f => <div key={f.name}><label className="label">{f.label}{f.required && <span className="req">*</span>}</label><FieldInput writingModule={def.module} f={f} value={custom[f.name]} invalid={errors['cf:' + f.name]} onChange={v => setCustom(c => ({ ...c, [f.name]: v }))} /></div>)}
+        <div className="swk-form-section mt-6">
+          <div className="swk-form-section-title">Custom fields</div>
+          <div className="swk-form-grid">
+            {customDefs.map(f => <div key={f.name} className="swk-form-field"><label className="label">{f.label}{f.required && <span className="req">*</span>}</label><div className="swk-control-wrap"><FieldInput writingModule={def.module} f={f} value={custom[f.name]} invalid={errors['cf:' + f.name]} onChange={v => setCustom(c => ({ ...c, [f.name]: v }))} /></div><div className="swk-field-foot" /></div>)}
           </div>
-        </fieldset>
+        </div>
       )}
       {kidDefs.map(c => (
         <div key={c.key} className="mt-6">
@@ -166,7 +168,7 @@ export function EntityFormModal({ entity, id, presets, onClose, onSaved, lockedO
   const [err, setErr] = useState('')
   useEffect(() => { if (id) get<Row>(`/api/e/${entity}/${id}`).then(setRec).catch(e => setErr(e.message)) }, [id, entity])
   return (
-    <Modal open onClose={onClose} persistent title={title ?? (id ? `Edit ${d.label}` : `New ${d.label}`)} width={width ?? (d.fields.filter(f => !f.hidden).length > 14 || (d.children?.length ?? 0) > 0 ? 1100 : 760)}>
+    <Modal open onClose={onClose} persistent title={title ?? (id ? `Edit ${d.label}` : `New ${d.label}`)} width={width ?? (d.fields.filter(f => !f.hidden).length > 10 || (d.children?.length ?? 0) > 0 ? 960 : 720)}>
       {err ? <div className="text-signal">{err}</div> : id && !rec ? <Loading /> : <EntityForm def={d} record={rec} presets={presets} onCancel={onClose} onSaved={onSaved} lockedOnEdit={lockedOnEdit} childKeys={childKeys} />}
     </Modal>
   )

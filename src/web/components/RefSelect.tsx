@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X, ChevronDown } from 'lucide-react'
 import { get } from '../lib/api'
-import { useClickOutside } from '../ui/kit'
 import { cls } from '../lib/format'
 
 interface Opt { id: number; label: string; sub?: string }
@@ -14,9 +14,58 @@ export function RefSelect({ entity, value, label, onChange, filter, disabled, in
   const [busy, setBusy] = useState(false)
   const [shown, setShown] = useState<string>(label ?? '')
   const [hi, setHi] = useState(0)
-  const ref = useClickOutside<HTMLDivElement>(() => setOpen(false))
+  const [pos, setPos] = useState<{ left: number; width: number; top?: number; bottom?: number; maxHeight: number } | null>(null)
+  const ref = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const timer = useRef<any>(null)
   const fkey = JSON.stringify(filter ?? {})
+
+  // Outside click that respects both input wrapper and portaled listbox
+  useEffect(() => {
+    if (!open) return
+    const h = (e: MouseEvent) => {
+      const t = e.target as Node
+      if (ref.current?.contains(t) || menuRef.current?.contains(t)) return
+      setOpen(false)
+    }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [open])
+
+  // Position portaled listbox relative to input and flip upward if near bottom of screen
+  useLayoutEffect(() => {
+    if (!open || disabled) { setPos(null); return }
+    const update = () => {
+      const el = ref.current
+      if (!el) return
+      const r = el.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - r.bottom - 12
+      const spaceAbove = r.top - 12
+      const flipUp = spaceBelow < 200 && spaceAbove > spaceBelow
+      if (flipUp) {
+        setPos({
+          left: r.left,
+          width: r.width,
+          bottom: window.innerHeight - r.top + 4,
+          maxHeight: Math.max(120, Math.min(256, spaceAbove - 4)),
+        })
+      } else {
+        setPos({
+          left: r.left,
+          width: r.width,
+          top: r.bottom + 4,
+          maxHeight: Math.max(120, Math.min(256, spaceBelow - 4)),
+        })
+      }
+    }
+    update()
+    window.addEventListener('scroll', update, true)
+    window.addEventListener('resize', update)
+    return () => {
+      window.removeEventListener('scroll', update, true)
+      window.removeEventListener('resize', update)
+    }
+  }, [open, disabled])
 
   // resolve label for an id we only know numerically
   useEffect(() => {
@@ -40,6 +89,39 @@ export function RefSelect({ entity, value, label, onChange, filter, disabled, in
   }, [open, text, entity, fkey])
 
   const pick = (o: Opt) => { onChange(o.id, o.label); setShown(o.label); setOpen(false); setText('') }
+  const dropdown = open && !disabled && pos ? (
+    <div
+      ref={menuRef}
+      style={{
+        position: 'fixed',
+        left: pos.left,
+        width: pos.width,
+        top: pos.top,
+        bottom: pos.bottom,
+        maxHeight: pos.maxHeight,
+        zIndex: 300,
+      }}
+      className="bg-card border border-line rounded-xl shadow-xl overflow-auto fade-in"
+      role="listbox"
+    >
+      {busy && !opts.length && <div className="px-3 py-2 text-sm text-muted">Searching…</div>}
+      {!busy && !opts.length && <div className="px-3 py-2 text-sm text-muted">No matches</div>}
+      {opts.map((o, i) => (
+        <div
+          key={o.id}
+          role="option"
+          aria-selected={o.id === value}
+          className={cls('px-3 py-2 text-[13.5px] cursor-pointer flex justify-between gap-2', i === hi ? 'bg-mint text-fold' : 'hover:bg-hover', o.id === value && 'font-bold')}
+          onMouseEnter={() => setHi(i)}
+          onMouseDown={e => { e.preventDefault(); pick(o) }}
+        >
+          <span className="truncate">{o.label}</span>
+          {o.sub && <span className="text-xs text-muted flex-none">{o.sub}</span>}
+        </div>
+      ))}
+    </div>
+  ) : null
+
   return (
     <div className="ref-select relative" ref={ref}>
       <div className="relative">
@@ -56,15 +138,8 @@ export function RefSelect({ entity, value, label, onChange, filter, disabled, in
           <ChevronDown size={15} className="text-muted pointer-events-none" />
         </div>
       </div>
-      {open && !disabled && (
-        <div className="absolute z-50 left-0 right-0 mt-1 bg-card border border-line rounded-xl shadow-xl max-h-64 overflow-auto fade-in" role="listbox">
-          {busy && !opts.length && <div className="px-3 py-2 text-sm text-muted">Searching…</div>}
-          {!busy && !opts.length && <div className="px-3 py-2 text-sm text-muted">No matches</div>}
-          {opts.map((o, i) => <div key={o.id} role="option" aria-selected={o.id === value} className={cls('px-3 py-2 text-[13.5px] cursor-pointer flex justify-between gap-2', i === hi ? 'bg-mint text-fold' : 'hover:bg-hover', o.id === value && 'font-bold')} onMouseEnter={() => setHi(i)} onMouseDown={e => { e.preventDefault(); pick(o) }}><span className="truncate">{o.label}</span>{o.sub && <span className="text-xs text-muted flex-none">{o.sub}</span>}</div>)}
-        </div>
-      )}
+      {dropdown && typeof document !== 'undefined' ? createPortal(dropdown, document.body) : dropdown}
     </div>
   )
 }
 export const clearRefCache = () => cache.clear()
-

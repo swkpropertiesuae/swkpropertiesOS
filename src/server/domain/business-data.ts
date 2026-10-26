@@ -72,7 +72,7 @@ export async function resetBusinessData(ctx: Ctx, opts: { backup?: boolean } = {
     for (const t of SYSTEM_TABLES_BY_RECORD) deleted[t] = q.run(`DELETE FROM ${qi(t)} WHERE entity IN (${top.map(() => '?').join(',')})`, ...top).changes
     deleted.compliance_exceptions = q.run(`DELETE FROM compliance_exceptions WHERE link_entity IN (${top.map(() => '?').join(',')})`, ...top).changes
     deleted.notifications = q.run(`DELETE FROM notifications`).changes
-    for (const t of ['job_tracking_tokens', 'job_closure_evidence', 'job_reopen_requests', 'approval_requests']) deleted[t] = q.run(`DELETE FROM ${qi(t)}`).changes
+    for (const t of ['job_tracking_tokens', 'job_closure_evidence', 'job_reopen_requests', 'approval_requests', 'mobile_devices', 'reception_qr_tokens', 'duty_location_batches', 'workday_states', 'property_key_logs', 'offline_sync_queue_log']) if (tableExists(t)) deleted[t] = q.run(`DELETE FROM ${qi(t)}`).changes
     const cond = journalCondition(), args = [...KEPT_JOURNAL_SOURCES, ...KEPT_JOURNAL_SOURCES]
     q.run(`DELETE FROM journal_lines WHERE entry_id IN (SELECT id FROM journal_entries WHERE ${cond})`, ...args)
     deleted.journal_entries = q.run(`DELETE FROM journal_entries WHERE ${cond}`, ...args).changes

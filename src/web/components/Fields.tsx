@@ -20,8 +20,8 @@ export function FieldInput({ f, value, label, onChange, disabled, invalid, compa
         {(f.options ?? []).map(o => <option key={optValue(o)} value={optValue(o)}>{optLabel(o)}</option>)}
       </select>)
     case 'bool': return (
-      <label className="inline-flex items-center gap-2 cursor-pointer min-h-[36px] select-none">
-        <input type="checkbox" className="w-4 h-4 accent-emerald" {...common} checked={!!value} onChange={e => onChange(e.target.checked)} /><span className="text-[13.5px] text-body">{value ? 'Yes' : 'No'}</span>
+      <label className={cls('swk-bool-box', compact && 'compact', disabled && 'opacity-60 cursor-not-allowed')}>
+        <input type="checkbox" className="w-4 h-4 accent-emerald" {...common} checked={!!value} onChange={e => onChange(e.target.checked)} /><span className="text-[14px] font-medium text-ink">{value ? 'Yes' : 'No'}</span>
       </label>)
     case 'ref': return <RefSelect entity={f.ref!} value={value} label={label} filter={f.refFilter as any} disabled={disabled} invalid={invalid} onChange={(id, l) => { onChange(id, l); onRef?.(id) }} />
     case 'email': return <input className={cls('input', invalid && 'invalid')} {...common} type="email" value={value ?? ''} onChange={e => onChange(e.target.value)} />

@@ -34,7 +34,14 @@ export default async function (app: FastifyInstance) {
     const out = isDemoLogin ? runInDb(getDemoDb()!, work) : work()
     if ('needsTotp' in out) return { needsTotp: true }
     setCookie(req, reply, (isDemoLogin ? DEMO_PREFIX : '') + out.s.token, out.s.expires)
-    return { ok: true, demo: isDemoLogin, user: { id: out.user.id, name: out.user.name, email: out.user.email, role: out.user.role_name }, mustChangePassword: !!out.must }
+    const isAndroidClient = req.headers['x-swk-client'] === 'android'
+    return {
+      ok: true,
+      demo: isDemoLogin,
+      user: { id: out.user.id, name: out.user.name, email: out.user.email, role: out.user.role_name },
+      mustChangePassword: !!out.must,
+      ...(isAndroidClient ? { sessionToken: (isDemoLogin ? DEMO_PREFIX : '') + out.s.token, expiresAt: out.s.expires.toISOString() } : {}),
+    }
   })
 
   app.post('/api/auth/logout', async (req, reply) => {

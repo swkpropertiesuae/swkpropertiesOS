@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { MessageSquare, Hand, Paperclip, Link as LinkIcon, Tag, Link2, ThumbsUp, MessageCircleWarning, Video, History, X, Trash2, Plus, Download, Send, ExternalLink, Check } from 'lucide-react'
@@ -29,22 +30,25 @@ export function SidePanel({ entity, id, onChanged }: { entity: string; id: numbe
       <nav className="rail card" aria-label="Collaboration">
         {ITEMS.map(i => <button key={i.key} className={cls(active === i.key && 'active')} onClick={() => setActive(a => (a === i.key ? null : i.key))}>{i.icon}<span className="cnt">{c[i.key] ?? 0}</span><span>- {i.label}</span></button>)}
       </nav>
-      {active && (
-        <div className="fixed inset-y-0 right-0 z-50 w-[min(480px,100vw)] bg-card border-l border-line shadow-2xl flex flex-col fade-in" role="dialog" aria-label={ITEMS.find(i => i.key === active)?.label}>
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-line bg-emerald text-white"><span className="font-display font-extrabold flex-1">{ITEMS.find(i => i.key === active)?.label} <span className="font-normal opacity-80 text-sm">· {c.title}</span></span><button className="btn ghost icon sm text-white" onClick={() => setActive(null)} aria-label="Close panel"><X /></button></div>
-          <div className="flex-1 overflow-auto p-4">
-            {active === 'comments' && <Comments entity={entity} id={id} refresh={refresh} />}
-            {active === 'followups' && <FollowUps entity={entity} id={id} title={c.title} refresh={refresh} />}
-            {active === 'attachments' && <Attachments entity={entity} id={id} refresh={refresh} />}
-            {active === 'references' && <Refs entity={entity} id={id} refresh={refresh} />}
-            {active === 'tags' && <Tags entity={entity} id={id} refresh={refresh} />}
-            {active === 'links' && <Links entity={entity} id={id} refresh={refresh} />}
-            {active === 'likes' && <Likes entity={entity} id={id} liked={c.liked} refresh={refresh} />}
-            {active === 'complaints' && <Complaints entity={entity} id={id} refresh={refresh} />}
-            {active === 'videocalls' && <VideoCalls entity={entity} id={id} refresh={refresh} />}
-            {active === 'history' && <HistoryTab entity={entity} id={id} />}
+      {active && createPortal(
+        <div className="fixed inset-0 z-[190] bg-[#0b1a3355] flex justify-end" onMouseDown={e => { if (e.target === e.currentTarget) setActive(null) }}>
+          <div className="h-full w-[min(480px,100vw)] bg-card border-l border-line shadow-2xl flex flex-col fade-in" role="dialog" aria-label={ITEMS.find(i => i.key === active)?.label}>
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-line bg-emerald text-white"><span className="font-display font-extrabold flex-1">{ITEMS.find(i => i.key === active)?.label} <span className="font-normal opacity-80 text-sm">· {c.title}</span></span><button className="btn ghost icon sm text-white" onClick={() => setActive(null)} aria-label="Close panel"><X /></button></div>
+            <div className="flex-1 overflow-auto p-4">
+              {active === 'comments' && <Comments entity={entity} id={id} refresh={refresh} />}
+              {active === 'followups' && <FollowUps entity={entity} id={id} title={c.title} refresh={refresh} />}
+              {active === 'attachments' && <Attachments entity={entity} id={id} refresh={refresh} />}
+              {active === 'references' && <Refs entity={entity} id={id} refresh={refresh} />}
+              {active === 'tags' && <Tags entity={entity} id={id} refresh={refresh} />}
+              {active === 'links' && <Links entity={entity} id={id} refresh={refresh} />}
+              {active === 'likes' && <Likes entity={entity} id={id} liked={c.liked} refresh={refresh} />}
+              {active === 'complaints' && <Complaints entity={entity} id={id} refresh={refresh} />}
+              {active === 'videocalls' && <VideoCalls entity={entity} id={id} refresh={refresh} />}
+              {active === 'history' && <HistoryTab entity={entity} id={id} />}
+            </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   )

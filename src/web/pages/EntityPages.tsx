@@ -25,7 +25,7 @@ export function EntityListPage() {
   const { entity = '' } = useParams()
   const { meta } = useMeta()
   const [sp, setSp] = useSearchParams()
-  const [open, setOpen] = useState(sp.get('new') === '1')
+  const [open, setOpen] = useState(sp.get('new') === '1'); useEffect(() => { setOpen(sp.get('new') === '1') }, [sp])
   const known = meta?.entities.find(e => e.key === entity)
   const nav = useNavigate()
   if (!known || known.child) return <ErrorBox error={new Error('Unknown record type')} />

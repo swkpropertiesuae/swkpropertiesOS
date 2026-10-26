@@ -70,6 +70,99 @@ const MIGRATIONS: { id: string; sql: string }[] = [
     CREATE TABLE email_drafts (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, from_addr TEXT NOT NULL DEFAULT '', to_addr TEXT NOT NULL DEFAULT '', cc_addr TEXT NOT NULL DEFAULT '', subject TEXT NOT NULL DEFAULT '', body TEXT NOT NULL DEFAULT '', version INTEGER NOT NULL DEFAULT 1, updated_at TEXT NOT NULL);
     CREATE INDEX ix_email_drafts_user ON email_drafts(user_id, updated_at);
   ` },
+  { id: '004_swk_one_android', sql: `
+    CREATE TABLE mobile_devices (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      employee_id INTEGER,
+      device_id TEXT NOT NULL,
+      device_name TEXT NOT NULL,
+      model TEXT,
+      manufacturer TEXT,
+      os_version TEXT,
+      app_version TEXT,
+      biometric_enabled INTEGER NOT NULL DEFAULT 1,
+      status TEXT NOT NULL DEFAULT 'Trusted',
+      last_ip TEXT,
+      last_seen_at TEXT NOT NULL,
+      registered_at TEXT NOT NULL,
+      revoked_at TEXT,
+      revoked_reason TEXT,
+      UNIQUE(user_id, device_id)
+    );
+    CREATE INDEX ix_mob_dev_user ON mobile_devices(user_id, status);
+    CREATE TABLE reception_qr_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      token_code TEXT NOT NULL UNIQUE,
+      short_code TEXT NOT NULL,
+      branch_id INTEGER,
+      office_network_hint TEXT,
+      issued_at TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      scans_count INTEGER NOT NULL DEFAULT 0,
+      created_by INTEGER
+    );
+    CREATE INDEX ix_qr_tok_exp ON reception_qr_tokens(expires_at);
+    CREATE TABLE duty_location_batches (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      field_session_id INTEGER NOT NULL,
+      employee_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      device_id TEXT,
+      points_json TEXT NOT NULL,
+      points_count INTEGER NOT NULL DEFAULT 1,
+      last_lat TEXT,
+      last_lng TEXT,
+      accuracy_m REAL,
+      battery_pct INTEGER,
+      network_type TEXT,
+      recorded_at TEXT NOT NULL,
+      received_at TEXT NOT NULL
+    );
+    CREATE INDEX ix_duty_batch_session ON duty_location_batches(field_session_id, received_at);
+    CREATE TABLE workday_states (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      employee_id INTEGER,
+      work_date TEXT NOT NULL,
+      presence_mode TEXT NOT NULL DEFAULT 'Office Work',
+      break_started_at TEXT,
+      break_minutes INTEGER NOT NULL DEFAULT 0,
+      checklist_json TEXT,
+      onboarding_json TEXT,
+      exit_json TEXT,
+      handover_to_user_id INTEGER,
+      handover_notes TEXT,
+      safety_confirmed_at TEXT,
+      updated_at TEXT NOT NULL,
+      UNIQUE(user_id, work_date)
+    );
+    CREATE TABLE property_key_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      key_tag TEXT NOT NULL,
+      property_id INTEGER,
+      building_name TEXT NOT NULL,
+      unit_no TEXT NOT NULL,
+      action TEXT NOT NULL,
+      holder_user_id INTEGER NOT NULL,
+      employee_id INTEGER,
+      viewing_id INTEGER,
+      notes TEXT,
+      logged_at TEXT NOT NULL
+    );
+    CREATE INDEX ix_key_logs_prop ON property_key_logs(building_name, unit_no, logged_at);
+    CREATE TABLE offline_sync_queue_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      idempotency_key TEXT NOT NULL UNIQUE,
+      user_id INTEGER NOT NULL,
+      device_id TEXT,
+      action_type TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      result_json TEXT,
+      queued_at TEXT NOT NULL,
+      synced_at TEXT NOT NULL
+    );
+  ` },
 ]
 
 /** System-table DDL is written once in SQLite dialect and adapted for PostgreSQL. */

@@ -60,4 +60,4 @@ try {
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'mobile app page fits viewport')
   assert.deepEqual(errors.filter(e => !/401/.test(e)), [])
   console.log('PASS: sign-in lands on the app launcher, search, app sub-navigation, recents, mobile layout')
-} finally { await browser?.close(); server.kill('SIGTERM'); fs.rmSync(data, { recursive: true, force: true }) }
+} finally { await browser?.close(); server.kill('SIGTERM'); try { fs.rmSync(data, { recursive: true, force: true }) } catch {} }
