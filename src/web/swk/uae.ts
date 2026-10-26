@@ -79,20 +79,8 @@ export function mortgagePlan(p: { price: number; residency: Residency; firstHome
   return { ltv, appliedLtv: requestedLtv, loan, emi, dbr, dbrOk: dbr <= UAE.dbrMax, loanByDbr, maxPriceByDbr: loanByDbr / Math.max(requestedLtv, 0.01), totalInterest, years, schedule }
 }
 
-// ---------------------------------------------------------------- RERA rental increase (Decree 43 of 2013)
-export const RERA_BANDS = [
-  { maxBelow: 10, increase: 0, label: 'Up to 10% below index' },
-  { maxBelow: 20, increase: 5, label: '11 – 20% below index' },
-  { maxBelow: 30, increase: 10, label: '21 – 30% below index' },
-  { maxBelow: 40, increase: 15, label: '31 – 40% below index' },
-  { maxBelow: Infinity, increase: 20, label: 'More than 40% below index' },
-]
-export function reraIncrease(currentRent: number, indexAverage: number) {
-  const below = indexAverage > 0 ? ((indexAverage - currentRent) / indexAverage) * 100 : 0
-  const band = below <= 0 ? RERA_BANDS[0] : RERA_BANDS.find(b => below <= b.maxBelow)!
-  const maxRent = currentRent * (1 + band.increase / 100)
-  return { below: Math.max(0, below), band, maxIncreasePct: band.increase, maxRent, maxIncrease: maxRent - currentRent }
-}
+// RERA rent-increase bands live in the shared rules so the server and the toolkit agree.
+export { RERA_BANDS, reraIncrease } from '@shared/uae-rules'
 
 // ---------------------------------------------------------------- rental yield / ROI
 export function yieldCalc(p: { price: number; annualRent: number; areaSqft: number; serviceChargePerSqft: number; maintenancePct?: number; mgmtFeePct?: number; vacancyWeeks?: number; mortgageInterest?: number }) {

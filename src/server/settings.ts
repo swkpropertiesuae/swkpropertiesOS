@@ -57,6 +57,8 @@ export const SETTING_DEFAULTS: Record<string, any> = {
   company_name_ar: '', licence_name_en: '', licence_authority: '', licence_issue_date: '', licence_expiry_date: '', dcci_no: '', commercial_register_no: '', company_legal_form: '',
   vat_registered: true, vat_filing_frequency: 'Quarterly', ct_registered: false, ct_trn: '', financial_year_end: '12-31', einv_revenue_over_50m: false,
   compliance_mode: 'enforce', activity_scope_mode: 'warn', sanctions_review_days: 365,
+  // --- UAE real estate rules (indicative defaults: confirm with RERA / DLD / your adviser)
+  rent_cap_mode: 'enforce', aml_cash_threshold: 55000, aml_filing_days: 5,
   ui_lang: 'en',
   seeded: {},
 }

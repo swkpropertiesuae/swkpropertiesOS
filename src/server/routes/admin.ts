@@ -47,11 +47,11 @@ export default async function (app: FastifyInstance) {
     const patch = { ...(req.body as Record<string, any>) }
     for (const k of SECRET_SETTINGS) if (patch[k] === '********') delete patch[k]
     delete patch.mail_accounts; delete patch.supabase_cursors; delete patch.seeded
-    const num = ['quote_validity_days', 'min_margin_pct', 'bill_approval_limit', 'payment_approval_limit', 'weight_divisor_air', 'weight_divisor_courier', 'sanctions_review_days', 'free_days_default', 'smtp_port']
+    const num = ['quote_validity_days', 'min_margin_pct', 'bill_approval_limit', 'payment_approval_limit', 'weight_divisor_air', 'weight_divisor_courier', 'sanctions_review_days', 'free_days_default', 'smtp_port', 'aml_cash_threshold', 'aml_filing_days']
     for (const k of num) if (k in patch && patch[k] !== '') { const v = Number(patch[k]); if (!Number.isFinite(v) || v < 0) throw bad(`${k} must be a non-negative number`); patch[k] = v }
     if ('company_trn' in patch && patch.company_trn && !/^\d{15}$/.test(String(patch.company_trn).replace(/\s/g, ''))) throw bad('A UAE TRN has 15 digits')
     if ('company_trn' in patch) patch.company_trn = String(patch.company_trn ?? '').replace(/\s/g, '')
-    for (const [k, opts] of [['compliance_mode', ['enforce', 'advisory']], ['activity_scope_mode', ['off', 'warn', 'block']], ['vat_filing_frequency', ['Quarterly', 'Monthly']]] as const) if (k in patch && !(opts as readonly string[]).includes(patch[k])) throw bad(`${k} must be one of ${opts.join(', ')}`)
+    for (const [k, opts] of [['compliance_mode', ['enforce', 'advisory']], ['activity_scope_mode', ['off', 'warn', 'block']], ['vat_filing_frequency', ['Quarterly', 'Monthly']], ['rent_cap_mode', ['enforce', 'advisory']]] as const) if (k in patch && !(opts as readonly string[]).includes(patch[k])) throw bad(`${k} must be one of ${opts.join(', ')}`)
     if ('financial_year_end' in patch && !/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(patch.financial_year_end)) throw bad('Financial year end must be MM-DD, e.g. 12-31')
     if ('lock_date' in patch && patch.lock_date && !/^\d{4}-\d{2}-\d{2}$/.test(patch.lock_date)) throw bad('Lock date must be YYYY-MM-DD')
     if ('invoice_no_pattern' in patch) {

@@ -4,6 +4,7 @@
  * Data: /api/e/properties, /api/e/units, /api/e/mandates (Form A). Portal state & stats are indicative (Sample).
  */
 import { useMemo, useState } from 'react'
+import { permitStatus, permitUsable, type PermitStatus } from '@shared/uae-rules'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
@@ -32,7 +33,7 @@ const PORTALS = [
 type Check = { key: string; label: string; weight: number; earned: number; fix: string; icon: any }
 type Listing = {
   p: Row; community?: Community; img: string; score: number; grade: 'Excellent' | 'Good' | 'Needs work'; checks: Check[]
-  permit: boolean; mandate?: Row; mandateDays?: number; days: number; ppsf: number; ppsfDelta?: number; units: Row[]; live: Record<string, boolean>
+  permit: boolean; permitState: PermitStatus; mandate?: Row; mandateDays?: number; days: number; ppsf: number; ppsfDelta?: number; units: Row[]; live: Record<string, boolean>
 }
 
 const gradeOf = (s: number): Listing['grade'] => (s >= 80 ? 'Excellent' : s >= 60 ? 'Good' : 'Needs work')
@@ -52,7 +53,8 @@ function photoFor(p: Row) {
 function scoreListing(p: Row, community: Community | undefined, mandate: Row | undefined, today: Date) {
   const media = Array.isArray(p.media) ? p.media.length : 0
   const desc = String(p.description ?? '').trim().length
-  const permit = !!String(p.rera_permit_no ?? '').trim()
+  const permitState = permitStatus(p.rera_permit_no, p.permit_expiry, today.toISOString().slice(0, 10))
+  const permit = permitUsable(permitState)
   const deed = !!(p.title_deed_no || p.makani) || !!p.is_off_plan
   const price = Number(p.price || p.rent_annual || 0), area = Number(p.area_sqft || 0)
   const ppsf = Number(p.price_per_sqft) || (p.price && area ? p.price / area : 0)
@@ -62,7 +64,7 @@ function scoreListing(p: Row, community: Community | undefined, mandate: Row | u
   const checks: Check[] = [
     { key: 'photos', label: 'Photo set (≥ 10 HD photos)', weight: 12, earned: media >= 10 ? 12 : media >= 5 ? 8 : media > 0 ? 4 : 0, fix: `Upload ${Math.max(0, 10 - media)} more HD photos (portals rank 10+ photo listings higher).`, icon: Camera },
     { key: 'desc', label: 'Description ≥ 300 characters', weight: 12, earned: desc >= 300 ? 12 : desc >= 80 ? 6 : 0, fix: `Description is ${desc} chars — use the AI copy helper to reach 300+.`, icon: ListChecks },
-    { key: 'permit', label: 'Trakheesi / RERA advert permit', weight: 18, earned: permit ? 18 : 0, fix: 'Apply for a Trakheesi permit (DLD) — ads without a permit and Madmoun QR are blocked.', icon: QrCode },
+    { key: 'permit', label: 'Trakheesi / RERA advert permit', weight: 18, earned: permit ? 18 : 0, fix: 'Apply for or renew the Trakheesi permit (DLD) — ads without a valid permit and Madmoun QR are blocked.', icon: QrCode },
     { key: 'deed', label: p.is_off_plan ? 'Oqood / SPA reference' : 'Title deed or Makani no.', weight: 8, earned: deed ? 8 : 0, fix: 'Add the title deed number or Makani number for TruCheck-style verification.', icon: BadgeCheck },
     { key: 'basics', label: 'Price & area present', weight: 10, earned: price && area ? 10 : price || area ? 5 : 0, fix: 'Complete price and built-up area (sq ft).', icon: Maximize2 },
     { key: 'ppsf', label: 'AED/sq ft within ±20% of community', weight: 10, earned: delta === undefined ? 5 : Math.abs(delta) <= 20 ? 10 : Math.abs(delta) <= 35 ? 5 : 0, fix: delta === undefined ? 'Community not matched to DLD index — tag the community.' : `Priced ${delta > 0 ? '+' : ''}${delta.toFixed(0)}% vs ${community!.name} average — review with the owner.`, icon: Sparkles },
@@ -71,7 +73,7 @@ function scoreListing(p: Row, community: Community | undefined, mandate: Row | u
     { key: 'fresh', label: 'Fresh (listed ≤ 30 days)', weight: 10, earned: days <= 30 ? 10 : days <= 60 ? 5 : 0, fix: `Listed ${days} days ago — refresh photos/price and re-publish.`, icon: Clock },
   ]
   const score = checks.reduce((s, c) => s + c.earned, 0)
-  return { checks, score, permit, days, ppsf, delta }
+  return { checks, score, permit, permitState, days, ppsf, delta }
 }
 
 function useListings() {
@@ -89,7 +91,7 @@ function useListings() {
     const sellable = ['Available', 'Off-Plan', 'Under Offer'].includes(p.status) && p.active !== false
     const publish = mandate ? mandate.portal_publish !== false : true
     const live = Object.fromEntries(PORTALS.map(pt => [pt.key, pt.key === 'web' ? sellable : sellable && s.permit && publish && p.status !== 'Under Offer']))
-    return { p, community, img: photoFor(p), score: s.score, grade: gradeOf(s.score), checks: s.checks, permit: s.permit, mandate, mandateDays: end ? daysBetween(today, end) : undefined, days: s.days, ppsf: s.ppsf, ppsfDelta: s.delta, units: (units.data?.rows ?? []).filter(u => u.property_id === p.id), live }
+    return { p, community, img: photoFor(p), score: s.score, grade: gradeOf(s.score), checks: s.checks, permit: s.permit, permitState: s.permitState, mandate, mandateDays: end ? daysBetween(today, end) : undefined, days: s.days, ppsf: s.ppsf, ppsfDelta: s.delta, units: (units.data?.rows ?? []).filter(u => u.property_id === p.id), live }
   }), [props.data, units.data, mandates.data, today])
   return { listings, mandates: mandates.data?.rows ?? [], leads: leads.data?.rows ?? [], loading: props.isLoading, error: props.error as Error | null, today }
 }
@@ -122,7 +124,7 @@ function buildCopy(l: Listing, tone: Tone) {
     p.price && p.price >= 2_000_000 ? '• Eligible for the UAE 10-year Golden Visa (property value ≥ AED 2M, subject to ICP/GDRFA approval)' : '',
     '',
     `Price: ${priceTxt}`,
-    `Trakheesi permit: ${p.rera_permit_no || '[PERMIT REQUIRED]'} · Ref: ${p.property_no ?? p.id}`,
+    `Trakheesi permit: ${p.rera_permit_no || '[PERMIT REQUIRED]'}${p.permit_expiry ? ` (valid until ${String(p.permit_expiry).slice(0, 10)})` : ''} · Ref: ${p.property_no ?? p.id}`,
     'SWK Properties · RERA ORN 51517 · Scan the Madmoun QR to verify this listing.',
   ].filter(x => x !== '').join('\n').replace(/\n\n\n+/g, '\n\n')
   const arType = ({ Apartment: 'شقة', Villa: 'فيلا', Townhouse: 'تاون هاوس', Studio: 'استوديو', Penthouse: 'بنتهاوس', Duplex: 'دوبلكس' } as Record<string, string>)[type] ?? 'عقار'
@@ -212,7 +214,7 @@ export default function ListingsStudio() {
               {noPermit.slice(0, 4).map(l => (
                 <Link key={l.p.id} to={`/e/properties/${l.p.id}`} className="swk-row">
                   <span className="swk-row-ic" style={{ background: '#fbe4dd', color: SWK.dune }}><XCircle size={17} /></span>
-                  <span className="min-w-0 flex-1"><span className="swk-row-t block">{l.p.title}</span><span className="swk-row-s block">Blocked from portals — Trakheesi permit required</span></span>
+                  <span className="min-w-0 flex-1"><span className="swk-row-t block">{l.p.title}</span><span className="swk-row-s block">{l.permitState === 'Expired' ? 'Blocked from portals — Trakheesi permit expired' : 'Blocked from portals — Trakheesi permit required'}</span></span>
                 </Link>
               ))}
             </div>
@@ -325,9 +327,9 @@ function ListingCard({ l, i, onQuality, onCopy }: { l: Listing; i: number; onQua
           <span className="ml-auto text-[11.5px] text-muted inline-flex items-center gap-1"><Clock size={12} />{l.days}d</span>
         </div>
         {l.permit ? (
-          <div className="flex items-center gap-2 text-[11.5px] text-muted"><QrCode size={14} style={{ color: SWK.oasis }} /> Trakheesi <b className="text-ink font-semibold">{p.rera_permit_no}</b></div>
+          <div className="flex items-center gap-2 text-[11.5px] text-muted"><QrCode size={14} style={{ color: l.permitState === 'Valid' ? SWK.oasis : SWK.dune }} /> Trakheesi <b className="text-ink font-semibold">{p.rera_permit_no}</b>{l.permitState === 'Expiring' && <span> · expires {String(p.permit_expiry).slice(0, 10)}</span>}{l.permitState === 'No expiry' && <span> · add expiry date</span>}</div>
         ) : (
-          <div className="flex items-start gap-2 rounded-xl px-3 py-2 text-[12px] font-medium" style={{ background: '#fbe4dd', color: '#a33a22' }}><AlertTriangle size={15} className="flex-none mt-px" /> Blocked from portals — Trakheesi permit required</div>
+          <div className="flex items-start gap-2 rounded-xl px-3 py-2 text-[12px] font-medium" style={{ background: '#fbe4dd', color: '#a33a22' }}><AlertTriangle size={15} className="flex-none mt-px" /> {l.permitState === 'Expired' ? 'Blocked from portals — Trakheesi permit expired' : 'Blocked from portals — Trakheesi permit required'}</div>
         )}
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2 text-[10.5px] uppercase tracking-wider text-muted font-semibold">Syndication <Pill tone="grey" className="!h-[18px] !text-[10px]">Trakheesi & Form A</Pill></div>
@@ -358,7 +360,7 @@ function ListingTable({ rows, onOpen }: { rows: Listing[]; onOpen: (id: number) 
                   <td><Pill tone={statusTone(l.p.status)}>{l.p.status}</Pill></td>
                   <td className="num">{l.p.price ? aed(l.p.price, { compact: true }) : '—'}</td>
                   <td className="num">{l.ppsf ? num(l.ppsf) : '—'}{l.ppsfDelta !== undefined && <span className="block text-[11px]" style={{ color: Math.abs(l.ppsfDelta) <= 20 ? SWK.oasis : SWK.dune }}>{l.ppsfDelta > 0 ? '+' : ''}{l.ppsfDelta.toFixed(0)}%</span>}</td>
-                  <td>{l.permit ? <span className="inline-flex items-center gap-1 text-[12.5px]"><CheckCircle2 size={14} style={{ color: SWK.oasis }} />{l.p.rera_permit_no}</span> : <Pill tone="dune">Blocked</Pill>}</td>
+                  <td>{l.permit ? <span className="inline-flex items-center gap-1 text-[12.5px]"><CheckCircle2 size={14} style={{ color: SWK.oasis }} />{l.p.rera_permit_no}</span> : <Pill tone="dune">{l.permitState === 'Expired' ? 'Expired' : 'Blocked'}</Pill>}</td>
                   <td>{l.mandate ? <span className="text-[12.5px]">{l.mandate.mandate_no}<span className="block text-[11px]" style={{ color: (l.mandateDays ?? 99) <= 14 ? SWK.dune : SWK.muted }}>{l.mandateDays !== undefined ? `${l.mandateDays}d left` : ''}</span></span> : <Pill tone="grey">None</Pill>}</td>
                   <td><span className="tabular-nums text-[12.5px]">{Object.values(l.live).filter(Boolean).length}/4 live</span></td>
                   <td className="num">{l.days}</td>
@@ -382,7 +384,7 @@ function QualityPanel({ l }: { l: Listing }) {
         <div className="flex-1 min-w-0">
           <div className="font-display text-[18px] font-semibold text-ink">{l.grade === 'Excellent' ? 'Portal-ready' : l.grade === 'Good' ? 'Almost there' : 'Needs work before publishing'}</div>
           <p className="text-[12.5px] text-muted mt-1">{missing.length ? `Fix ${missing.length} item${missing.length > 1 ? 's' : ''} to gain up to ${missing.reduce((s, c) => s + c.weight - c.earned, 0)} points.` : 'Every quality check passes.'}</p>
-          {!l.permit && <div className="mt-3 flex items-start gap-2 rounded-xl px-3 py-2 text-[12px] font-medium" style={{ background: '#fbe4dd', color: '#a33a22' }}><AlertTriangle size={15} className="flex-none mt-px" /> Blocked from portals — Trakheesi permit required</div>}
+          {!l.permit && <div className="mt-3 flex items-start gap-2 rounded-xl px-3 py-2 text-[12px] font-medium" style={{ background: '#fbe4dd', color: '#a33a22' }}><AlertTriangle size={15} className="flex-none mt-px" /> {l.permitState === 'Expired' ? 'Blocked from portals — Trakheesi permit expired' : 'Blocked from portals — Trakheesi permit required'}</div>}
         </div>
       </div></div>
       <div className="flex flex-col gap-2">

@@ -7,6 +7,7 @@ import type { Ctx, Rec } from './engine'
 import { jobHooks } from './domain/jobs'
 import { quoteHooks, partyHooks, leadHooks, opportunityHooks, contractHooks } from './domain/sales'
 import { invoiceHooks, billHooks, receiptHooks, paymentHooks, journalHooks, expenseHooks, bankTxnHooks } from './domain/finance'
+import { leaseHooks, dldFilingHooks, kycCheckHooks, amlReportHooks } from './domain/uae'
 import { withCompliance, COMPLIANCE_KEYS } from './domain/compliance'
 import { userHooks, roleHooks, branchHooks, taskHooks, ticketHooks, leaveHooks, attendanceHooks, payslipHooks, poHooks, currencyHooks, activityHooks, apiKeyHooks, attachmentHooks } from './domain/misc'
 
@@ -30,6 +31,7 @@ const registry: Record<string, () => Hooks> = {
   expenses: () => expenseHooks, bank_transactions: () => bankTxnHooks,
   users: () => userHooks, roles: () => roleHooks, branches: () => branchHooks, tasks: () => taskHooks, tickets: () => ticketHooks, leave_requests: () => leaveHooks,
   attendance: () => attendanceHooks, payslips: () => payslipHooks, purchase_orders: () => poHooks, currencies: () => currencyHooks, activities: () => activityHooks,
+  leases: () => leaseHooks, dld_filings: () => dldFilingHooks, kyc_checks: () => kycCheckHooks, aml_reports: () => amlReportHooks,
   api_keys: () => apiKeyHooks, attachments: () => attachmentHooks,
 }
 

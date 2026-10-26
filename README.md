@@ -141,6 +141,7 @@ Key docs are available in the `docs/` directory and referenced from the app:
 
 - `docs/DASHBOARD.md` — Dashboard section layout and data refresh (2-min intervals)
 - `docs/FEATURES.md` — Feature catalog and limits
+- `docs/UAE-REAL-ESTATE.md` — UAE rules the app applies (rent cap, permits, DLD filings, KYC/AML) and their limits
 - `docs/AI-TEAM.md` — AI employees (Jarvis) and audited tooling
 - `docs/INTEGRATIONS.md` — Resend, R2, Supabase, WhatsApp, e-invoicing integrations
 - `docs/CALENDAR.md` — Company calendar and meeting scheduling

@@ -5,7 +5,7 @@ import { CALENDAR_CATEGORIES } from '../shared/calendar'
 import { can, getRecord, listRecords, type Ctx } from './engine'
 
 const categoryFor: Record<string, CalendarCategory> = { jobs: 'sales', documents: 'sales', crm: 'activities', projects: 'work', finance: 'finance', sales: 'sales', hr: 'people', compliance: 'compliance', properties: 'properties', leases: 'leases' }
-const specialTypes: Record<string, string> = { 'jobs.target_close': 'Target Close', 'jobs.deal_date': 'Deal Date', 'invoices.due_date': 'Invoice due', 'bills.due_date': 'Bill due', 'quotations.valid_until': 'Quote expiry', 'contracts.end_date': 'Contract end', 'tasks.due_date': 'Task', 'leave_requests.from_date': 'Leave', 'viewings.scheduled_at': 'Viewing', 'handovers.scheduled_at': 'Handover', 'leases.start_date': 'Lease Start', 'leases.end_date': 'Lease End', 'maintenance.scheduled_at': 'Maintenance', 'inspections.scheduled_at': 'Inspection' }
+const specialTypes: Record<string, string> = { 'jobs.target_close': 'Target Close', 'jobs.deal_date': 'Deal Date', 'invoices.due_date': 'Invoice due', 'bills.due_date': 'Bill due', 'quotations.valid_until': 'Quote expiry', 'contracts.end_date': 'Contract end', 'tasks.due_date': 'Task', 'leave_requests.from_date': 'Leave', 'viewings.scheduled_at': 'Viewing', 'handovers.scheduled_at': 'Handover', 'leases.start_date': 'Lease Start', 'leases.end_date': 'Lease End', 'leases.notice_deadline': 'Rent notice deadline', 'properties.permit_expiry': 'Trakheesi permit expiry', 'dld_filings.due_date': 'DLD filing due', 'dld_filings.expiry_date': 'DLD filing expiry', 'aml_reports.filing_due': 'goAML report due', 'maintenance.scheduled_at': 'Maintenance', 'inspections.scheduled_at': 'Inspection' }
 const spanEnd: Record<string, string> = { activities: 'end_at', leave_requests: 'to_date', projects: 'end_date' }
 const finished = new Set(['done', 'completed', 'closed', 'paid', 'cancelled', 'canceled', 'void', 'voided', 'rejected', 'disposed', 'filed', 'renewed', 'delivered', 'empty returned'])
 
@@ -60,7 +60,7 @@ export function calendarEvents(from: string, to: string, ctx: Ctx): CalendarEven
           allDay: field.type === 'date', 
           status: record[def.statusField ?? 'status'] ?? '', 
           completed: finished.has(String(record[def.statusField ?? 'status'] ?? '').toLowerCase()),
-          deadline: def.calendar != null || ['due_date', 'end_date', 'target_close', 'expiry_date', 'end_date'].includes(field.name),
+          deadline: def.calendar != null || ['due_date', 'end_date', 'target_close', 'expiry_date', 'permit_expiry', 'notice_deadline', 'filing_due'].includes(field.name),
           owner: record[ownerField ?? ''] ?? '',
           ownerId: ownerField ? Number(record[ownerField]) : null,
           location: String(record.location ?? ''),
