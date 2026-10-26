@@ -1280,7 +1280,8 @@ export function decideComplianceCase(caseId: number, findings: string, remedyDec
 }
 
 export function appealComplianceCase(caseId: number, appealNotes: string, ctx: Ctx) {
-  const c = getRecord(getDef('compliance_cases'), caseId, ctx)
+  if (!ctx.system && !ctx.user?.id) throw bad('Authentication required to submit a compliance appeal')
+  getRecord(getDef('compliance_cases'), caseId, { ...ctx, system: true })
   if (appealNotes.trim().length < 10) throw bad('Provide appeal grounds and counter-evidence (at least 10 characters)')
   // Control 3.29 & Adversarial 7.16: Right to appeal automated risk flags or findings
   return patchRecord(getDef('compliance_cases'), caseId, {

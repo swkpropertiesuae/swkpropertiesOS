@@ -29,7 +29,7 @@ export async function seedDemoScenarios(): Promise<void> {
   const defaultRoles = [
     { name: 'Admin', description: 'Full system access, including administration', system: true, permissions: '*' },
     { name: 'Manager', description: 'Full access to every module', system: true, permissions: '*' },
-    { name: 'Sales', description: 'CRM, quotations and customer follow-up', permissions: { dashboard: V, crm: CRUD, sales: [...CRUD, 'export'], properties: CE, mandates: CE, transactions: CE, hr: CE, compliance: V, documents: CE, support: CE, projects: CRUD, reports: VE, masters: V } },
+    { name: 'Sales', description: 'CRM, quotations and customer follow-up', permissions: { dashboard: V, crm: CRUD, sales: [...CRUD, 'export'], properties: CE, mandates: CE, transactions: CE, hr: CE, documents: CE, support: CE, projects: CRUD, reports: VE, masters: V } },
     { name: 'Leasing', description: 'Leasing and tenant management', permissions: { dashboard: V, crm: V, sales: V, leases: CRUD, documents: CE, projects: CE, masters: V } },
     { name: 'Operations', description: 'Deals, leases, transactions and properties', permissions: { dashboard: V, crm: V, sales: CRUD, leases: CRUD, transactions: CRUD, properties: CRUD, documents: CRUD, support: CE, projects: CRUD, reports: VE, masters: V } },
     { name: 'Accounts', description: 'Invoicing, bills, banking and financial reports', permissions: { dashboard: V, crm: V, sales: V, finance: [...CRUD, 'approve'], documents: CE, reports: VE, masters: CE, hr: V, leases: CRUD } },

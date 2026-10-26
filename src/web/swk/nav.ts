@@ -13,8 +13,8 @@ export type NavSection = { key: string; label: string; items: NavItem[] }
 /** Real-estate-only navigation. `module` is the RBAC module checked with can(module, 'view'). */
 export const SWK_NAV: NavSection[] = [
   { key: 'command', label: 'Command centre', items: [
-    { label: 'Enterprise Master OS', to: '/enterprise/master-os', icon: ShieldCheck, isNew: true, desc: '35 modules, 10 workflows & command centre' },
     { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard, module: 'dashboard', desc: 'Your brokerage at a glance' },
+    { label: 'Enterprise Master OS', to: '/enterprise/master-os', icon: ShieldCheck, isNew: true, desc: '35 modules, 10 workflows & command centre' },
     { label: 'Market Pulse', to: '/market', icon: LineChart, isNew: true, desc: 'DLD-style prices, yields & supply' },
     { label: 'Deal Pipeline', to: '/pipeline', icon: KanbanSquare, module: 'sales', isNew: true, desc: 'Lead → Form B → MOU → Transfer' },
     { label: 'Universal Approvals', to: '/e/universal_approvals', icon: CheckCheck, module: 'projects', isNew: true, desc: 'Four-eyes & maker-checker queue' },
@@ -22,9 +22,9 @@ export const SWK_NAV: NavSection[] = [
     { label: 'AI Concierge', to: '/ai', icon: Sparkles, module: 'ai', desc: 'AI team, briefings & approvals' },
   ] },
   { key: 'inventory', label: 'Inventory & listings', items: [
+    { label: 'Listing Studio', to: '/listings', icon: Megaphone, module: 'properties', isNew: true, desc: 'Quality score, Trakheesi & portals' },
     { label: 'Daily Inventory Queue', to: '/e/inventory_submissions', icon: Building2, module: 'properties', isNew: true, desc: '3.07 sourcing & duplicate check' },
     { label: 'Listing Mandates & Prices', to: '/e/listing_mandates', icon: FileSignature, module: 'mandates', isNew: true, desc: '3.12 Form A, Trakheesi & price log' },
-    { label: 'Listing Studio', to: '/listings', icon: Megaphone, module: 'properties', isNew: true, desc: 'Quality score, Trakheesi & portals' },
     { label: 'Properties', to: '/e/properties', icon: Building2, module: 'properties' },
     { label: 'Units', to: '/e/units', icon: Home, module: 'properties' },
     { label: 'Off-Plan Launches', to: '/offplan', icon: Rocket, module: 'properties', isNew: true, desc: 'Projects, payment plans & Oqood' },
@@ -45,9 +45,9 @@ export const SWK_NAV: NavSection[] = [
     { label: 'Email', to: '/email', icon: Mail, module: 'crm' },
   ] },
   { key: 'sales', label: 'Sales & mandates', items: [
+    { label: 'Mandates (Form A)', to: '/e/mandates', icon: FilePen, module: 'mandates' },
     { label: 'Enterprise Transactions', to: '/e/transactions', icon: Briefcase, module: 'transactions', isNew: true, desc: '3.13 stage gates & 11 exceptions' },
     { label: 'Developer NOC Centre', to: '/e/developer_requests', icon: FileCheck, module: 'transactions', isNew: true, desc: '3.08 NOC portal & closing gate' },
-    { label: 'Mandates (Form A)', to: '/e/mandates', icon: FilePen, module: 'mandates' },
     { label: 'Viewings', to: '/e/viewings', icon: CalendarCheck, module: 'mandates' },
     { label: 'Offers', to: '/e/offers', icon: HandCoins, module: 'transactions' },
     { label: 'Deal Files', to: '/e/jobs', icon: FileSignature, module: 'sales' },
@@ -69,8 +69,8 @@ export const SWK_NAV: NavSection[] = [
     { label: 'Owner Statements', to: '/e/owner_statements', icon: FileBarChart, module: 'finance' },
   ] },
   { key: 'finance', label: 'Commission & finance', items: [
-    { label: 'Commission Entitlements', to: '/e/commission_entitlements', icon: Percent, module: 'finance', isNew: true, desc: '3.17 3-way payout & IBAN security' },
     { label: 'Agent Commissions', to: '/e/agent_commissions', icon: Percent, module: 'finance' },
+    { label: 'Commission Entitlements', to: '/e/commission_entitlements', icon: Percent, module: 'finance', isNew: true, desc: '3.17 3-way payout & IBAN security' },
     { label: 'Tax Invoices', to: '/e/invoices', icon: Receipt, module: 'finance' },
     { label: 'Receipts', to: '/e/receipts', icon: HandCoins, module: 'finance' },
     { label: 'Vendor Bills', to: '/e/bills', icon: FileInput, module: 'finance' },
@@ -88,11 +88,11 @@ export const SWK_NAV: NavSection[] = [
     { label: 'Document Vault', to: '/documents', icon: FileStack, module: 'documents' },
   ] },
   { key: 'team', label: 'Team', items: [
+    { label: 'Agent Leaderboard', to: '/agents', icon: Trophy, module: 'hr', isNew: true, desc: 'GCI, conversion & licences' },
     { label: 'Daily Accountability', to: '/e/daily_reports', icon: ClipboardCheck, module: 'hr', isNew: true, desc: '3.06 system snapshot vs narrative' },
     { label: 'Visa, Immigration & PRO', to: '/e/immigration_cases', icon: Plane, module: 'hr', isNew: true, desc: '3.03 visa & work-permit workflow' },
     { label: 'Field Presence Sessions', to: '/e/field_sessions', icon: MapPinned, module: 'hr', isNew: true, desc: '3.10 work-hours duty location' },
     { label: 'Recruitment & Separation', to: '/e/hr_lifecycle_cases', icon: Users, module: 'hr', isNew: true, desc: '3.26/4.10 onboarding & offboarding' },
-    { label: 'Agent Leaderboard', to: '/agents', icon: Trophy, module: 'hr', isNew: true, desc: 'GCI, conversion & licences' },
     { label: 'Agents (BRN)', to: '/e/agents', icon: IdCard, module: 'hr' },
     { label: 'Employees', to: '/e/employees', icon: Users, module: 'hr' },
     { label: 'Attendance', to: '/e/attendance', icon: Clock, module: 'hr' },
@@ -106,10 +106,10 @@ export const SWK_NAV: NavSection[] = [
     { label: 'Reports', to: '/reports', icon: BarChart3, module: 'reports' },
   ] },
   { key: 'admin', label: 'Administration', items: [
+    { label: 'Settings', to: '/admin/settings', icon: Settings, module: 'admin' },
     { label: 'Corporate Governance', to: '/e/corporate_governance_items', icon: DevIcon, module: 'admin', isNew: true, desc: '3.01 board, budgets & authorities' },
     { label: 'DR & Security Drills', to: '/e/dr_exercises', icon: DatabaseBackup, module: 'admin', isNew: true, desc: '3.35 RTO/RPO restore verification' },
     { label: 'Enterprise Audit Events', to: '/e/audit_events', icon: History, module: 'admin', isNew: true },
-    { label: 'Settings', to: '/admin/settings', icon: Settings, module: 'admin' },
     { label: 'Roles & Access', to: '/admin/roles', icon: ShieldHalf, module: 'admin' },
     { label: 'Branches', to: '/e/branches', icon: Building, module: 'admin' },
     { label: 'Audit Trail', to: '/admin/audit', icon: History, module: 'admin' },

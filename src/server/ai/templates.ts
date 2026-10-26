@@ -19,7 +19,7 @@ export const AGENT_TEMPLATES = [
     autonomy: 'Auto for internal actions (approve external messages)',
     run_hour: 8,
     deliver_to: 'In-app + WhatsApp (owner)',
-    tools: 'business_snapshot,search_deals,get_deal,search_parties,party_statement,overdue_invoices,bills_due,pipeline_summary,rent_roll,expiring_leases,list_leads,stale_opportunities,list_tasks,open_tickets,expiring_documents,create_task,add_note,alert_team',
+    tools: 'business_snapshot,search_deals,get_deal,search_parties,party_statement,overdue_invoices,bills_due,pipeline_summary,rent_roll,expiring_leases,mandate_health,list_leads,stale_opportunities,list_tasks,open_tickets,expiring_documents,lookup_listings,find_caller,create_task,add_note,alert_team',
   },
   {
     id: 'deal-pipeline-review',
