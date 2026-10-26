@@ -121,8 +121,8 @@ export const NAV: NavGroup[] = [
     { label: 'Employees', to: '/e/employees', icon: 'Users', module: 'hr' },
     { label: 'Agents (DLD Registered)', to: '/e/agents', icon: 'BadgeCheck', module: 'hr' },
     { label: 'Attendance', to: '/e/attendance', icon: 'CalendarCheck', module: 'hr' },
-    { label: 'Leave', to: '/e/leave', icon: 'Plane', module: 'hr' },
-    { label: 'Payroll', to: '/e/payroll', icon: 'Banknote', module: 'hr' },
+    { label: 'Leave', to: '/e/leave_requests', icon: 'Plane', module: 'hr' },
+    { label: 'Payroll', to: '/e/payslips', icon: 'Banknote', module: 'hr' },
   ] },
   { label: 'Support', icon: 'Headphones', items: [
     { label: 'Tickets', to: '/e/tickets', icon: 'Ticket', module: 'support' },
@@ -135,7 +135,7 @@ export const NAV: NavGroup[] = [
   { label: 'Documents', icon: 'FileStack', items: [
     { label: 'Document Studio', to: '/studio', icon: 'FileCode2', module: 'documents' },
     { label: 'Templates', to: '/studio/templates', icon: 'FileTemplate', module: 'documents' },
-    { label: 'Company Documents', to: '/e/company_documents', icon: 'FileCheck', module: 'documents' },
+    { label: 'Company Documents', to: '/e/compliance_items', icon: 'FileCheck', module: 'documents' },
   ] },
   { label: 'Automation', icon: 'Bot', items: [
     { label: 'AI Employees', to: '/ai', icon: 'Bot', module: 'ai' },

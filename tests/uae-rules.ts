@@ -1,5 +1,7 @@
 /* Pure rules for UAE real estate (rent cap, notice deadline, advertising permit, KYC). No server needed:  npx tsx tests/uae-rules.ts */
 import { ok, sec, finish } from './_api'
+import { SWK_NAV } from '../src/web/swk/nav'
+import { ENTITIES } from '../src/shared/entities'
 import { RERA_BANDS, reraIncrease, noticeDeadline, renewalCheck, permitStatus, permitUsable, KYC_STANDARD_CHECKS, nextKycReview } from '../src/shared/uae-rules'
 
 sec('RERA rent-increase bands')
@@ -64,4 +66,12 @@ ok('medium risk reviewed in 12 months', nextKycReview('2026-01-15', 'Medium') ==
 ok('low risk reviewed in 24 months', nextKycReview('2026-01-15', 'Low') === '2028-01-15')
 ok('unknown risk uses medium', nextKycReview('2026-01-15', '') === '2027-01-15')
 ok('no review date gives null', nextKycReview('', 'High') === null)
+
+sec('Menu')
+const items = SWK_NAV.flatMap(sec => sec.items)
+for (const to of ['/e/dld_filings', '/e/kyc_checks', '/e/aml_reports']) ok(`menu has ${to}`, items.some(i => i.to === to), items.map(i => i.to))
+const missing = items.filter(i => i.to.startsWith('/e/')).filter(i => !ENTITIES[i.to.split('/')[2]])
+ok('every /e/ menu link points to a real entity', missing.length === 0, missing.map(i => i.to))
+const entityModules = items.filter(i => i.to.startsWith('/e/') && ENTITIES[i.to.split('/')[2]]).filter(i => i.module && ENTITIES[i.to.split('/')[2]].module !== i.module && !['mandates', 'transactions', 'sales', 'leases', 'finance', 'hr', 'documents', 'compliance', 'crm', 'properties', 'masters', 'admin'].includes(i.module))
+ok('menu modules are known modules', entityModules.length === 0, entityModules.map(i => i.to))
 finish()
