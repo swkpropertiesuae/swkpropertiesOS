@@ -3,10 +3,9 @@ import { Link } from 'react-router-dom'
 import {
   QrCode, MapPin, Building2, FileText, Users, Eye, MessageSquare, Percent,
   ShieldCheck, Wifi, WifiOff, BatteryCharging, Lock, Smartphone, Monitor,
-  CheckCircle2, Clock, Sparkles, RefreshCw, AlertTriangle, LogOut, Compass,
-  Briefcase, Bell, Check, ArrowUpRight, Radio, Play, Square,
+  Sparkles, RefreshCw, Compass,
 } from 'lucide-react'
-import { api, getSwkApiBaseUrl, setSwkApiBaseUrl } from '../lib/api'
+import { get, post } from '../lib/api'
 import {
   getDeviceIdentity,
   getCurrentGpsPosition,
@@ -15,9 +14,11 @@ import {
   stopNativeForegroundDutyService,
   getOfflineQueue,
   enqueueOfflineAction,
-  clearSyncedOfflineItems,
+  clearAllOfflineQueue,
   authenticateBiometricSession,
   isCapacitorAndroid,
+  getStoredServerUrl,
+  setStoredServerUrl,
   type DeviceIdentity,
   type OfflineQueueItem,
 } from './native-bridge'
@@ -52,7 +53,7 @@ export default function SwkOneApp() {
   })
   const [offlineMode, setOfflineMode] = useState(false)
   const [offlineQueue, setOfflineQueue] = useState<OfflineQueueItem[]>([])
-  const [apiBaseUrl, setApiBaseUrlState] = useState(getSwkApiBaseUrl())
+  const [apiBaseUrl, setApiBaseUrlState] = useState(getStoredServerUrl())
 
   // Modals & frame mode
   const [phoneFrameMode, setPhoneFrameMode] = useState(() => !isCapacitorAndroid() && window.innerWidth >= 900)
@@ -81,13 +82,13 @@ export default function SwkOneApp() {
       setTelemetry(tel)
       setOfflineQueue(getOfflineQueue())
 
-      const res = await api.get<any>('/swk-one/bootstrap')
+      const res = await get<any>('/api/swk-one/bootstrap')
       setData(res)
       if (res?.today_report?.self_summary && !eodSummary) {
         setEodSummary(res.today_report.self_summary)
       }
       // Register / heartbeat device silently once bootstrapped
-      await api.post('/swk-one/device/register', dev).catch(() => {})
+      await post('/api/swk-one/device/register', dev).catch(() => {})
     } catch (e: any) {
       showNotice(e?.message || 'Operating in Offline Queue mode', 'warn')
     } finally {
@@ -115,7 +116,7 @@ export default function SwkOneApp() {
     }
     setBusyAction(label)
     try {
-      const res = await api.post<any>(endpoint, payload)
+      const res = await post<any>(endpoint, payload)
       showNotice(successMsg, 'ok')
       await loadBootstrap()
       return res
@@ -130,7 +131,7 @@ export default function SwkOneApp() {
   const handleInitializeDemoData = async () => {
     setBusyAction('Initializing SWK ONE field data…')
     try {
-      await api.post('/swk-one/initialize', {})
+      await post('/api/swk-one/initialize', {})
       await loadBootstrap()
       showNotice('SWK ONE field workspace populated with live viewings, inventory, WABA & commissions.')
     } finally {
@@ -139,18 +140,16 @@ export default function SwkOneApp() {
   }
 
   // 1. Office Reception QR Check-In
-  const handleOfficeCheckIn = async (payload: {
-    qr_token: string
-    short_code: string
-    network_type: string
-    wifi_ssid: string
-  }) => {
+  const handleOfficeScanSubmit = async (tokenOrCode: string, networkSsid: string) => {
     const dev = device || (await getDeviceIdentity())
     const coords = await getCurrentGpsPosition()
     setBusyAction('Verifying Reception QR & Device…')
     try {
-      const res = await api.post<any>('/swk-one/attendance/qr-check-in', {
-        ...payload,
+      const res = await post<any>('/api/swk-one/attendance/qr-check-in', {
+        qr_token: tokenOrCode,
+        short_code: tokenOrCode,
+        network_type: networkSsid.includes('SWK') ? 'Office Wi-Fi' : 'External Network',
+        wifi_ssid: networkSsid,
         device_id: dev.device_id,
         device_name: dev.device_name,
         lat: coords.lat,
@@ -170,9 +169,9 @@ export default function SwkOneApp() {
 
   const handleOfficeCheckOut = async () => {
     await runOrQueue(
-      'workday_mode',
+      'office_check_in',
       'Office Check-Out',
-      '/swk-one/attendance/check-out',
+      '/api/swk-one/attendance/check-out',
       {},
       'Checked out of office & ended workday shift.'
     )
@@ -181,9 +180,9 @@ export default function SwkOneApp() {
   // 2. Workday Mode Switch
   const handleSetWorkdayMode = async (mode: 'Off Duty' | 'Office Work' | 'On Break' | 'Approved Travel' | 'Active Field Duty') => {
     await runOrQueue(
-      'workday_mode',
+      'office_check_in',
       `Set Workday Mode: ${mode}`,
-      '/swk-one/workday/mode',
+      '/api/swk-one/workday/mode',
       { mode },
       `Workday presence updated to: ${mode}`
     )
@@ -195,7 +194,7 @@ export default function SwkOneApp() {
     const coords = await getCurrentGpsPosition()
     setBusyAction('Starting Android Foreground Duty Service…')
     try {
-      const res = await api.post<any>('/swk-one/field-duty/start', {
+      const res = await post<any>('/api/swk-one/field-duty/start', {
         assigned_location: location,
         viewing_id: viewingId || null,
         property_id: propertyId || null,
@@ -205,7 +204,11 @@ export default function SwkOneApp() {
         device_id: dev.device_id,
       })
       if (res?.session?.id) {
-        await startNativeForegroundDutyService(res.session.id, location)
+        await startNativeForegroundDutyService({
+          sessionId: res.session.id,
+          assignedLocation: location,
+          deviceId: dev.device_id,
+        })
       }
       await loadBootstrap()
       showNotice(`Field Duty Started (${res?.session?.session_no}) · Persistent Location Notification Active`)
@@ -218,9 +221,9 @@ export default function SwkOneApp() {
     const coords = await getCurrentGpsPosition()
     const tel = await getBatteryAndNetworkTelemetry()
     await runOrQueue(
-      'field_duty_batch',
+      'start_field_duty',
       `Field Location Batch #${sessionId}`,
-      `/swk-one/field-duty/${sessionId}/location-batch`,
+      `/api/swk-one/field-duty/${sessionId}/location-batch`,
       {
         session_id: sessionId,
         points: [
@@ -243,7 +246,7 @@ export default function SwkOneApp() {
     setBusyAction('Stopping Foreground Location Service…')
     try {
       await stopNativeForegroundDutyService()
-      await api.post(`/swk-one/field-duty/${sessionId}/end`, {
+      await post(`/api/swk-one/field-duty/${sessionId}/end`, {
         lat: coords.lat,
         lng: coords.lng,
         notes,
@@ -257,9 +260,9 @@ export default function SwkOneApp() {
 
   const handleSafetyCheckIn = async (sessionId: number) => {
     await runOrQueue(
-      'field_duty_batch',
+      'start_field_duty',
       'Lone-Worker Safety Check-In',
-      `/swk-one/field-duty/${sessionId}/safety-check-in`,
+      `/api/swk-one/field-duty/${sessionId}/safety-check-in`,
       {},
       'Lone-worker safety check-in confirmed.'
     )
@@ -269,7 +272,7 @@ export default function SwkOneApp() {
     const coords = await getCurrentGpsPosition()
     setBusyAction('Broadcasting SOS Alert…')
     try {
-      const res = await api.post<any>('/swk-one/field-duty/sos', {
+      const res = await post<any>('/api/swk-one/field-duty/sos', {
         session_id: data?.active_field_session?.id || null,
         lat: coords.lat,
         lng: coords.lng,
@@ -287,7 +290,7 @@ export default function SwkOneApp() {
     await runOrQueue(
       'daily_report',
       'End-of-Day Work Report',
-      '/swk-one/daily-report/one-tap',
+      '/api/swk-one/daily-report/one-tap',
       {
         self_summary:
           eodSummary ||
@@ -309,15 +312,15 @@ export default function SwkOneApp() {
     setBusyAction('Syncing encrypted offline queue…')
     try {
       const dev = device || (await getDeviceIdentity())
-      await api.post('/swk-one/offline/sync', {
+      await post('/api/swk-one/offline/sync', {
         device_id: dev.device_id,
         items: current.map(i => ({
-          client_queue_id: i.client_queue_id,
+          client_queue_id: i.idempotency_key,
           action_type: i.action_type,
           payload: i.payload,
         })),
       })
-      clearSyncedOfflineItems(current.map(i => i.client_queue_id))
+      clearAllOfflineQueue()
       setOfflineQueue(getOfflineQueue())
       setOfflineMode(false)
       await loadBootstrap()
@@ -853,7 +856,7 @@ export default function SwkOneApp() {
                         type="checkbox"
                         checked={!!item.done}
                         onChange={async e => {
-                          await api.post('/swk-one/workday/checklist', {
+                          await post('/api/swk-one/workday/checklist', {
                             list_type: 'workday',
                             item_id: item.id,
                             done: e.target.checked,
@@ -885,9 +888,9 @@ export default function SwkOneApp() {
               onViewingArrive={async viewingId => {
                 const coords = await getCurrentGpsPosition()
                 await runOrQueue(
-                  'viewing_feedback',
+                  'viewing_arrive',
                   `Viewing Arrival #${viewingId}`,
-                  `/swk-one/viewings/${viewingId}/arrive`,
+                  `/api/swk-one/viewings/${viewingId}/arrive`,
                   { lat: coords.lat, lng: coords.lng },
                   `Verified GPS Viewing Check-In recorded!`
                 )
@@ -896,7 +899,7 @@ export default function SwkOneApp() {
                 await runOrQueue(
                   'viewing_feedback',
                   `Viewing Feedback #${viewingId}`,
-                  `/swk-one/viewings/${viewingId}/feedback`,
+                  `/api/swk-one/viewings/${viewingId}/feedback`,
                   payload,
                   'Viewing outcome & structured client feedback saved!'
                 )
@@ -905,7 +908,7 @@ export default function SwkOneApp() {
                 await runOrQueue(
                   'viewing_feedback',
                   `Viewing Event #${viewingId}`,
-                  `/swk-one/viewings/${viewingId}/event`,
+                  `/api/swk-one/viewings/${viewingId}/event`,
                   { mode, note },
                   `Viewing updated (${mode.replace('_', ' ')})`
                 )
@@ -917,10 +920,10 @@ export default function SwkOneApp() {
             <InventoryAndNocTab
               data={data}
               onCheckDuplicate={async (building, unit) => {
-                return api.get(`/swk-one/inventory/check-duplicate?building=${encodeURIComponent(building)}&unit=${encodeURIComponent(unit)}`)
+                return get(`/api/swk-one/inventory/check-duplicate?building=${encodeURIComponent(building)}&unit=${encodeURIComponent(unit)}`)
               }}
               onCameraExtract={async (docType, hint) => {
-                const res = await api.post<any>('/swk-one/inventory/camera-extract', {
+                const res = await post<any>('/api/swk-one/inventory/camera-extract', {
                   document_type: docType,
                   building_hint: hint,
                 })
@@ -931,7 +934,7 @@ export default function SwkOneApp() {
                 await runOrQueue(
                   'inventory_submit',
                   `Inventory: ${payload.building_name} #${payload.unit_no}`,
-                  '/swk-one/inventory/submit',
+                  '/api/swk-one/inventory/submit',
                   payload,
                   `Unit ${payload.building_name} #${payload.unit_no} submitted to SWK OS pipeline!`
                 )
@@ -940,7 +943,7 @@ export default function SwkOneApp() {
                 await runOrQueue(
                   'inventory_submit',
                   `Reconfirm Price #${id}`,
-                  `/swk-one/inventory/${id}/reconfirm-price`,
+                  `/api/swk-one/inventory/${id}/reconfirm-price`,
                   { asking_price: askingPrice },
                   'Owner price & availability reconfirmed today!'
                 )
@@ -949,7 +952,7 @@ export default function SwkOneApp() {
                 await runOrQueue(
                   'inventory_submit',
                   `Owner Withdrawal #${id}`,
-                  `/swk-one/inventory/${id}/owner-withdrawal`,
+                  `/api/swk-one/inventory/${id}/owner-withdrawal`,
                   { reason },
                   'Urgent owner withdrawal alert logged & unit suspended.'
                 )
@@ -958,7 +961,7 @@ export default function SwkOneApp() {
                 await runOrQueue(
                   'inventory_submit',
                   `Key Custody: ${payload.building_name}`,
-                  '/swk-one/inventory/key-log',
+                  '/api/swk-one/inventory/key-log',
                   payload,
                   'Property key custody event logged!'
                 )
@@ -971,9 +974,9 @@ export default function SwkOneApp() {
               data={data}
               onQuickLogLead={async (leadId, outcome, channel, notes) => {
                 await runOrQueue(
-                  'lead_call_log',
+                  'lead_quick_log',
                   `Lead Call Log #${leadId}`,
-                  `/swk-one/leads/${leadId}/quick-log`,
+                  `/api/swk-one/leads/${leadId}/quick-log`,
                   { outcome, channel, notes },
                   `Logged ${channel} outcome (${outcome}) & updated CRM activity counters!`
                 )
@@ -983,13 +986,13 @@ export default function SwkOneApp() {
                 await runOrQueue(
                   'inventory_submit',
                   'Submit Digital Offer',
-                  '/swk-one/offers/submit',
+                  '/api/swk-one/offers/submit',
                   payload,
                   'Formal Digital Offer recorded in SWK OS!'
                 )
               }}
               onGetAiDraft={async (commId, lang) => {
-                const res = await api.post<any>('/swk-one/communications/ai-draft', {
+                const res = await post<any>('/api/swk-one/communications/ai-draft', {
                   comm_id: commId,
                   language: lang,
                 })
@@ -997,18 +1000,18 @@ export default function SwkOneApp() {
               }}
               onReplyComm={async (commId, message, lang) => {
                 await runOrQueue(
-                  'lead_call_log',
+                  'comm_reply',
                   `WABA Reply #${commId}`,
-                  `/swk-one/communications/${commId}/reply`,
+                  `/api/swk-one/communications/${commId}/reply`,
                   { message, language: lang },
                   'Official WABA response sent & SLA timer cleared!'
                 )
               }}
               onEscalateComm={async (commId, title, summary) => {
                 await runOrQueue(
-                  'lead_call_log',
+                  'comm_reply',
                   `Escalate WABA #${commId}`,
-                  `/swk-one/communications/${commId}/escalate`,
+                  `/api/swk-one/communications/${commId}/escalate`,
                   { title, summary, severity: 'High' },
                   'Escalated to supervisor & created QA Incident!'
                 )
@@ -1021,15 +1024,15 @@ export default function SwkOneApp() {
               data={data}
               onRequestAttendanceCorrection={async (id, reason) => {
                 await runOrQueue(
-                  'workday_mode',
+                  'office_check_in',
                   `Attendance Correction #${id}`,
-                  `/swk-one/attendance/${id}/correction`,
+                  `/api/swk-one/attendance/${id}/correction`,
                   { reason },
                   'Attendance correction submitted for manager sign-off.'
                 )
               }}
               onToggleChecklist={async (listType, itemId, done) => {
-                await api.post('/swk-one/workday/checklist', {
+                await post('/api/swk-one/workday/checklist', {
                   list_type: listType,
                   item_id: itemId,
                   done,
@@ -1038,24 +1041,24 @@ export default function SwkOneApp() {
               }}
               onShiftHandover={async (toUserId, notes) => {
                 await runOrQueue(
-                  'workday_mode',
+                  'office_check_in',
                   'Shift Handover',
-                  '/swk-one/workday/handover',
+                  '/api/swk-one/workday/handover',
                   { to_user_id: toUserId, notes },
                   'Shift handover assigned to next colleague!'
                 )
               }}
               onSubmitLeave={async payload => {
                 await runOrQueue(
-                  'workday_mode',
+                  'office_check_in',
                   'Leave Request',
-                  '/swk-one/hr/leave-request',
+                  '/api/swk-one/hr/leave-request',
                   payload,
                   'Leave request submitted to HR!'
                 )
               }}
               onAskKnowledge={async question => {
-                return api.post('/swk-one/knowledge/ask', { question })
+                return post('/api/swk-one/knowledge/ask', { question })
               }}
             />
           )}
@@ -1103,10 +1106,10 @@ export default function SwkOneApp() {
         device={device}
         userName={data?.user?.name || 'SWK Agent'}
         onUnlock={async () => {
-          const ok = await authenticateBiometricSession()
-          if (ok) {
+          const res = await authenticateBiometricSession()
+          if (res.verified) {
             setBiometricLocked(false)
-            showNotice('Android Biometric Session Verified')
+            showNotice(`Android Biometric Session Verified (${res.method})`)
           }
         }}
       />
@@ -1115,23 +1118,24 @@ export default function SwkOneApp() {
         open={qrModalOpen}
         onClose={() => setQrModalOpen(false)}
         device={device}
-        activeQr={data?.reception_qr}
-        onSubmitCheckIn={handleOfficeCheckIn}
+        receptionQrPreview={data?.reception_qr}
+        onScanSubmit={handleOfficeScanSubmit}
       />
 
       <PropertyComparisonModal
         open={compareModalOpen}
         onClose={() => setCompareModalOpen(false)}
         properties={data?.properties || []}
+        onSelectForOffer={() => setActiveTab('crm')}
       />
 
       <OfflineAndApkModal
         open={apkModalOpen}
         onClose={() => setApkModalOpen(false)}
         device={device}
-        queue={offlineQueue}
+        offlineQueue={offlineQueue}
         offlineSimulated={offlineMode}
-        onToggleOfflineSimulated={val => {
+        onToggleOfflineSimulated={(val: boolean) => {
           setOfflineMode(val)
           showNotice(
             val
@@ -1141,9 +1145,9 @@ export default function SwkOneApp() {
           )
         }}
         onSyncNow={handleSyncOfflineQueue}
-        apiBaseUrl={apiBaseUrl}
-        onSaveApiBaseUrl={url => {
-          setSwkApiBaseUrl(url)
+        serverUrl={apiBaseUrl}
+        onSaveServerUrl={(url: string) => {
+          setStoredServerUrl(url)
           setApiBaseUrlState(url)
           showNotice(`SWK OS Backend URL updated`)
         }}

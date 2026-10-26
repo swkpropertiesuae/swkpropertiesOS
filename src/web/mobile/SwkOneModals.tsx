@@ -117,15 +117,24 @@ export function ReceptionQrScannerModal({
   open,
   onClose,
   receptionQrPreview,
+  activeQr,
   device,
   onScanSubmit,
+  onSubmitCheckIn,
 }: {
   open: boolean
   onClose: () => void
-  receptionQrPreview: any
+  receptionQrPreview?: any
+  activeQr?: any
   device: DeviceIdentity | null
-  onScanSubmit: (tokenOrCode: string, networkSsid: string) => Promise<void>
+  onScanSubmit?: (tokenOrCode: string, networkSsid: string) => Promise<void>
+  onSubmitCheckIn?: (payload: any) => Promise<any>
 }) {
+  const qrPreview = receptionQrPreview ?? activeQr
+  const submitScan = async (tok: string, ssid: string) => {
+    if (onScanSubmit) return onScanSubmit(tok, ssid)
+    if (onSubmitCheckIn) return onSubmitCheckIn({ qr_token: tok, short_code: tok, network_type: 'WiFi', wifi_ssid: ssid })
+  }
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [cameraActive, setCameraActive] = useState(false)
   const [manualCode, setManualCode] = useState('')
@@ -159,8 +168,8 @@ export function ReceptionQrScannerModal({
   const handleScanLiveReception = async () => {
     setSubmitting(true)
     try {
-      const tok = receptionQrPreview?.token_code || 'AUTO-RECEPTION-QR'
-      await onScanSubmit(tok, networkSsid)
+      const tok = qrPreview?.token_code || 'AUTO-RECEPTION-QR'
+      await submitScan(tok, networkSsid)
       onClose()
     } finally {
       setSubmitting(false)
@@ -172,7 +181,7 @@ export function ReceptionQrScannerModal({
     if (!manualCode.trim()) return
     setSubmitting(true)
     try {
-      await onScanSubmit(manualCode.trim(), networkSsid)
+      await submitScan(manualCode.trim(), networkSsid)
       onClose()
     } finally {
       setSubmitting(false)
@@ -285,7 +294,7 @@ export function PropertyComparisonModal({
   open: boolean
   onClose: () => void
   properties: any[]
-  onSelectForOffer: (prop: any) => void
+  onSelectForOffer?: (prop: any) => void
 }) {
   const [selectedIds, setSelectedIds] = useState<number[]>(() => properties.slice(0, 3).map(p => p.id))
 
@@ -364,7 +373,7 @@ export function PropertyComparisonModal({
                     <button
                       onClick={() => {
                         onClose()
-                        onSelectForOffer(p)
+                        onSelectForOffer?.(p)
                       }}
                       className="w-full py-2 rounded-full bg-[#007b52] text-white text-xs font-semibold border-0 cursor-pointer"
                     >
@@ -388,20 +397,32 @@ export function OfflineAndApkModal({
   open,
   onClose,
   offlineQueue,
+  queue,
   onSyncNow,
   serverUrl,
+  apiBaseUrl,
   onSaveServerUrl,
+  onSaveApiBaseUrl,
   device,
+  offlineSimulated,
+  onToggleOfflineSimulated,
 }: {
   open: boolean
   onClose: () => void
-  offlineQueue: OfflineQueueItem[]
+  offlineQueue?: OfflineQueueItem[]
+  queue?: OfflineQueueItem[]
   onSyncNow: () => Promise<void>
-  serverUrl: string
-  onSaveServerUrl: (url: string) => void
+  serverUrl?: string
+  apiBaseUrl?: string
+  onSaveServerUrl?: (url: string) => void
+  onSaveApiBaseUrl?: (url: string) => void
   device: DeviceIdentity | null
+  offlineSimulated?: boolean
+  onToggleOfflineSimulated?: (val: boolean) => void
 }) {
-  const [urlInput, setUrlInput] = useState(serverUrl)
+  const effectiveQueue = offlineQueue ?? queue ?? []
+  const effectiveUrl = serverUrl ?? apiBaseUrl ?? ''
+  const [urlInput, setUrlInput] = useState(effectiveUrl)
   const [syncing, setSyncing] = useState(false)
 
   if (!open) return null
@@ -439,10 +460,27 @@ export function OfflineAndApkModal({
 
           {/* Offline Evidence Queue */}
           <div className="p-3.5 rounded-2xl bg-white border border-[#cbd6ce] space-y-2.5">
+            {onToggleOfflineSimulated && (
+              <div className="flex items-center justify-between pb-2 border-b border-[#e6ebe7]">
+                <div>
+                  <div className="font-bold text-[#161d1a]">Field Offline Queue Mode (Basement / Dead-Zone Test)</div>
+                  <div className="text-[10px] text-[#53655b]">Queue reports & check-ins locally on handset until signal returns</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onToggleOfflineSimulated(!offlineSimulated)}
+                  className={`px-3 py-1 rounded-full text-[11px] font-bold border-0 cursor-pointer ${
+                    offlineSimulated ? 'bg-[#8c4329] text-white' : 'bg-[#edf5f0] text-[#007b52]'
+                  }`}
+                >
+                  {offlineSimulated ? 'Offline Mode ON' : 'Online (Tap to Test Offline)'}
+                </button>
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <div className="font-bold text-sm text-[#161d1a] flex items-center gap-1.5">
                 <CloudOff size={15} className="text-[#007b52]" />
-                Encrypted Offline Evidence Queue ({offlineQueue.length})
+                Encrypted Offline Evidence Queue ({effectiveQueue.length})
               </div>
               <button
                 onClick={async () => {
@@ -450,20 +488,20 @@ export function OfflineAndApkModal({
                   await onSyncNow()
                   setSyncing(false)
                 }}
-                disabled={syncing || offlineQueue.length === 0}
+                disabled={syncing || effectiveQueue.length === 0}
                 className="px-3 py-1.5 rounded-full bg-[#007b52] text-white font-semibold text-xs border-0 cursor-pointer disabled:opacity-50 flex items-center gap-1"
               >
                 <UploadCloud size={13} />
                 {syncing ? 'Syncing…' : 'Sync to SWK OS Now'}
               </button>
             </div>
-            {offlineQueue.length === 0 ? (
+            {effectiveQueue.length === 0 ? (
               <div className="text-[#53655b] py-2">
                 All field attendance, viewing check-ins, daily reports, and inventory submissions are synced with SWK OS.
               </div>
             ) : (
               <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                {offlineQueue.map(item => (
+                {effectiveQueue.map(item => (
                   <div key={item.idempotency_key} className="p-2 rounded-xl bg-[#f1f6f3] flex items-center justify-between">
                     <div>
                       <div className="font-semibold text-[#161d1a]">{item.label}</div>
@@ -497,7 +535,8 @@ export function OfflineAndApkModal({
               />
               <button
                 onClick={() => {
-                  onSaveServerUrl(urlInput)
+                  onSaveServerUrl?.(urlInput)
+                  onSaveApiBaseUrl?.(urlInput)
                   onClose()
                 }}
                 className="px-4 py-2 rounded-full bg-[#161d1a] text-white font-semibold text-xs border-0 cursor-pointer"

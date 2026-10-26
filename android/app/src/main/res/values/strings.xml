@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SWK ONE</string>
+    <string name="title_activity_main">SWK ONE — Staff &amp; Agent Workspace</string>
+    <string name="package_name">ae.swkproperties.one</string>
+    <string name="custom_url_scheme">ae.swkproperties.one</string>
+</resources>

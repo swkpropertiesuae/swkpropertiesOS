@@ -2,7 +2,7 @@
   "name": "swkpropos-os",
   "version": "1.0.0",
   "private": true,
-  "description": "SWK OS – UAE Real Estate Operating System",
+  "description": "SWK OS – UAE Real Estate Operating System + SWK ONE Android Workspace",
   "type": "module",
   "engines": {
     "node": ">=22.0.0"
@@ -17,12 +17,15 @@
     "start": "node --env-file-if-exists=.env dist/server/index.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "tsx --env-file-if-exists=.env tests/smoke.ts",
+    "test:swk-one": "tsx --env-file-if-exists=.env tests/swk-one-android.ts",
     "test:integrations": "tsx --env-file-if-exists=.env tests/phase2.ts",
     "data:reset": "tsx --env-file-if-exists=.env tools/data/reset-business-data.ts",
     "test:compliance": "tsx --env-file-if-exists=.env tests/compliance.ts",
     "test:documents": "node tests/documents-ui.mjs",
     "test:handover": "tsx --env-file-if-exists=.env tests/handover.ts",
-    "test:all": "bash tests/run-all.sh"
+    "test:all": "bash tests/run-all.sh",
+    "android:sync": "npm run build:web && npx cap copy android",
+    "android:apk": "cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1147.0",

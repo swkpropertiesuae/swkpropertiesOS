@@ -1,4 +1,7 @@
-import { getStoredServerUrl, getStoredSessionToken, isCapacitorAndroid, setStoredSessionToken } from '../mobile/native-bridge'
+import { getStoredServerUrl, getStoredSessionToken, isCapacitorAndroid, setStoredServerUrl, setStoredSessionToken } from '../mobile/native-bridge'
+
+export const getSwkApiBaseUrl = getStoredServerUrl
+export const setSwkApiBaseUrl = setStoredServerUrl
 
 export class ApiError extends Error {
   status: number; details?: any
@@ -23,7 +26,7 @@ function buildClientHeaders(extra?: Record<string, string>): Record<string, stri
   }
 }
 
-export async function api<T = any>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+async function rawApi<T = any>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
   const { url, crossOrigin } = resolveApiUrl(path)
   const res = await fetch(url, {
     method,
@@ -52,11 +55,13 @@ export const get = <T = any>(p: string, params?: Record<string, any>, signal?: A
     for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== null && v !== '') u.set(k, typeof v === 'object' ? JSON.stringify(v) : String(v))
     const s = u.toString(); if (s) p += (p.includes('?') ? '&' : '?') + s
   }
-  return api<T>('GET', p, undefined, signal)
+  return rawApi<T>('GET', p, undefined, signal)
 }
-export const post = <T = any>(p: string, b?: unknown) => api<T>('POST', p, b ?? {})
-export const put = <T = any>(p: string, b?: unknown) => api<T>('PUT', p, b ?? {})
-export const del = <T = any>(p: string) => api<T>('DELETE', p)
+export const post = <T = any>(p: string, b?: unknown) => rawApi<T>('POST', p, b ?? {})
+export const put = <T = any>(p: string, b?: unknown) => rawApi<T>('PUT', p, b ?? {})
+export const del = <T = any>(p: string) => rawApi<T>('DELETE', p)
+
+export const api = Object.assign(rawApi, { get, post, put, del })
 
 export async function upload(files: File[], fields: Record<string, string | number | undefined>) {
   const fd = new FormData()

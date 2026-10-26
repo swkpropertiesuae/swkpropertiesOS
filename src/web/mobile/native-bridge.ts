@@ -18,16 +18,8 @@ export interface GpsPosition {
 
 export interface OfflineQueueItem {
   idempotency_key: string
-  action_type:
-    | 'office_check_in'
-    | 'start_field_duty'
-    | 'end_field_duty'
-    | 'viewing_arrive'
-    | 'viewing_feedback'
-    | 'lead_quick_log'
-    | 'inventory_submit'
-    | 'daily_report'
-    | 'comm_reply'
+  client_queue_id: string
+  action_type: string
   label: string
   payload: Record<string, any>
   queued_at: string
@@ -188,12 +180,13 @@ export async function getCurrentGpsPosition(): Promise<GpsPosition> {
 }
 
 export async function startNativeForegroundDutyService(opts: {
-  sessionId: number
-  assignedLocation: string
+  sessionId?: number
+  assignedLocation?: string
   serverUrl?: string
   sessionToken?: string
-  deviceId: string
-}): Promise<{ fgServiceActive: boolean; notificationTitle: string }> {
+  deviceId?: string
+  [k: string]: any
+}, _extra?: any): Promise<{ fgServiceActive: boolean; notificationTitle: string }> {
   const cap = typeof window !== 'undefined' ? (window as any).Capacitor : null
   const nativePlugin = cap?.Plugins?.SwkNative
   const title = `SWK ONE: Active Field Duty (${opts.assignedLocation})`
@@ -212,7 +205,7 @@ export async function startNativeForegroundDutyService(opts: {
   return { fgServiceActive: true, notificationTitle: title }
 }
 
-export async function stopNativeForegroundDutyService(): Promise<{ stopped: boolean }> {
+export async function stopNativeForegroundDutyService(_a?: any, _b?: any): Promise<{ stopped: boolean }> {
   const cap = typeof window !== 'undefined' ? (window as any).Capacitor : null
   const nativePlugin = cap?.Plugins?.SwkNative
   if (nativePlugin?.stopDutyLocationService) {
@@ -255,12 +248,16 @@ export function getOfflineQueue(): OfflineQueueItem[] {
 }
 
 export function enqueueOfflineAction(
-  action_type: OfflineQueueItem['action_type'],
-  label: string,
-  payload: Record<string, any>,
+  action_type: string,
+  labelOrPayload: string | Record<string, any>,
+  maybePayload?: Record<string, any>,
 ): OfflineQueueItem {
+  const label = typeof labelOrPayload === 'string' ? labelOrPayload : action_type
+  const payload = (typeof labelOrPayload === 'object' && labelOrPayload !== null ? labelOrPayload : maybePayload) || {}
+  const key = `OFF-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
   const item: OfflineQueueItem = {
-    idempotency_key: `OFF-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+    idempotency_key: key,
+    client_queue_id: key,
     action_type,
     label,
     payload,
@@ -272,6 +269,19 @@ export function enqueueOfflineAction(
     localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(updated))
   } catch { /* ignore */ }
   return item
+}
+
+export function clearSyncedOfflineItems(keys?: string[]) {
+  if (!keys || keys.length === 0) {
+    clearAllOfflineQueue()
+    return []
+  }
+  const set = new Set(keys)
+  const current = getOfflineQueue().filter(i => !set.has(i.idempotency_key) && !set.has(i.client_queue_id))
+  try {
+    localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(current))
+  } catch { /* ignore */ }
+  return current
 }
 
 export function clearOfflineQueueItem(idempotencyKey: string) {
