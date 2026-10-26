@@ -78,7 +78,6 @@ function roundingAccount(): number {
   try { return accountByRole('rounding') } catch { return accountByRole('fx_gain_loss') }
 }
 
-const INVOICE_TRADE_CODE: Record<string, string> = { Import: 'IMP', Export: 'EXP', 'Cross trade': 'XTR', Domestic: 'DOM' }
 export const DEFAULT_INVOICE_PATTERN = '{prefix}{YY}{seq:5}'
 
 /**
@@ -94,9 +93,8 @@ function nextInvoiceNumber(inv: Rec, prefix: string): string {
   const pattern = String(getSetting('invoice_no_pattern') || DEFAULT_INVOICE_PATTERN)
   const date = inv.invoice_date
   if (pattern === DEFAULT_INVOICE_PATTERN) return formatNumber('invoices', pattern, { prefix }, date)
-  const job = inv.job_id ? q.get(`SELECT trade FROM jobs WHERE id = ?`, inv.job_id) : null
   const branch = (inv.branch_id ? q.val<string>(`SELECT code FROM branches WHERE id = ?`, inv.branch_id) : null) ?? q.val<string>(`SELECT code FROM branches WHERE is_head_office = 1 AND deleted_at IS NULL ORDER BY id LIMIT 1`) ?? 'DXB'
-  const tokens = { prefix, branch, dir: INVOICE_TRADE_CODE[inv.trade || job?.trade || ''] ?? 'GEN' }
+  const tokens = { prefix, branch, dir: 'GEN' } // {dir} had no meaning once the freight trade field was removed; kept so existing patterns still validate
   const key = invoiceSeriesKey(pattern, date)
   const seq = nextSeq(key)
   let pad = 3

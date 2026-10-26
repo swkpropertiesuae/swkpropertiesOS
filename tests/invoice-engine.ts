@@ -1,4 +1,4 @@
-/* Invoice engine: foreign-priced lines billed in AED, rounding, own/series numbering, shipment details, supplementary invoices, e-invoice and PDF.
+/* Invoice engine: foreign-priced lines billed in AED, rounding, own/series numbering, invoices from deal charges, e-invoice and PDF.
    Needs a server on a fresh data directory with STARTER_DATA=false:  npx tsx tests/invoice-engine.ts */
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
@@ -44,36 +44,34 @@ async function main() {
 
   sec('Number series')
   r = await a.put('/api/admin/settings', { invoice_no_pattern: 'bad pattern' }); ok('an invalid number format is rejected', r.status === 400, r.data)
-  r = await a.put('/api/admin/settings', { invoice_no_pattern: '{branch}/{dir}/ES{seq:3}/{seq:3}' }); ok('two counters are rejected', r.status === 400)
-  r = await a.put('/api/admin/settings', { invoice_no_pattern: '{branch}/{dir}/ES{seq:3}' }); ok('custom format saved', r.status === 200 && r.data.invoice_no_pattern === '{branch}/{dir}/ES{seq:3}')
+  r = await a.put('/api/admin/settings', { invoice_no_pattern: '{branch}/INV{seq:3}/{seq:3}' }); ok('two counters are rejected', r.status === 400)
+  r = await a.put('/api/admin/settings', { invoice_no_pattern: '{branch}/INV{seq:3}' }); ok('custom format saved', r.status === 200 && r.data.invoice_no_pattern === '{branch}/INV{seq:3}')
   r = await a.post('/api/finance/invoice-numbering', { next: 101 }); ok('next number set to 101', r.status === 200)
   const mk = async (extra: any) => { const c = await a.post('/api/e/invoices', { doc_type: 'Tax Invoice', party_id: cust, invoice_date: '2026-10-01', currency: 'AED', children: { lines: [line('Charge', 50)] }, ...extra }); return c.data.id as number }
-  r = await a.post(`/api/finance/invoices/${await mk({ trade: 'Import' })}/post`); ok('first import invoice is DXB/IMP/ES101', r.data.invoice_no === 'DXB/IMP/ES101', r.data)
-  r = await a.post(`/api/finance/invoices/${await mk({ trade: 'Export' })}/post`); ok('export invoice continues the same counter: DXB/EXP/ES102', r.data.invoice_no === 'DXB/EXP/ES102', r.data)
-  r = await a.post(`/api/finance/invoices/${await mk({ trade: 'Import', custom_no: 'DXB/IMP/ES102A' })}/post`); ok('own number is used exactly and does not use the counter', r.data.invoice_no === 'DXB/IMP/ES102A', r.data)
-  r = await a.post(`/api/finance/invoices/${await mk({ trade: 'Import' })}/post`); ok('the next series number is 103', r.data.invoice_no === 'DXB/IMP/ES103', r.data)
-  r = await a.post('/api/e/invoices', { doc_type: 'Tax Invoice', party_id: cust, invoice_date: '2026-10-01', custom_no: 'dxb/imp/es103', children: { lines: [line('x', 1)] } }); ok('numbers are unique whatever the letter case', r.status === 400 && /already used/.test(r.data.error), r.data)
+  r = await a.post(`/api/finance/invoices/${await mk({})}/post`); ok('first invoice is DXB/INV101', r.data.invoice_no === 'DXB/INV101', r.data)
+  r = await a.post(`/api/finance/invoices/${await mk({})}/post`); ok('the next invoice continues the same counter: DXB/INV102', r.data.invoice_no === 'DXB/INV102', r.data)
+  r = await a.post(`/api/finance/invoices/${await mk({ custom_no: 'DXB/INV102A' })}/post`); ok('own number is used exactly and does not use the counter', r.data.invoice_no === 'DXB/INV102A', r.data)
+  r = await a.post(`/api/finance/invoices/${await mk({})}/post`); ok('the next series number is 103', r.data.invoice_no === 'DXB/INV103', r.data)
+  r = await a.post('/api/e/invoices', { doc_type: 'Tax Invoice', party_id: cust, invoice_date: '2026-10-01', custom_no: 'dxb/inv103', children: { lines: [line('x', 1)] } }); ok('numbers are unique whatever the letter case', r.status === 400 && /already used/.test(r.data.error), r.data)
   r = await a.post('/api/e/invoices', { doc_type: 'Tax Invoice', party_id: cust, invoice_date: '2026-10-01', custom_no: '<b>1</b>', children: { lines: [line('x', 1)] } }); ok('markup in a number is rejected', r.status === 400)
 
-  sec('Shipment details from a job and from the invoice')
+  sec('Invoices from a deal file')
   const dxb = (await a.get('/api/e/branches')).data.rows[0].id
-  const pol = (await a.get('/api/e/locations?q=THLCH')).data.rows[0].id, pod = (await a.get('/api/e/locations?q=AEJEA')).data.rows[0].id
-  const job = (await a.post('/api/e/jobs', { client_id: cust, branch_id: dxb, department: 'FCL IMPORT', trade: 'Import', job_date: '2026-10-02', hbl_no: 'HBL123', vessel_name: 'MV TEST', voyage_no: '12W', pol_id: pol, pod_id: pod, commodity: 'Toys', gross_weight: 1234.5, children: { containers: [{ container_no: 'TEMU1234567' }, { container_no: 'TEMU7654321' }], charges: [{ kind: 'Revenue', charge_code_id: (await a.get('/api/e/charge_codes?q=FRT-OCN')).data.rows[0].id, qty: 2, rate: 1000, currency: 'USD', ex_rate: 3.6725, party_id: cust }] } })).data
-  r = await a.post('/api/e/invoices', { doc_type: 'Tax Invoice', party_id: cust, job_id: job.id, invoice_date: '2026-10-02', currency: 'AED', ship_vessel: 'TYPED VESSEL', children: { lines: [line('Freight', 1)] } })
-  ok('blank shipment fields are filled from the job', r.data.ship_bl_no === 'HBL123' && r.data.ship_pol?.includes('Laem') && r.data.ship_pod === 'Jebel Ali' && r.data.ship_containers === 'TEMU1234567 | TEMU7654321' && r.data.ship_weight === '1,234.5 KGS' && r.data.ship_cargo === 'Toys' && r.data.trade === 'Import', r.data)
-  ok('what was typed on the invoice wins', r.data.ship_vessel === 'TYPED VESSEL')
-  r = await a.post(`/api/jobs/${job.id}/generate-invoices`, { bill_in_base: true }); ok('job → one AED invoice with the USD charge on the line', r.status === 200 && r.data.length === 1 && r.data[0].currency === 'AED' && r.data[0].children.lines[0].line_ccy === 'USD' && r.data[0].children.lines[0].line_roe === 3.6725 && r.data[0].subtotal === 7345, r.data)
+  const cc = (await a.get('/api/e/charge_codes?pageSize=1')).data.rows[0].id
+  const job = (await a.post('/api/e/jobs', { deal_name: 'Invoice engine deal', deal_type: 'Sale', client_id: cust, branch_id: dxb, deal_date: '2026-10-02', deal_value: 1000000, children: { charges: [{ kind: 'Revenue', charge_code_id: cc, party_id: cust, description: 'Brokerage commission', qty: 1, rate: 20000, currency: 'AED', ex_rate: 1, vat_code_id: ZR }] } })).data
+  ok('deal file created with a revenue charge', job.id > 0 && job.children?.charges?.length === 1, job)
+  r = await a.post(`/api/jobs/${job.id}/generate-invoices`, { bill_in_base: true }); ok('deal → one AED invoice from the unbilled revenue charge', r.status === 200 && r.data.length === 1 && r.data[0].currency === 'AED' && r.data[0].children.lines[0].amount === 20000 && r.data[0].job_id === job.id, r.data)
   const draft = r.data[0]
-  r = await a.post(`/api/finance/invoices/${draft.id}/post`); ok('it posts and marks the job charge invoiced', r.status === 200, r.data)
-  ok('job charge is invoiced', (await a.get(`/api/e/jobs/${job.id}`)).data.children.charges.every((c: any) => c.status === 'Invoiced'))
+  r = await a.post(`/api/finance/invoices/${draft.id}/post`); ok('it posts and marks the deal charge invoiced', r.status === 200, r.data)
+  ok('deal charge is invoiced', (await a.get(`/api/e/jobs/${job.id}`)).data.children.charges.every((c: any) => c.status === 'Invoiced'))
   r = await a.post(`/api/e/invoices`, { doc_type: 'Tax Invoice', party_id: cust, invoice_date: '2026-10-03', currency: 'AED', children: { lines: [line('x', 1)] } }); const posted = await a.post(`/api/finance/invoices/${r.data.id}/post`)
-  r = await a.put(`/api/e/invoices/${posted.data.id}`, { ship_bl_no: 'LATE-BL', version: posted.data.version }); ok('shipment text may be corrected on a posted invoice', r.status === 200 && r.data.ship_bl_no === 'LATE-BL', r.data)
+  r = await a.put(`/api/e/invoices/${posted.data.id}`, { reference: 'LATE-REF', version: posted.data.version }); ok('a reference may be corrected on a posted invoice', r.status === 200 && r.data.reference === 'LATE-REF', r.data)
   r = await a.put(`/api/e/invoices/${posted.data.id}`, { currency: 'USD', version: r.data.version }); ok('accounting fields stay locked after posting', r.status === 400, r.data)
 
   sec('E-invoice and PDF')
   const x = await a.raw(`/api/invoices/${inv1.id}/einvoice.xml`); const xml = await x.text()
   ok('e-invoice XML shows the rounding and the total payable', x.status === 200 && xml.includes('<cbc:PayableRoundingAmount currencyID="AED">-0.48</cbc:PayableRoundingAmount>') && xml.includes('<cbc:PayableAmount currencyID="AED">86258.00</cbc:PayableAmount>') && xml.includes('<cbc:TaxInclusiveAmount currencyID="AED">86258.48</cbc:TaxInclusiveAmount>'), xml.slice(0, 300))
-  const wxml = await a.raw(`/api/invoices/${(await a.get(`/api/e/invoices?q=ES101&pageSize=5`)).data.rows[0].id}/einvoice.xml`)
+  const wxml = await a.raw(`/api/invoices/${(await a.get(`/api/e/invoices?q=INV101&pageSize=5`)).data.rows[0].id}/einvoice.xml`)
   ok('e-invoice file name has no slashes', !/filename="?[^"]*\//.test(wxml.headers.get('content-disposition') ?? ''), wxml.headers.get('content-disposition'))
   const pdf = await a.raw(`/api/pdf/invoices/${inv1.id}?download=1`)
   if (pdf.status === 200) {
