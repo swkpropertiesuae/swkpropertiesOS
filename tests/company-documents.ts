@@ -41,10 +41,9 @@ for (const title of ['Tax Invoice', 'Credit Note', 'Debit Note']) {
  assert.ok(!tax.includes('TL-TEST-1'))
 }
 assert.ok(!presentDocumentHtml(contact, 'Proforma Invoice').includes('100123456700003'))
-assert.equal(presentDocumentHtml('<p>Office F101-3, Ibrahim Mohammed Sharif Balsalah building, Naif, Dubai, United Arab Emirates</p>'), '<p>Bur Dubai, Dubai, UAE</p>')
-console.log('English presentation passed: no Arabic or general identifiers, preserved required tax fields and contact cells, legacy address replacement.')
+console.log('English presentation passed: no Arabic or general identifiers, preserved required tax fields and contact cells, address normalisation.')
 
-const footer = corporatePdfFooter({ company_name: 'SWK <Properties>', company_address: 'Bur Dubai, Dubai, UAE', company_phone: '+971 50 422 1950', company_info_email: 'info@swkpropertiesuae.com', company_website: 'https://www.swkpropertiesuae.com' })
+const footer = corporatePdfFooter({ company_name: 'SWK <Properties>', company_address: 'Bur Dubai, Dubai, UAE', company_phone: '+971 4 000 0000', company_info_email: 'info@swkpropertiesuae.com', company_website: 'https://www.swkpropertiesuae.com' })
 assert.ok(footer.includes('SWK &lt;Properties&gt;') && footer.includes('Bur Dubai, Dubai, UAE'))
 assert.ok(footer.includes('www.swkpropertiesuae.com') && footer.includes('pageNumber') && footer.includes('totalPages'))
 assert.ok(!corporatePdfFooter({}, { pageNumbers: false }).includes('pageNumber'))

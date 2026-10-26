@@ -52,7 +52,6 @@ export function seedCompliance(opts: { demo?: boolean } = {}) {
     company_legal_form: cur('company_legal_form') || 'Limited Liability Company – Single Owner (LLC – SO)',
     licence_authority: cur('licence_authority') || 'Dubai Economy and Tourism (DET)',
     company_address: cur('company_address'),
-    company_phone: cur('company_phone') || '+971 50 422 1950',
   })
   for (const [en, ar, covers, notes] of ACTIVITIES)
     if (!q.val(`SELECT 1 FROM licence_activities WHERE activity_en = ? AND deleted_at IS NULL`, en)) createRecord(getDef('licence_activities'), { activity_en: en, activity_ar: ar, covers, notes, status: 'Active', source: 'Trade licence' }, SYSTEM_CTX)

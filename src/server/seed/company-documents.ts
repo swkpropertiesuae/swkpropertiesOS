@@ -4,13 +4,9 @@ import { createRecord, patchRecord, getDef, SYSTEM_CTX } from '../engine'
 
 /** Company profile facts. Licence, registration and tax numbers are entered by the administrator, never seeded. */
 export function seedCompanyDocuments() {
-  const address = String(getSetting('company_address') ?? '')
   const patch: Record<string, unknown> = {}
-  if (!address || ['Dubai, United Arab Emirates'].includes(address))
-    patch.company_address = 'Office F101-3, Ibrahim Mohammed Sharif Balsalah building, Naif, Dubai, United Arab Emirates'
   const facts = {
     company_name_ar: 'إس دبليو كي العقارية ش.ذ.م.م',
-    company_address_ar: 'مكتب رقم F101-3، ملك ابراهيم محمد شريف بالسلح، نايف، دبي، الإمارات العربية المتحدة',
     company_legal_form: 'Limited Liability Company - Single Owner (LLC - SO)',
   }
   for (const [key, value] of Object.entries(facts)) if (!getSetting(key)) patch[key] = value

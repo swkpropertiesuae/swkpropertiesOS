@@ -17,7 +17,7 @@ async function main() {
   r = await a.get('/api/e/accounts?pageSize=1'); ok('chart of accounts is installed', r.data.total > 40, r.data.total)
   r = await a.get('/api/e/doc_templates?pageSize=1'); ok('document templates are installed', r.data.total > 40, r.data.total)
   r = await a.get('/api/e/branches'); ok('head office branch exists', r.data.rows.some((b: any) => b.code === 'DXB'), r.data.rows)
-  r = await a.get('/api/admin/settings'); ok('company profile is filled in', r.data.company_phone === '+971 50 422 1950' && !!r.data.company_email, r.data)
+  r = await a.get('/api/admin/settings'); ok('company profile is filled in', !!r.data.company_email && !!r.data.company_address && !r.data.company_phone, r.data)
   r = await a.post('/api/admin/business-data/load-starter'); ok('no starter data is shipped: loading is refused', r.status === 400 && /not loaded|already/i.test(r.data.error), r.data)
 
   sec('Create business records')
@@ -39,7 +39,7 @@ async function main() {
   r = await a.get('/api/e/accounts?pageSize=1'); ok('chart of accounts is untouched', r.data.total > 40)
   r = await a.get('/api/e/users'); ok('users are untouched', r.data.total === 2)
   r = await a.get('/api/e/doc_templates?pageSize=1'); ok('document templates are untouched', r.data.total > 40)
-  r = await a.get('/api/admin/settings'); ok('company settings are untouched', r.data.company_phone === '+971 50 422 1950')
+  r = await a.get('/api/admin/settings'); ok('company settings are untouched', r.data.company_trn === '100123456700003')
   r = await a.get('/api/admin/audit?action=business-reset'); ok('the reset is in the audit log', r.data.total >= 1, r.data)
   r = await a.post('/api/admin/business-data/reset', { confirm: 'DELETE ALL BUSINESS DATA', load_starter: true }); ok('reset with load_starter still succeeds and loads nothing', r.status === 200 && r.data.starter?.loaded === false, r.data)
   finish()
