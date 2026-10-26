@@ -1,8 +1,6 @@
 # SWK OS – SWKPROPOS
 
-A sovereign, agentic operating system for SWK Properties' UAE real estate enterprise. A comprehensive property management and real estate OS with 14 core SME modules, agentic workflow orchestration, and full UAE regulatory compliance.
-
-It is a purpose-built real estate operating system with sovereign agent capabilities, financial substrate, and governed intelligence layers.
+An operating system for SWK Properties' UAE real estate business: property management, brokerage, finance and HR in one app, with 14 core modules, workflow automation, AI assistants and UAE regulatory controls.
 
 ---
 
@@ -11,13 +9,12 @@ It is a purpose-built real estate operating system with sovereign agent capabili
 SWK OS – SWKPROPOS is a complete real estate operating system that covers every function an SME runs on: from company administration and CRM through accounting, procurement, HR, project management, and communications. It is presented as 14 core modules, branded as SWK OS, with a dashboard built on the SWK OS design system (Instrument Sans + Plus Jakarta Sans fonts, emerald `#007b52` + graphite `#161d1a` palette).
 
 The system includes:
-- **14 seeded SWK properties** across UAE locations (Dubai Marina, Palm Jumeirah, Downtown Dubai, Dubai Hills Estate, Arabian Ranches, JVC, Business Bay)
-- **Agent harness** (Harnis) for tenant isolation, approval gates, and sandboxed code execution
-- **Data fabric** (MCP gateway) with DLD API integration, Emirates ID and broker license validation
-- **ML valuation engine** with 20+ feature-based pricing and mispricing explorer
-- **ForestSwarm orchestration** — 17-stage agent tree from Lead Capture → Deal Closed, with Cowork Copilot
-- **Blockchain asset rails** — hash registry, verifiable credentials, XRPL/Stacks registry
-- **Governance fabric** — UAE AI Act Tier classification (Tiers 1-4), PDPL consent & DSAR workflows, RERA AI controls
+- **UAE brokerage workflows**: listings and mandates, leads and viewings, transactions, leases and PDC cheques, owner statements, commissions, DLD filings, KYC and goAML/AML logging, RERA permit tracking
+- **Finance**: invoices, VAT, bank import and feeds, UAE PINT AE e-invoicing, WPS salary files, year-end close
+- **AI employees** (Jarvis and role agents) with a reviewed tool list: read tools run freely, internal writes follow the agent's autonomy setting, and anything external (e-mail, WhatsApp) needs approval
+- **Integrations**: Resend/SMTP, Cloudflare R2, Supabase mirror, WhatsApp Cloud API, voice receptionist
+- **SWK ONE**: Android field app (Capacitor) with duty-location sharing, reception QR check-in and offline queue
+- **Installable web app (PWA)** with an offline page
 
 ---
 
@@ -48,11 +45,11 @@ Each module is in `packages/ID/` with a `module.json` containing its description
 
 ```bash
 npm install
-npm run dev              # API on :8081 + web on :5173
+npm run dev              # API on :8080 + web on :5173
 npm run build && npm start   # production
 ```
 
-The API runs on port **8081** (configurable via `.env`). The web interface runs on port **5173** with proxy to the API.
+The API runs on port **8080** (set `PORT` in `.env` to change it; the dev web server follows `PORT`). The web interface runs on port **5173** with proxy to the API.
 
 ### Configuration
 
@@ -60,29 +57,26 @@ Copy `.env.example` to `.env` and adjust:
 
 ```
 NODE_ENV=production
-PORT=8081
+PORT=8080
 DATA_DIR=./data
 PG_SCHEMA=swk
-PUBLIC_URL=http://localhost:8081
+PUBLIC_URL=http://localhost:8080
 BASE_CURRENCY=AED
 STARTER_DATA=false
 ADMIN_EMAIL=admin@swkpropertiesuae.com
-ADMIN_PASSWORD=SWK@Admin2026
+ADMIN_PASSWORD=<choose a strong password>
 MANAGER_EMAIL=manager@swkpropertiesuae.com
-MANAGER_PASSWORD=SWK@Manager2026
+MANAGER_PASSWORD=<choose a strong password>
+APP_SECRET=<long random string>
 DEMO_ENABLED=false
-DEMO_EMAIL=demo@swkpropertiesuae.com
-DEMO_PASSWORD=Demo@SWK2026
 ```
 
-### Sign-in Accounts
+### Sign-in accounts
 
-| Account | Email | Password | Workspace |
-|---|---|---|---|
-| Administrator (all access) | admin@swkpropertiesuae.com | SWK@Admin2026 | Production – clean, zero mock data |
-| Manager (all access) | manager@swkpropertiesuae.com | SWK@Manager2026 | Production – clean, zero mock data |
+The first start creates an Administrator and a Manager account (`ADMIN_EMAIL` / `MANAGER_EMAIL`) with a clean, empty workspace.
 
-Production accounts must set their own password at first sign-in, or set `ADMIN_PASSWORD` / `MANAGER_PASSWORD` before the first start.
+- **Production** (`NODE_ENV=production`): set `ADMIN_PASSWORD` / `MANAGER_PASSWORD` before the first start. If you do not, a random one-time password is generated and printed once in the server log. Either way the account must change its password at first sign-in.
+- **Development** (any other `NODE_ENV`): the documented development defaults in `src/server/config.ts` apply. Never expose a development instance to a network.
 
 ---
 
@@ -107,10 +101,10 @@ All CSS in `src/web/index.css` follows this system — buttons, cards, tables, a
 SWK OS/
 ├── packages/              # 14 core SWKPROPOS modules (packages/01 → packages/14)
 ├── src/                   # Source code
-│   ├── server/            # Fastify API server (port 8081)
+│   ├── server/            # Fastify API server (port 8080)
 │   └── web/               # React + Vite frontend (port 5173)
 ├── data/                  # Runtime data directory
-├── .env                   # Configuration (PORT=8081, AED currency, credentials)
+├── .env                   # Configuration (see .env.example)
 ├── package.json           # swkpropos / SWK OS
 ├── vite.config.ts         # Vite config
 ├── index.css              # Complete SWK OS design system stylesheet
@@ -125,9 +119,9 @@ SWK OS/
 
 ```bash
 npm run typecheck    # TypeScript validation
-npm test             # 135 API smoke checks
-npm run test:compliance  # 65 UAE compliance rule checks
-npm run test:handover  # 48 handover/approval checks
+npm test             # API smoke checks (needs a running server)
+npm run test:compliance  # UAE compliance rule checks
+npm run test:handover  # handover/approval checks
 npm run test:all     # Complete acceptance runner
 npm run build:api    # Build API to dist/server/index.mjs
 npm run build:web    # Build web frontend to dist/web/
@@ -152,7 +146,7 @@ Key docs are available in the `docs/` directory and referenced from the app:
 
 ## 🏢 About SWK Properties
 
-This operating system is tailored for **SWK Properties**, a UAE real estate enterprise. The system incorporates UAE-specific compliance (DLD regulations, 5% VAT, escrow accounts, Ejari structures, RERA BRN tracking) and is designed as a sovereign agentic OS — meaning it has agent harnessing, data fabric, intelligence layer, transaction surfaces, asset rails, and governance fabric all unified on one regulatory and financial substrate.
+This operating system is tailored for **SWK Properties**, a UAE real estate enterprise. The system incorporates UAE-specific compliance (DLD regulations, 5% VAT, escrow accounts, Ejari structures, RERA BRN tracking). Rules are indicative defaults: confirm them with RERA, DLD and your adviser (see `docs/UAE-REAL-ESTATE.md`).
 
 The OS is branded as **SWK OS** and presents 14 SME modules that any growing company can run on, from a single-entity startup to a multi-branch real estate enterprise.
 
@@ -168,7 +162,9 @@ The OS is branded as **SWK OS** and presents 14 SME modules that any growing com
 - API key support
 - Helmet HTTP security headers
 - Rate limiting per endpoint
-- Append-only audit trail (OpenTelemetry)
+- Audit trail of every create, update, delete and sign-in
+- Secrets saved in Integrations are encrypted (AES-256-GCM)
+- Security details and reporting: see `SECURITY.md`
 - Backups via Administration → Backup
 - Optional PostgreSQL production deployment
 
@@ -187,8 +183,8 @@ npm start
 docker compose up -d --build
 ```
 
-The API esbuild target is `node22`. The web Vite build outputs to `dist/web/`. Both builds are verified on every `npm run dev` cycle.
+The API esbuild target is `node22`. The web Vite build outputs to `dist/web/`. CI typechecks, builds and runs the acceptance suites on every push.
 
 ---
 
-*SWK OS – SWKPROPOS. Sovereign agentic operating system for UAE real estate enterprises. 14 core SME modules.*
+*SWK OS – SWKPROPOS. Operating system for UAE real estate businesses.*

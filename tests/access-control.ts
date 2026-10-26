@@ -1,6 +1,6 @@
 /* Access control for company-wide endpoints: a customer-portal user and a role without CRM/finance access must not read other people's data.
    Needs a server on a fresh data directory with STARTER_DATA=false:  npx tsx tests/access-control.ts */
-import { Api, ok, sec, finish } from './_api'
+import { Api, BASE, ok, sec, finish } from './_api'
 
 async function main() {
   const a = new Api()
@@ -54,6 +54,34 @@ async function main() {
   r = await w.get('/api/e/users/lookup?q='); ok('assignee pickers still list colleagues', r.status === 200 && r.data.length >= 2, r.data)
   r = await w.get('/api/e/leases/lookup?q='); ok('leases (own module) can be picked', r.status === 200)
   r = await w.get('/api/finance/bank/summary'); ok('bank balances are closed to a property-management role', r.status === 403)
+
+  sec('Limited administrators cannot escalate')
+  const limitedRole = (await a.post('/api/e/roles', { name: 'Limited admin', permissions: { dashboard: ['view'], admin: ['view', 'edit', 'create'] } })).data
+  await a.post('/api/e/users', { name: 'Limited Admin', email: 'limited@a.example', password: 'Limited-Pass-2026!', role_id: limitedRole.id, branch_id: dxb, active: true, must_change_password: false })
+  const l = new Api()
+  ok('limited administrator signs in', await l.login('limited@a.example', 'Limited-Pass-2026!'))
+  const fullAdminId = (await a.get('/api/e/users?pageSize=50')).data.rows.find((u: any) => u.email === 'admin@swkpropertiesuae.com').id
+  r = await l.post('/api/e/users', { name: 'Sneaky', email: 'sneaky@a.example', password: 'Sneaky-Pass-2026!', role_id: roleId('Admin'), branch_id: dxb, active: true, must_change_password: false }); ok('cannot create a user with a full-access role', r.status === 400, r.data)
+  r = await l.put(`/api/e/users/${fullAdminId}`, { password: 'Hijacked-Pass-2026!' }); ok('cannot change the password of a full administrator', r.status === 400, r.data)
+  r = await l.post(`/api/admin/users/${fullAdminId}/reset-2fa`); ok('cannot reset 2-step verification of a full administrator', r.status === 400, r.data)
+  r = await l.post(`/api/admin/users/${fullAdminId}/sign-out`); ok('cannot sign out a full administrator', r.status === 400, r.data)
+  r = await l.post('/api/e/roles', { name: 'Too much', permissions: { finance: ['view'] } }); ok('cannot create a role with rights the creator lacks', r.status === 400, r.data)
+  r = await l.post('/api/e/roles', { name: 'Within reach', permissions: { admin: ['view'] } }); ok('can create a role within own rights', r.status === 201, r.data)
+  r = await l.get('/api/health/db'); ok('database health is visible to administrators', r.status === 200 && 'avg_query_ms' in r.data, r.data)
+  r = await w.get('/api/health/db'); ok('database health is closed to other staff', r.status === 403)
+  r = await fetch(BASE + '/api/health/db'); ok('database health is closed to anonymous callers', r.status === 401)
+
+  sec('Tracking links and sessions')
+  const t1 = (await a.post(`/api/jobs/${job}/tracking-token`)).data, t2 = (await a.post(`/api/jobs/${job}/tracking-token`)).data
+  ok('opening the share dialog again keeps the same link', t1.token && t1.token === t2.token, [t1, t2])
+  const t3 = (await a.post(`/api/jobs/${job}/tracking-token`, { rotate: true })).data
+  ok('a link is replaced only when rotation is requested', t3.token && t3.token !== t1.token)
+  r = await fetch(`${BASE}/api/public/track/${t1.token}`); ok('the replaced link stops working', r.status === 404)
+  const login = await fetch(BASE + '/api/auth/login', { method: 'POST', headers: { 'content-type': 'application/json', 'x-swk-client': 'android' }, body: JSON.stringify({ email: 'pm@a.example', password: 'Manager-Pass-2026!' }) })
+  const lj: any = await login.json(); const hdr = { 'x-swk-session': lj.sessionToken, 'x-swk-client': 'android', 'content-type': 'application/json' }
+  r = { status: (await fetch(BASE + '/api/auth/me', { headers: hdr })).status, data: null }; ok('app session token works', r.status === 200)
+  await fetch(BASE + '/api/auth/logout', { method: 'POST', headers: hdr, body: '{}' })
+  r = { status: (await fetch(BASE + '/api/auth/me', { headers: hdr })).status, data: null }; ok('signing out from the app ends the session on the server', r.status === 401)
   finish()
 }
 main().catch(e => { console.error(e); process.exit(1) })

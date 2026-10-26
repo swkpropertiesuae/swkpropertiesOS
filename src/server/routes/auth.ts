@@ -5,7 +5,7 @@ import { COOKIE, DEMO_PREFIX } from '../app'
 import { runInDb, inDemo } from '../db'
 import { getDemoDb } from '../demo/workspace'
 import { config } from '../config'
-import { attemptLogin, createSession, destroySession, destroyUserSessions, hashPassword, newTotpSecret, sessionHash, validatePasswordStrength, verifyPassword, verifyTotp } from '../auth'
+import { attemptLogin, createSession, destroySessionByHash, destroyUserSessions, hashPassword, newTotpSecret, sessionHash, validatePasswordStrength, verifyPassword, verifyTotp } from '../auth'
 import { bad, HttpError, nowIso } from '../util'
 import { audit, getDef } from '../engine'
 import { body } from './helpers'
@@ -45,8 +45,8 @@ export default async function (app: FastifyInstance) {
   })
 
   app.post('/api/auth/logout', async (req, reply) => {
-    const t = req.cookies?.[COOKIE]
-    if (t) destroySession(t.startsWith(DEMO_PREFIX) ? t.slice(DEMO_PREFIX.length) : t)
+    // The session may have arrived as a cookie (web) or as the x-swk-session header (Android); the request hook already resolved either to its hash.
+    if (req.sessionHash) destroySessionByHash(req.sessionHash)
     reply.clearCookie(COOKIE, { path: '/' })
     return { ok: true }
   })

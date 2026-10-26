@@ -10,7 +10,7 @@ import { assertCan, getDef, getRecord, insertRow, labelsFor, can } from '../engi
 import { bad, forbidden, notFound, nowIso, todayStr } from '../util'
 import { audit } from '../engine'
 import { idOf } from './helpers'
-import { openStored, persistUpload } from '../integrations/storage'
+import { openStored, persistUpload, removeStored } from '../integrations/storage'
 
 const BLOCKED = new Set(['exe', 'bat', 'cmd', 'com', 'msi', 'scr', 'js', 'mjs', 'vbs', 'sh', 'ps1', 'jar', 'dll', 'html', 'htm', 'svg', 'php', 'apk', 'app', 'iso', 'lnk'])
 const INLINE: Record<string, string> = { pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', txt: 'text/plain; charset=utf-8' }
@@ -18,32 +18,45 @@ const INLINE: Record<string, string> = { pdf: 'application/pdf', png: 'image/png
 export default async function (app: FastifyInstance) {
   app.post('/api/files', async (req) => {
     if (!req.isMultipart()) throw bad('Expected a multipart upload')
+    // Cheap gate before any byte is written: the record-level check below needs the form fields, which can arrive after the file.
+    const mayUpload = can(req.user, 'documents', 'create') || Object.values(ENTITIES).some(e => can(req.user, e.module, 'edit'))
+    if (!mayUpload) throw forbidden('You do not have permission to upload files')
     const out: any[] = []
     const fields: Record<string, string> = {}
     const saved: { name: string; stored: string; size: number; mime: string }[] = []
+    const pending: string[] = [] // files on disk that no record points to yet
     const dayDir = path.join(dirs.uploads, todayStr().slice(0, 7))
     fs.mkdirSync(dayDir, { recursive: true })
-    for await (const part of req.parts()) {
-      if (part.type === 'field') { fields[part.fieldname] = String(part.value); continue }
-      const orig = path.basename(part.filename || 'file').replace(/[^\w.\- ()]+/g, '_').slice(0, 150)
-      const ext = path.extname(orig).slice(1).toLowerCase()
-      if (BLOCKED.has(ext)) { part.file.resume(); throw bad(`Files of type .${ext} are not allowed`) }
-      const stored = path.join(todayStr().slice(0, 7), crypto.randomBytes(16).toString('hex') + (ext ? '.' + ext : ''))
-      const full = path.join(dirs.uploads, stored)
-      await pipeline(part.file, fs.createWriteStream(full))
-      if ((part.file as any).truncated) { fs.unlinkSync(full); throw bad(`File exceeds the ${config.maxUploadMb} MB limit`) }
-      const size = fs.statSync(full).size
-      saved.push({ name: orig, stored: await persistUpload(stored, part.mimetype), size, mime: part.mimetype })
+    let link: { entity: string; id: number; label: string | null } | null = null
+    try {
+      for await (const part of req.parts()) {
+        if (part.type === 'field') { fields[part.fieldname] = String(part.value); continue }
+        const orig = path.basename(part.filename || 'file').replace(/[^\w.\- ()]+/g, '_').slice(0, 150)
+        const ext = path.extname(orig).slice(1).toLowerCase()
+        if (BLOCKED.has(ext)) { part.file.resume(); throw bad(`Files of type .${ext} are not allowed`) }
+        const stored = path.join(todayStr().slice(0, 7), crypto.randomBytes(16).toString('hex') + (ext ? '.' + ext : ''))
+        const full = path.join(dirs.uploads, stored)
+        pending.push(stored)
+        await pipeline(part.file, fs.createWriteStream(full))
+        if ((part.file as any).truncated) throw bad(`File exceeds the ${config.maxUploadMb} MB limit`)
+        const size = fs.statSync(full).size
+        const kept = await persistUpload(stored, part.mimetype)
+        pending[pending.indexOf(stored)] = kept
+        saved.push({ name: orig, stored: kept, size, mime: part.mimetype })
+      }
+      if (!saved.length) throw bad('No file received')
+      const entity = fields.link_entity, linkId = Number(fields.link_id)
+      if (entity) {
+        const def = getDef(entity)
+        assertCan(req.ctx, def.module, 'edit')
+        const r = getRecord(def, idOf(linkId), req.ctx, { children: false })
+        link = { entity, id: linkId, label: r._title }
+      } else assertCan(req.ctx, 'documents', 'create')
+    } catch (e) {
+      await Promise.all(pending.map(n => removeStored(n)))
+      throw e
     }
-    if (!saved.length) throw bad('No file received')
-    const entity = fields.link_entity, linkId = Number(fields.link_id)
-    let label: string | null = null
-    if (entity) {
-      const def = getDef(entity)
-      assertCan(req.ctx, def.module, 'edit')
-      const r = getRecord(def, idOf(linkId), req.ctx, { children: false })
-      label = r._title
-    } else assertCan(req.ctx, 'documents', 'create')
+    const entity = link?.entity, linkId = link?.id ?? 0, label = link?.label ?? null
     for (const f of saved) {
       const prev = q.get(`SELECT MAX(doc_version) v FROM attachments WHERE file_name = ? AND link_entity IS ? AND link_id IS ? AND deleted_at IS NULL`, f.name, entity ?? null, entity ? linkId : null)
       const id = insertRow(getDef('attachments'), { file_name: f.name, stored_name: f.stored, size: f.size, mime: f.mime, category: fields.category || 'General', link_entity: entity ?? null, link_id: entity ? linkId : null, link_label: label, expiry_date: fields.expiry_date || null, note: fields.note || null, doc_version: (prev?.v ?? 0) + 1 }, req.ctx)

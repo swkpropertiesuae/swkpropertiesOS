@@ -11,7 +11,7 @@ import { bad, nowIso, safeJson, todayStr, notFound } from '../util'
 import { idOf, need } from './helpers'
 import { retryOutbox, verifySmtp, smtpConfigured } from '../mailer'
 import { generatePayroll, lastIssued } from '../domain/misc'
-import { destroyUserSessions } from '../auth'
+import { destroyUserSessions, loadUser } from '../auth'
 import { ENTITY_LIST } from '../../shared/entities'
 
 export default async function (app: FastifyInstance) {
@@ -93,9 +93,17 @@ export default async function (app: FastifyInstance) {
   app.get('/api/admin/login-events', async (req) => { need(req, 'admin', 'view'); return q.all(`SELECT * FROM login_events ORDER BY id DESC LIMIT 200`) })
 
   // ---- user administration
-  app.post('/api/admin/users/:id/unlock', async (req) => { need(req, 'admin', 'edit'); const id = idOf((req.params as any).id); q.run(`UPDATE users SET failed_logins = 0, locked_until = NULL WHERE id = ?`, id); audit(req.ctx, getDef('users'), id, 'unlock', null, ''); return { ok: true } })
-  app.post('/api/admin/users/:id/reset-2fa', async (req) => { need(req, 'admin', 'edit'); const id = idOf((req.params as any).id); q.run(`UPDATE users SET totp_secret = NULL WHERE id = ?`, id); audit(req.ctx, getDef('users'), id, 'reset-2fa', null, ''); return { ok: true } })
-  app.post('/api/admin/users/:id/sign-out', async (req) => { need(req, 'admin', 'edit'); const id = idOf((req.params as any).id); destroyUserSessions(id); audit(req.ctx, getDef('users'), id, 'force-signout', null, ''); return { ok: true } })
+  /** An administrator with limited rights must not be able to lock out, unlock or strip 2-step verification from a full administrator. */
+  const manageUser = (req: any) => {
+    need(req, 'admin', 'edit')
+    const id = idOf(req.params.id)
+    const target = loadUser(id)
+    if (target?.permissions === '*' && req.user.permissions !== '*') throw bad('Only a full administrator can change another full administrator')
+    return id
+  }
+  app.post('/api/admin/users/:id/unlock', async (req) => { const id = manageUser(req); q.run(`UPDATE users SET failed_logins = 0, locked_until = NULL WHERE id = ?`, id); audit(req.ctx, getDef('users'), id, 'unlock', null, ''); return { ok: true } })
+  app.post('/api/admin/users/:id/reset-2fa', async (req) => { const id = manageUser(req); q.run(`UPDATE users SET totp_secret = NULL WHERE id = ?`, id); audit(req.ctx, getDef('users'), id, 'reset-2fa', null, ''); return { ok: true } })
+  app.post('/api/admin/users/:id/sign-out', async (req) => { const id = manageUser(req); destroyUserSessions(id); audit(req.ctx, getDef('users'), id, 'force-signout', null, ''); return { ok: true } })
 
   // ---- API keys: show the key once at creation
   app.post('/api/admin/api-keys', async (req) => {

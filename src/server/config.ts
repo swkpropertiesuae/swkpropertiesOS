@@ -1,5 +1,6 @@
 import path from 'node:path'
 import fs from 'node:fs'
+import crypto from 'node:crypto'
 
 const env = process.env
 const bool = (v: string | undefined, d: boolean) => (v === undefined || v === '' ? d : ['1', 'true', 'yes', 'on'].includes(v.toLowerCase()))
@@ -8,6 +9,12 @@ if (process.env.REQUIRE_DATABASE_URL === 'true' && !process.env.DATABASE_URL) {
   // Hosts with a disposable disk (e.g. Cloudflare Containers) set this so a missing secret can never silently create a throw-away SQLite database.
   throw new Error('DATABASE_URL is required on this host but is not set. Refusing to start on a local database file.')
 }
+
+/** In production the well-known default passwords are never used: without an explicit env value a random one is generated and printed once at first start. */
+const production = (env.NODE_ENV ?? 'development') === 'production'
+const initialPassword = (value: string | undefined, fallback: string) => value ? { password: value, generated: false } : production ? { password: crypto.randomBytes(12).toString('base64url') + 'aA1', generated: true } : { password: fallback, generated: false }
+const adminInit = initialPassword(env.ADMIN_PASSWORD, 'SWK@Admin2026')
+const managerInit = initialPassword(env.MANAGER_PASSWORD, 'SWK@Manager2026')
 
 export const config = {
   env: env.NODE_ENV ?? 'development',
@@ -33,10 +40,12 @@ export const config = {
   accounts: {
     adminEmail: (env.ADMIN_EMAIL ?? 'admin@swkpropertiesuae.com').toLowerCase(),
     adminName: env.ADMIN_NAME ?? 'System Administrator',
-    adminPassword: env.ADMIN_PASSWORD ?? 'SWK@Admin2026',
+    adminPassword: adminInit.password,
+    adminPasswordGenerated: adminInit.generated,
     managerEmail: (env.MANAGER_EMAIL ?? 'manager@swkpropertiesuae.com').toLowerCase(),
     managerName: env.MANAGER_NAME ?? 'Operations Manager',
-    managerPassword: env.MANAGER_PASSWORD ?? 'SWK@Manager2026',
+    managerPassword: managerInit.password,
+    managerPasswordGenerated: managerInit.generated,
   },
   smtp: {
     host: env.SMTP_HOST ?? '',

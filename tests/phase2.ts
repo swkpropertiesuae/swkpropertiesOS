@@ -3,6 +3,7 @@ import { signInReady } from './login-ready'
    Start the API with:  WA_GRAPH_URL=http://localhost:9099/graph RESEND_API_URL=http://localhost:9099/resend R2_ENDPOINT=http://localhost:9099/r2  (fresh data dir)
    then: npx tsx tests/phase2.ts */
 import http from 'node:http'
+import crypto from 'node:crypto'
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:8080'
 const MOCK = 'http://localhost:9099'
@@ -52,7 +53,9 @@ function ok(name: string, cond: any, extra?: any) { if (cond) { pass++; console.
 const sec = (t: string) => console.log('\n' + t)
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
 const reply = (content: string | null, tool_calls?: { name: string; args: any }[]) => ({ choices: [{ message: { role: 'assistant', content, tool_calls: tool_calls?.map((c, i) => ({ id: 'c' + i, type: 'function', function: { name: c.name, arguments: JSON.stringify(c.args) } })) } }], usage: { total_tokens: 50 } })
-const waPost = (value: any) => fetch(BASE + '/api/public/whatsapp', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ entry: [{ changes: [{ value }] }] }) })
+const WA_SECRET = 'wa-app-secret-for-tests'
+const waSign = (raw: string) => 'sha256=' + crypto.createHmac('sha256', WA_SECRET).update(raw).digest('hex')
+const waPost = (value: any) => { const raw = JSON.stringify({ entry: [{ changes: [{ value }] }] }); return fetch(BASE + '/api/public/whatsapp', { method: 'POST', headers: { 'content-type': 'application/json', 'x-hub-signature-256': waSign(raw) }, body: raw }) }
 
 async function main() {
   await new Promise<void>(r => server.listen(9099, r))
@@ -69,7 +72,7 @@ async function main() {
   r = await api('PUT', '/api/admin/settings', {
     mail_provider: 'resend', resend_api_key: 're_test', resend_from: 'SWK OS <ops@swk.test>',
     ai_enabled: true, ai_provider: 'custom', ai_base_url: MOCK + '/v1', ai_api_key: 'k', ai_model: 'mock',
-    wa_enabled: true, wa_phone_number_id: '123', wa_access_token: 'tok', wa_verify_token: 'vt', wa_owner_numbers: '971500000001', wa_auto_leads: true, wa_staff_bot: true, wa_customer_bot: true,
+    wa_enabled: true, wa_phone_number_id: '123', wa_access_token: 'tok', wa_verify_token: 'vt', wa_app_secret: WA_SECRET, wa_owner_numbers: '971500000001', wa_auto_leads: true, wa_staff_bot: true, wa_customer_bot: true,
     company_trn: '100123456700003', einv_enabled: true, einv_endpoint: MOCK + '/asp', einv_api_key: 'asp',
     r2_account_id: 'acct', r2_access_key_id: 'ak', r2_secret_access_key: 'sk', r2_bucket: 'swk-test', supabase_url: MOCK, supabase_service_key: 'svc',
     wps_employer_id: '0000012345678', wps_bank_routing: '123456789',
@@ -137,9 +140,11 @@ async function main() {
   await waPost({ messages: [{ from: '971500000001', id: 'wamid.in3', type: 'text', text: { body: 'how is cash today?' } }] }); await sleep(700)
   ok('owner free text is answered by Jarvis', calls.some(c => /Cash is fine/.test(c.body?.text?.body ?? '')), calls.map(c => c.body?.text?.body))
   r = await api('GET', '/api/whatsapp/threads'); ok('WhatsApp inbox lists conversations', r.data.threads.length >= 2, r.data.threads?.length)
-  await api('PUT', '/api/admin/settings', { wa_app_secret: 'shh' })
-  r = await fetch(BASE + '/api/public/whatsapp', { method: 'POST', headers: { 'content-type': 'application/json', 'x-hub-signature-256': 'sha256=deadbeef' }, body: JSON.stringify({ entry: [] }) }); ok('bad signature rejected once app secret is set', r.status === 401)
+  r = await fetch(BASE + '/api/public/whatsapp', { method: 'POST', headers: { 'content-type': 'application/json', 'x-hub-signature-256': 'sha256=deadbeef' }, body: JSON.stringify({ entry: [] }) }); ok('bad signature rejected', r.status === 401)
+  r = await fetch(BASE + '/api/public/whatsapp', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ entry: [] }) }); ok('unsigned webhook rejected', r.status === 401)
   await api('PUT', '/api/admin/settings', { wa_app_secret: '' })
+  r = await fetch(BASE + '/api/public/whatsapp', { method: 'POST', headers: { 'content-type': 'application/json', 'x-hub-signature-256': waSign('{"entry":[]}') }, body: '{"entry":[]}' }); ok('webhook rejected when no app secret is configured', r.status === 401)
+  await api('PUT', '/api/admin/settings', { wa_app_secret: WA_SECRET })
   r = await api('POST', '/api/whatsapp/send', { to: '0555000111', text: 'Hello from the inbox' }); ok('manual send from inbox (local number normalised)', r.status === 200, r.data)
   ok('number normalised to 971…', calls.some(c => c.body?.to === '971555000111' && /Hello from the inbox/.test(c.body?.text?.body ?? '')))
 

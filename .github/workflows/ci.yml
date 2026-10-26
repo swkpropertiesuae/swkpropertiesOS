@@ -10,6 +10,8 @@ jobs:
       - run: npm ci
       - name: Install OCR acceptance dependencies
         run: sudo apt-get update && sudo apt-get install -y tesseract-ocr tesseract-ocr-eng poppler-utils
+      - name: Audit runtime dependencies
+        run: npm audit --omit=dev --audit-level=high
       - run: npm run typecheck
       - run: npm run build
       - name: Check launcher, calendar and documents in desktop and mobile browsers
