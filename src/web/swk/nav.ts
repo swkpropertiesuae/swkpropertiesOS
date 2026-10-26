@@ -4,7 +4,7 @@ import {
   UserPlus, Users, Target, PhoneCall, MessageCircle, Mail, FilePen, CalendarCheck, HandCoins, FileSignature, FileCheck, ShieldCheck,
   KeyRound, CalendarClock, Wallet, ReceiptText, Wrench, ClipboardCheck, DoorOpen, UserRoundCog, FileBarChart, Percent, Receipt, FileInput,
   Banknote, Scale, BadgeCheck, ScrollText, FileStack, Trophy, IdCard, Clock, Plane, Calculator, FileCode2, BarChart3, Settings,
-  ShieldHalf, History, Plug, DatabaseBackup, Building, Gavel, Layers,
+  ShieldHalf, ShieldAlert, History, Plug, DatabaseBackup, Building, Gavel, Layers,
 } from 'lucide-react'
 
 export type NavItem = { label: string; to: string; icon: LucideIcon; module?: string; isNew?: boolean; desc?: string }
@@ -43,6 +43,7 @@ export const SWK_NAV: NavSection[] = [
     { label: 'Deal Files', to: '/e/jobs', icon: FileSignature, module: 'sales' },
     { label: 'Sales Contracts (Form F)', to: '/e/sales_contracts', icon: FileCheck, module: 'transactions' },
     { label: 'Escrow Accounts', to: '/e/escrow_accounts', icon: ShieldCheck, module: 'transactions' },
+    { label: 'DLD Filings', to: '/e/dld_filings', icon: FileCheck, module: 'transactions', isNew: true, desc: 'Forms, NOC, Oqood, title deed, Ejari' },
   ] },
   { key: 'leasing', label: 'Leasing & management', items: [
     { label: 'Leases & Ejari', to: '/e/leases', icon: KeyRound, module: 'leases' },
@@ -70,7 +71,9 @@ export const SWK_NAV: NavSection[] = [
   { key: 'compliance', label: 'RERA & compliance', items: [
     { label: 'RERA Centre', to: '/rera', icon: Gavel, module: 'compliance', isNew: true, desc: 'BRN, Trakheesi, Form A & AML' },
     { label: 'Licences & Filings', to: '/compliance', icon: BadgeCheck, module: 'compliance' },
-    { label: 'Company Documents', to: '/e/company_documents', icon: ScrollText, module: 'documents' },
+    { label: 'KYC Checks', to: '/e/kyc_checks', icon: ShieldCheck, module: 'compliance', isNew: true, desc: 'Client due diligence' },
+    { label: 'goAML Reports', to: '/e/aml_reports', icon: ShieldAlert, module: 'compliance', isNew: true, desc: 'Suspicious activity log' },
+    { label: 'Company Documents', to: '/e/compliance_items', icon: ScrollText, module: 'documents' },
     { label: 'Document Vault', to: '/documents', icon: FileStack, module: 'documents' },
   ] },
   { key: 'team', label: 'Team', items: [
@@ -78,8 +81,8 @@ export const SWK_NAV: NavSection[] = [
     { label: 'Agents (BRN)', to: '/e/agents', icon: IdCard, module: 'hr' },
     { label: 'Employees', to: '/e/employees', icon: Users, module: 'hr' },
     { label: 'Attendance', to: '/e/attendance', icon: Clock, module: 'hr' },
-    { label: 'Leave', to: '/e/leave', icon: Plane, module: 'hr' },
-    { label: 'Payroll & WPS', to: '/e/payroll', icon: Banknote, module: 'hr' },
+    { label: 'Leave', to: '/e/leave_requests', icon: Plane, module: 'hr' },
+    { label: 'Payroll & WPS', to: '/e/payslips', icon: Banknote, module: 'hr' },
   ] },
   { key: 'tools', label: 'Tools & reports', items: [
     { label: 'UAE Deal Toolkit', to: '/toolkit', icon: Calculator, isNew: true, desc: 'DLD fees, mortgage, RERA rent, yield' },
