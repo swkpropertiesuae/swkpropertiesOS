@@ -192,3 +192,6 @@ The API esbuild target is `node22`. The web Vite build outputs to `dist/web/`. B
 ---
 
 *SWK OS – SWKPROPOS. Sovereign agentic operating system for UAE real estate enterprises. 14 core SME modules.*
+## Native Android app — SWK ONE
+
+The Kotlin / Jetpack Compose Android project is in [`android/`](android/README.md). It connects to the same backend and database using existing accounts and permissions. See the [65-feature coverage matrix](docs/ANDROID_FEATURE_COVERAGE.md) for implemented workflows, partial coverage and remaining work. Android CI builds a test APK; controlled release signing and device acceptance are required before staff rollout.

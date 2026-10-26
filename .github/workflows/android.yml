@@ -1,0 +1,41 @@
+name: SWK ONE Android
+on:
+  push:
+    paths: ['android/**', 'src/server/routes/mobile.ts', 'tests/mobile.ts', '.github/workflows/android.yml']
+  pull_request:
+    paths: ['android/**', 'src/server/routes/mobile.ts', 'tests/mobile.ts', '.github/workflows/android.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: '8.10.2' }
+      - run: gradle -p android :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SWK-ONE-Android-test-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Android-quality-reports
+          path: |
+            android/app/build/reports/
+            android/app/build/test-results/
+  mobile-api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: npm }
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Verify native API isolation and evidence controls
+        run: DATA_DIR=$(mktemp -d) DEMO_ENABLED=false STARTER_DATA=false node --import tsx tests/mobile.ts
