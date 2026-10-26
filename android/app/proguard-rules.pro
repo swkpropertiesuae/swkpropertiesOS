@@ -1,2 +1,5 @@
-# Add project specific ProGuard rules here for SWK ONE Android App
--keep class ae.swkproperties.one.** { *; }
+# SWK ONE: the web UI calls these through window.SwkAndroidBridge; R8 must not rename or strip them.
+-keepclassmembers class ae.swkproperties.one.SwkNativePlugin {
+    @android.webkit.JavascriptInterface <methods>;
+}
+-keepattributes JavascriptInterface

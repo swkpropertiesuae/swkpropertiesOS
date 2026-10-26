@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { ArrowRight, Check, Eye, EyeOff, KeyRound, Loader2, Lock, Mail, Server, ShieldCheck, Smartphone } from 'lucide-react'
 import { get, post, getSwkApiBaseUrl, setSwkApiBaseUrl } from '../lib/api'
-import { isCapacitorAndroid } from '../mobile/native-bridge'
+import { isNativeAndroid } from '../mobile/native-bridge'
 import { useMeta } from '../lib/meta'
 import { COMMUNITIES } from '../swk/uae'
 
@@ -50,7 +50,7 @@ function MarketMoments() {
 export function Login() {
   const { reload } = useMeta(); const nav = useNavigate(); const loc = useLocation()
   const reduce = useReducedMotion()
-  const isAndroid = isCapacitorAndroid()
+  const isAndroid = isNativeAndroid()
   const [email, setEmail] = useState(() => localStorage.getItem('swk.remember') || '')
   const [pw, setPw] = useState(''); const [totp, setTotp] = useState(''); const [needTotp, setNeedTotp] = useState(false)
   const [remember, setRemember] = useState(() => !!localStorage.getItem('swk.remember'))
@@ -181,7 +181,7 @@ export function Login() {
                           type="url"
                           value={serverUrl}
                           onChange={e => { setServerUrl(e.target.value); setServerSaved(false) }}
-                          placeholder="https://os.swkpropertiesuae.com or http://192.168.1.50:3000"
+                          placeholder="https://os.swkpropertiesuae.com"
                           className="flex-1 px-3 py-2 rounded-xl bg-black/30 border border-white/15 text-white text-[12.5px] outline-none"
                         />
                         <button
@@ -196,7 +196,7 @@ export function Login() {
                         </button>
                       </div>
                       <p className="text-[11px] text-[#8a9ab5] m-0">
-                        When running the native Android APK on your phone, enter your live SWK OS server URL or office LAN IP here.
+                        The Android app connects to https://os.swkpropertiesuae.com by default. Change it only if IT gave you another secure (https) server address.
                       </p>
                     </div>
                   </motion.div>

@@ -20,6 +20,8 @@ export interface OfflineQueueItem {
   idempotency_key: string
   client_queue_id: string
   action_type: string
+  /** API path the action is replayed against when connectivity returns (see /api/swk-one/offline/sync). */
+  endpoint?: string
   label: string
   payload: Record<string, any>
   queued_at: string
@@ -30,18 +32,32 @@ const OFFLINE_QUEUE_KEY = 'swk.one.offline_queue'
 const SESSION_TOKEN_KEY = 'swk.one.session_token'
 const SERVER_URL_KEY = 'swk.one.server_url'
 
-export function isCapacitorAndroid(): boolean {
+type SwkBridge = {
+  getDefaultServerUrl?: () => string
+  getDeviceIdentityJson?: () => string
+  startDutyLocationService?: (paramsJson: string) => string
+  stopDutyLocationService?: () => string
+  getTelemetryJson?: () => string
+  isBiometricAvailable?: () => boolean
+  promptBiometricUnlock?: (reason: string) => void
+}
+const bridge = (): SwkBridge | null => (typeof window !== 'undefined' ? ((window as any).SwkAndroidBridge ?? null) : null)
+
+/** True inside the SWK ONE Android app (native bridge present) or when opened with ?platform=android for testing. */
+export function isNativeAndroid(): boolean {
   if (typeof window === 'undefined') return false
-  if ((window as any).SwkAndroidBridge) return true
-  const cap = (window as any).Capacitor
-  if (cap?.isNativePlatform?.() && cap?.getPlatform?.() === 'android') return true
-  if (new URLSearchParams(window.location.search).get('platform') === 'android') return true
-  return false
+  if (bridge()) return true
+  return new URLSearchParams(window.location.search).get('platform') === 'android'
 }
 
+/** Inside the app the bundled UI is served from https://localhost, so the API lives on the company server, never on the page origin. */
 export function getStoredServerUrl(): string {
   try {
-    return localStorage.getItem(SERVER_URL_KEY) || ''
+    const stored = localStorage.getItem(SERVER_URL_KEY)
+    if (stored) return stored
+  } catch { /* fall through to the app default */ }
+  try {
+    return bridge()?.getDefaultServerUrl?.().replace(/\/+$/, '') || ''
   } catch {
     return ''
   }
@@ -71,146 +87,88 @@ export function setStoredSessionToken(token: string | null) {
 }
 
 export async function getDeviceIdentity(): Promise<DeviceIdentity> {
-  const swkBridge = typeof window !== 'undefined' ? (window as any).SwkAndroidBridge : null
-  if (swkBridge?.getDeviceIdentityJson) {
+  const native = bridge()
+  if (native?.getDeviceIdentityJson) {
     try {
-      const info = JSON.parse(swkBridge.getDeviceIdentityJson())
+      const info = JSON.parse(native.getDeviceIdentityJson())
       if (info?.device_id) {
-        localStorage.setItem(DEVICE_STORAGE_KEY, info.device_id)
+        try { localStorage.setItem(DEVICE_STORAGE_KEY, info.device_id) } catch { /* ignore */ }
         return {
           device_id: info.device_id,
-          device_name: info.device_name || `${info.manufacturer || 'Android'} ${info.model || 'Handset'}`,
-          model: info.model || 'Android Enterprise Device',
-          manufacturer: info.manufacturer || 'Google',
-          os_version: info.os_version || 'Android 15',
-          app_version: info.app_version || '2.0.0-enterprise',
+          device_name: info.device_name || `${info.manufacturer || 'Android'} ${info.model || 'handset'}`,
+          model: info.model || 'Android',
+          manufacturer: info.manufacturer || 'Android',
+          os_version: info.os_version || 'Android',
+          app_version: info.app_version || '',
           is_native_android: true,
-          biometric_supported: info.biometric_supported !== false,
+          biometric_supported: info.biometric_supported === true,
         }
       }
-    } catch { /* fallback below */ }
-  }
-  const cap = typeof window !== 'undefined' ? (window as any).Capacitor : null
-  const nativePlugin = cap?.Plugins?.SwkNative
-  if (nativePlugin?.getDeviceIdentity) {
-    try {
-      const info = await nativePlugin.getDeviceIdentity()
-      if (info?.device_id) {
-        localStorage.setItem(DEVICE_STORAGE_KEY, info.device_id)
-        return {
-          device_id: info.device_id,
-          device_name: info.device_name || `${info.manufacturer || 'Android'} ${info.model || 'Handset'}`,
-          model: info.model || 'Android Enterprise Device',
-          manufacturer: info.manufacturer || 'Google',
-          os_version: info.os_version || 'Android 15',
-          app_version: info.app_version || '2.0.0-native',
-          is_native_android: true,
-          biometric_supported: info.biometric_supported !== false,
-        }
-      }
-    } catch { /* fallback below */ }
+    } catch { /* fall back to a browser identity below */ }
   }
 
+  // Browser / PWA: a stable per-browser id that describes what it really is. It is never presented as a handset.
   let devId = ''
   try {
     devId = localStorage.getItem(DEVICE_STORAGE_KEY) || ''
     if (!devId) {
-      const rand = Math.random().toString(36).slice(2, 8).toUpperCase()
-      devId = `AND-SWK-${rand}-DXB`
+      devId = `WEB-${(globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2)).replace(/-/g, '').slice(0, 12).toUpperCase()}`
       localStorage.setItem(DEVICE_STORAGE_KEY, devId)
     }
   } catch {
-    devId = 'AND-SWK-PRIMARY-DXB'
+    devId = 'WEB-UNKNOWN'
   }
-
   const ua = typeof navigator !== 'undefined' ? navigator.userAgent : ''
-  const isAndroidUa = /Android/i.test(ua)
   return {
     device_id: devId,
-    device_name: isAndroidUa ? 'Samsung Galaxy S25 Ultra (SWK Enrolled)' : 'Google Pixel 9 Pro · SWK ONE Android',
-    model: isAndroidUa ? 'SM-S938B' : 'Pixel 9 Pro',
-    manufacturer: isAndroidUa ? 'Samsung' : 'Google',
-    os_version: 'Android 15 (API 35 · One UI 7)',
-    app_version: '2.0.0 (Build 20261026)',
-    is_native_android: isCapacitorAndroid() || isAndroidUa,
-    biometric_supported: true,
+    device_name: /Android/i.test(ua) ? 'Android browser' : 'Web browser',
+    model: 'Browser',
+    manufacturer: '',
+    os_version: typeof navigator !== 'undefined' ? navigator.platform || 'Unknown' : 'Unknown',
+    app_version: 'web',
+    is_native_android: false,
+    biometric_supported: false,
   }
 }
 
 export async function authenticateBiometricSession(
   reason = 'Unlock SWK ONE Staff & Agent Workspace',
 ): Promise<{ verified: boolean; method: string }> {
-  const swkBridge = typeof window !== 'undefined' ? (window as any).SwkAndroidBridge : null
-  if (swkBridge?.promptBiometricUnlock) {
-    return new Promise(resolve => {
-      const handler = (ev: any) => {
-        window.removeEventListener('swk:biometric-result', handler)
-        resolve({
-          verified: !!ev?.detail?.verified,
-          method: ev?.detail?.method || 'Android BiometricPrompt',
-        })
-      }
-      window.addEventListener('swk:biometric-result', handler)
-      swkBridge.promptBiometricUnlock(reason)
-    })
-  }
-  const cap = typeof window !== 'undefined' ? (window as any).Capacitor : null
-  const nativePlugin = cap?.Plugins?.SwkNative
-  if (nativePlugin?.authenticateBiometric) {
-    try {
-      const res = await nativePlugin.authenticateBiometric({
-        title: 'SWK ONE Biometric Security',
-        subtitle: reason,
-      })
-      return { verified: !!res?.verified, method: res?.method || 'Android BiometricPrompt (Fingerprint / Face)' }
-    } catch {
-      return { verified: false, method: 'Biometric cancelled' }
+  const native = bridge()
+  if (!native?.promptBiometricUnlock) return { verified: false, method: 'Unavailable' }
+  return new Promise(resolve => {
+    const handler = (ev: any) => {
+      window.removeEventListener('swk:biometric-result', handler)
+      resolve({ verified: !!ev?.detail?.verified, method: ev?.detail?.method || 'Android BiometricPrompt' })
     }
-  }
-  return { verified: true, method: 'Android Biometric / Hardware Credential Verified' }
+    window.addEventListener('swk:biometric-result', handler)
+    native.promptBiometricUnlock!(reason)
+  })
 }
 
+/** A real location fix or an error: the app never substitutes made-up coordinates (they would become attendance / duty evidence). */
 export async function getCurrentGpsPosition(): Promise<GpsPosition> {
-  const cap = typeof window !== 'undefined' ? (window as any).Capacitor : null
-  const geoPlugin = cap?.Plugins?.Geolocation
-  if (geoPlugin?.getCurrentPosition) {
-    try {
-      const pos = await geoPlugin.getCurrentPosition({ enableHighAccuracy: true, timeout: 6000 })
-      return {
-        lat: Number(pos.coords.latitude).toFixed(6),
-        lng: Number(pos.coords.longitude).toFixed(6),
-        accuracy_m: Math.round(pos.coords.accuracy || 8),
-        timestamp: new Date().toISOString(),
-      }
-    } catch { /* fallback to browser geolocation */ }
+  if (typeof navigator === 'undefined' || !navigator.geolocation) throw new Error('Location is not available on this device')
+  try {
+    const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 12000, maximumAge: 15000 })
+    })
+    return {
+      lat: Number(pos.coords.latitude).toFixed(6),
+      lng: Number(pos.coords.longitude).toFixed(6),
+      accuracy_m: Math.round(pos.coords.accuracy || 0),
+      timestamp: new Date(pos.timestamp || Date.now()).toISOString(),
+    }
+  } catch (e: any) {
+    throw new Error(e?.code === 1 ? 'Location permission is off. Allow location for SWK ONE and try again.' : 'Could not get a location fix. Move to open sky or check that location is on, then try again.')
   }
+}
 
-  if (typeof navigator !== 'undefined' && navigator.geolocation) {
-    try {
-      const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 3500,
-          maximumAge: 15000,
-        })
-      })
-      return {
-        lat: Number(pos.coords.latitude).toFixed(6),
-        lng: Number(pos.coords.longitude).toFixed(6),
-        accuracy_m: Math.round(pos.coords.accuracy || 10),
-        timestamp: new Date().toISOString(),
-      }
-    } catch { /* fallback to Dubai Marina / Downtown coordinates when permission denied on desktop */ }
-  }
-
-  // Default Dubai Business Bay / Downtown coordinates with slight jitter for realistic field simulation
-  const jitter = () => (Math.random() - 0.5) * 0.0012
-  return {
-    lat: (25.1972 + jitter()).toFixed(6),
-    lng: (55.2744 + jitter()).toFixed(6),
-    accuracy_m: 7,
-    timestamp: new Date().toISOString(),
-  }
+export interface DutyServiceResult {
+  fgServiceActive: boolean
+  notificationTitle: string
+  /** Set when the native service did not start, e.g. "location_permission_required". */
+  reason?: string
 }
 
 export async function startNativeForegroundDutyService(opts: {
@@ -219,71 +177,59 @@ export async function startNativeForegroundDutyService(opts: {
   serverUrl?: string
   sessionToken?: string
   deviceId?: string
-  [k: string]: any
-}, _extra?: any): Promise<{ fgServiceActive: boolean; notificationTitle: string }> {
-  const swkBridge = typeof window !== 'undefined' ? (window as any).SwkAndroidBridge : null
-  const title = `SWK ONE: Active Field Duty (${opts.assignedLocation})`
-  if (swkBridge?.startDutyLocationService) {
-    try {
-      swkBridge.startDutyLocationService(Number(opts.sessionId || 1), String(opts.assignedLocation || 'Dubai Field Duty'))
-      return { fgServiceActive: true, notificationTitle: title }
-    } catch { /* fallback */ }
+}): Promise<DutyServiceResult> {
+  const title = `SWK ONE: Active Field Duty (${opts.assignedLocation || 'field duty'})`
+  const native = bridge()
+  if (!native?.startDutyLocationService) return { fgServiceActive: false, notificationTitle: title, reason: 'not_native' }
+  try {
+    const res = JSON.parse(native.startDutyLocationService(JSON.stringify({
+      sessionId: Number(opts.sessionId || 0),
+      assignedLocation: opts.assignedLocation || '',
+      serverUrl: opts.serverUrl || getStoredServerUrl(),
+      sessionToken: opts.sessionToken || getStoredSessionToken(),
+      deviceId: opts.deviceId || '',
+    })))
+    return { fgServiceActive: !!res.started, notificationTitle: title, reason: res.reason }
+  } catch {
+    return { fgServiceActive: false, notificationTitle: title, reason: 'start_failed' }
   }
-  const cap = typeof window !== 'undefined' ? (window as any).Capacitor : null
-  const nativePlugin = cap?.Plugins?.SwkNative
-  if (nativePlugin?.startDutyLocationService) {
-    try {
-      await nativePlugin.startDutyLocationService({
-        sessionId: opts.sessionId,
-        assignedLocation: opts.assignedLocation,
-        serverUrl: opts.serverUrl || window.location.origin,
-        sessionToken: opts.sessionToken || getStoredSessionToken(),
-        deviceId: opts.deviceId,
-      })
-      return { fgServiceActive: true, notificationTitle: title }
-    } catch { /* fallback */ }
-  }
-  return { fgServiceActive: true, notificationTitle: title }
 }
 
-export async function stopNativeForegroundDutyService(_a?: any, _b?: any): Promise<{ stopped: boolean }> {
-  const swkBridge = typeof window !== 'undefined' ? (window as any).SwkAndroidBridge : null
-  if (swkBridge?.stopDutyLocationService) {
-    try {
-      swkBridge.stopDutyLocationService()
-    } catch { /* ignore */ }
-  }
-  const cap = typeof window !== 'undefined' ? (window as any).Capacitor : null
-  const nativePlugin = cap?.Plugins?.SwkNative
-  if (nativePlugin?.stopDutyLocationService) {
-    try {
-      await nativePlugin.stopDutyLocationService()
-    } catch { /* ignore */ }
-  }
+export async function stopNativeForegroundDutyService(): Promise<{ stopped: boolean }> {
+  try {
+    bridge()?.stopDutyLocationService?.()
+  } catch { /* ignore */ }
   return { stopped: true }
 }
 
 export async function getBatteryAndNetworkTelemetry(): Promise<{
-  battery_pct: number
+  battery_pct: number | null
   is_charging: boolean
   online: boolean
   network_type: string
 }> {
-  let batteryPct = 88
+  const online = typeof navigator !== 'undefined' ? navigator.onLine : true
+  const native = bridge()
+  if (native?.getTelemetryJson) {
+    try {
+      const t = JSON.parse(native.getTelemetryJson())
+      return {
+        battery_pct: typeof t.battery_pct === 'number' && t.battery_pct >= 0 ? t.battery_pct : null,
+        is_charging: !!t.is_charging,
+        online: online && t.network_type !== 'Offline',
+        network_type: t.network_type || (online ? 'Online' : 'Offline'),
+      }
+    } catch { /* fall through to browser APIs */ }
+  }
+  let batteryPct: number | null = null
   let isCharging = false
   try {
-    const navAny = navigator as any
-    if (navAny?.getBattery) {
-      const b = await navAny.getBattery()
-      if (typeof b.level === 'number') batteryPct = Math.round(b.level * 100)
-      isCharging = !!b.charging
-    }
+    const b = await (navigator as any)?.getBattery?.()
+    if (b && typeof b.level === 'number') batteryPct = Math.round(b.level * 100)
+    isCharging = !!b?.charging
   } catch { /* ignore */ }
-
-  const online = typeof navigator !== 'undefined' ? navigator.onLine : true
   const conn = typeof navigator !== 'undefined' ? (navigator as any).connection : null
-  const netType = !online ? 'Offline' : conn?.effectiveType ? `Android ${String(conn.effectiveType).toUpperCase()} / WiFi` : '5G / SWK-CORP-WIFI'
-  return { battery_pct: batteryPct, is_charging: isCharging, online, network_type: netType }
+  return { battery_pct: batteryPct, is_charging: isCharging, online, network_type: !online ? 'Offline' : conn?.type === 'wifi' ? 'Wi-Fi' : conn?.effectiveType ? String(conn.effectiveType).toUpperCase() : 'Online' }
 }
 
 export function getOfflineQueue(): OfflineQueueItem[] {
@@ -298,6 +244,7 @@ export function enqueueOfflineAction(
   action_type: string,
   labelOrPayload: string | Record<string, any>,
   maybePayload?: Record<string, any>,
+  endpoint?: string,
 ): OfflineQueueItem {
   const label = typeof labelOrPayload === 'string' ? labelOrPayload : action_type
   const payload = (typeof labelOrPayload === 'object' && labelOrPayload !== null ? labelOrPayload : maybePayload) || {}
@@ -306,6 +253,7 @@ export function enqueueOfflineAction(
     idempotency_key: key,
     client_queue_id: key,
     action_type,
+    endpoint,
     label,
     payload,
     queued_at: new Date().toISOString(),
@@ -348,5 +296,13 @@ export function clearAllOfflineQueue() {
 export function openAndroidMapsNavigation(lat?: string | number | null, lng?: string | number | null, label?: string) {
   const q = lat && lng ? `${lat},${lng}` : encodeURIComponent(label || 'Dubai Marina, Dubai, UAE')
   const url = `https://www.google.com/maps/dir/?api=1&destination=${q}&travelmode=driving`
+  // Inside the app the WebView hands https links to the system (Maps / browser).
   window.open(url, '_blank', 'noopener,noreferrer')
+}
+
+/** Keeps only the queue items that did not sync, so a failed action is never silently dropped. */
+export function removeSyncedOfflineItems(results: Array<{ idempotency_key: string; status: string }>) {
+  const done = new Set(results.filter(r => r.status === 'synced' || r.status === 'already_synced').map(r => r.idempotency_key))
+  if (done.size === 0) return getOfflineQueue() // clearSyncedOfflineItems([]) would wipe the whole queue
+  return clearSyncedOfflineItems([...done])
 }

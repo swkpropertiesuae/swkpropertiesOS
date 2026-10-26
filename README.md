@@ -13,7 +13,7 @@ The system includes:
 - **Finance**: invoices, VAT, bank import and feeds, UAE PINT AE e-invoicing, WPS salary files, year-end close
 - **AI employees** (Jarvis and role agents) with a reviewed tool list: read tools run freely, internal writes follow the agent's autonomy setting, and anything external (e-mail, WhatsApp) needs approval
 - **Integrations**: Resend/SMTP, Cloudflare R2, Supabase mirror, WhatsApp Cloud API, voice receptionist
-- **SWK ONE**: Android field app (Capacitor) with duty-location sharing, reception QR check-in and offline queue
+- **SWK ONE**: native Android app (WebView shell + foreground location service) with duty-location sharing, reception QR check-in and offline queue; see [docs/ANDROID.md](docs/ANDROID.md)
 - **Installable web app (PWA)** with an offline page
 
 ---

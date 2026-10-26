@@ -23,8 +23,8 @@ import {
   stopNativeForegroundDutyService,
   getOfflineQueue,
   enqueueOfflineAction,
-  clearAllOfflineQueue,
-  isCapacitorAndroid,
+  removeSyncedOfflineItems,
+  isNativeAndroid,
   getStoredServerUrl,
   setStoredServerUrl,
   type DeviceIdentity,
@@ -86,9 +86,9 @@ export default function SwkOneApp() {
 
   // Device & native bridge states
   const [device, setDevice] = useState<DeviceIdentity | null>(null)
-  const [telemetry, setTelemetry] = useState<{ battery_pct: number; network_type: string; online: boolean }>({
-    battery_pct: 94,
-    network_type: '5G_WIFI_OFFICE',
+  const [telemetry, setTelemetry] = useState<{ battery_pct: number | null; network_type: string; online: boolean }>({
+    battery_pct: null,
+    network_type: 'Checking…',
     online: true,
   })
   const [offlineMode, setOfflineMode] = useState(false)
@@ -96,7 +96,7 @@ export default function SwkOneApp() {
   const [apiBaseUrl, setApiBaseUrlState] = useState(getStoredServerUrl())
 
   // Modals & frame mode
-  const [phoneFrameMode, setPhoneFrameMode] = useState(() => !isCapacitorAndroid() && window.innerWidth >= 900)
+  const [phoneFrameMode, setPhoneFrameMode] = useState(() => !isNativeAndroid() && window.innerWidth >= 900)
   const [biometricLocked, setBiometricLocked] = useState(false)
   const [qrModalOpen, setQrModalOpen] = useState(false)
   const [compareModalOpen, setCompareModalOpen] = useState(false)
@@ -104,8 +104,8 @@ export default function SwkOneApp() {
 
   // Daily report local inputs
   const [eodSummary, setEodSummary] = useState('')
-  const [eodBlockers, setEodBlockers] = useState('None — all viewings and client follow-ups logged.')
-  const [eodPriorities, setEodPriorities] = useState('Follow up on Marina Gate offer & confirm Dubai Hills viewing.')
+  const [eodBlockers, setEodBlockers] = useState('')
+  const [eodPriorities, setEodPriorities] = useState('')
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -161,6 +161,26 @@ export default function SwkOneApp() {
     void loadBootstrap()
   }, [])
 
+  // The native service ended the duty (notification button, expired or rejected session): refresh so the UI matches.
+  useEffect(() => {
+    const onDutyEnded = () => {
+      showNotice('Field duty ended · location sharing stopped')
+      void loadBootstrap()
+    }
+    window.addEventListener('swk:duty-ended', onDutyEnded)
+    return () => window.removeEventListener('swk:duty-ended', onDutyEnded)
+  }, [])
+
+  /** Real GPS fix or null (with an explanation); the app never substitutes coordinates. */
+  const fixOrNotice = async (required = true) => {
+    try {
+      return await getCurrentGpsPosition()
+    } catch (e: any) {
+      if (required) showNotice(e?.message || 'Could not get your location', 'warn')
+      return null
+    }
+  }
+
   // Helper that executes an API call or queues it when offlineMode is enabled
   const runOrQueue = async (
     actionType: OfflineQueueItem['action_type'],
@@ -170,7 +190,7 @@ export default function SwkOneApp() {
     successMsg: string
   ) => {
     if (offlineMode || !navigator.onLine) {
-      enqueueOfflineAction(actionType, label, payload)
+      enqueueOfflineAction(actionType, label, payload, endpoint)
       setOfflineQueue(getOfflineQueue())
       showNotice(`Queued Offline: ${label} (will auto-sync when connectivity returns)`, 'warn')
       return null
@@ -200,29 +220,28 @@ export default function SwkOneApp() {
     }
   }
 
-  // 1. Office Reception QR Check-In
-  const handleOfficeScanSubmit = async (tokenOrCode: string, networkSsid: string) => {
+  // 1. Office Reception QR Check-In (the QR is read from the reception screen by the camera, or its 6-digit code is typed)
+  const handleOfficeScanSubmit = async (tokenOrCode: string) => {
     const dev = device || (await getDeviceIdentity())
-    const coords = await getCurrentGpsPosition()
-    setBusyAction('Verifying Reception QR & Device…')
+    const coords = await fixOrNotice(false) // used for the office-area check; the server flags the check-in if it is required and missing
+    setBusyAction('Verifying reception QR & device…')
     try {
       const res = await post<any>('/api/swk-one/attendance/qr-check-in', {
         qr_token: tokenOrCode,
         short_code: tokenOrCode,
-        network_type: networkSsid.includes('SWK') ? 'Office Wi-Fi' : 'External Network',
-        wifi_ssid: networkSsid,
         device_id: dev.device_id,
         device_name: dev.device_name,
-        lat: coords.lat,
-        lng: coords.lng,
+        ...(coords ? { lat: coords.lat, lng: coords.lng, accuracy_m: coords.accuracy_m } : {}),
       })
       await loadBootstrap()
       showNotice(
         res?.verification === 'Verified'
-          ? `Verified Office Check-In (${res.event?.event_no})`
-          : `Recorded with Doubtful Flag for HR Review (${res?.doubtful_reasons?.join(', ')})`,
+          ? `Verified office check-in (${res.event?.event_no})`
+          : `Recorded and flagged for HR review: ${(res?.doubtful_reasons || []).join(', ') || 'could not verify'}`,
         res?.verification === 'Verified' ? 'ok' : 'warn'
       )
+    } catch (e: any) {
+      showNotice(e?.message || 'Check-in failed', 'warn')
     } finally {
       setBusyAction(null)
     }
@@ -252,8 +271,9 @@ export default function SwkOneApp() {
   // 3. Field Duty Start / Batch / End / Safety / SOS
   const handleStartFieldDuty = async (location: string, viewingId?: number | null, propertyId?: number | null) => {
     const dev = device || (await getDeviceIdentity())
-    const coords = await getCurrentGpsPosition()
-    setBusyAction('Starting Android Foreground Duty Service…')
+    const coords = await fixOrNotice()
+    if (!coords) return
+    setBusyAction('Starting field duty…')
     try {
       const res = await post<any>('/api/swk-one/field-duty/start', {
         assigned_location: location,
@@ -264,22 +284,33 @@ export default function SwkOneApp() {
         accuracy_m: coords.accuracy_m,
         device_id: dev.device_id,
       })
+      let sharing = 'Persistent location notification active'
       if (res?.session?.id) {
-        await startNativeForegroundDutyService({
+        const svc = await startNativeForegroundDutyService({
           sessionId: res.session.id,
           assignedLocation: location,
           deviceId: dev.device_id,
         })
+        if (!svc.fgServiceActive) {
+          sharing = svc.reason === 'location_permission_required'
+            ? 'Allow location for SWK ONE when asked, then end and restart the duty to share live location'
+            : svc.reason === 'not_native'
+              ? 'Live location sharing runs in the SWK ONE Android app'
+              : 'Live location sharing could not start'
+        }
       }
       await loadBootstrap()
-      showNotice(`Field Duty Started (${res?.session?.session_no}) · Persistent Location Notification Active`)
+      showNotice(`Field duty started (${res?.session?.session_no}) · ${sharing}`)
+    } catch (e: any) {
+      showNotice(e?.message || 'Could not start field duty', 'warn')
     } finally {
       setBusyAction(null)
     }
   }
 
   const handleSendLocationBatch = async (sessionId: number) => {
-    const coords = await getCurrentGpsPosition()
+    const coords = await fixOrNotice()
+    if (!coords) return
     const tel = await getBatteryAndNetworkTelemetry()
     await runOrQueue(
       'start_field_duty',
@@ -292,28 +323,29 @@ export default function SwkOneApp() {
             lat: coords.lat,
             lng: coords.lng,
             accuracy_m: coords.accuracy_m,
-            recorded_at: new Date().toISOString(),
+            timestamp: coords.timestamp,
           },
         ],
-        battery_pct: tel.battery_pct,
+        ...(tel.battery_pct !== null ? { battery_pct: tel.battery_pct } : {}),
         network_type: tel.network_type,
       },
-      `Batched GPS update synced (±${coords.accuracy_m}m · Battery ${tel.battery_pct}%)`
+      `Location update sent (±${coords.accuracy_m}m${tel.battery_pct !== null ? ` · battery ${tel.battery_pct}%` : ''})`
     )
   }
 
   const handleEndFieldDuty = async (sessionId: number, notes?: string) => {
-    const coords = await getCurrentGpsPosition()
-    setBusyAction('Stopping Foreground Location Service…')
+    const coords = await fixOrNotice(false)
+    setBusyAction('Ending field duty…')
     try {
       await stopNativeForegroundDutyService()
       await post(`/api/swk-one/field-duty/${sessionId}/end`, {
-        lat: coords.lat,
-        lng: coords.lng,
+        ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
         notes,
       })
       await loadBootstrap()
-      showNotice('Field Duty Ended · Android Location Service Stopped (Zero Off-Duty Tracking)')
+      showNotice('Field duty ended · location sharing stopped (no off-duty tracking)')
+    } catch (e: any) {
+      showNotice(e?.message || 'Could not end field duty', 'warn')
     } finally {
       setBusyAction(null)
     }
@@ -330,13 +362,12 @@ export default function SwkOneApp() {
   }
 
   const handleTriggerSos = async (reason: string) => {
-    const coords = await getCurrentGpsPosition()
+    const coords = await fixOrNotice(false) // an SOS is always sent, with or without a location fix
     setBusyAction('Broadcasting SOS Alert…')
     try {
       const res = await post<any>('/api/swk-one/field-duty/sos', {
         session_id: data?.active_field_session?.id || null,
-        lat: coords.lat,
-        lng: coords.lng,
+        ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
         reason,
       })
       await loadBootstrap()
@@ -346,46 +377,72 @@ export default function SwkOneApp() {
     }
   }
 
-  // 4. One-Tap Daily Report
+  // 4. One-Tap Daily Report: the narrative is yours; when empty it is composed from verified system activity only
   const handleOneTapDailyReport = async () => {
+    const priorities = eodPriorities.trim()
+    if (!priorities) {
+      showNotice('Add at least one priority for tomorrow before submitting your report.', 'warn')
+      return
+    }
+    const summary = eodSummary.trim() || (() => {
+      const j = data?.activity_journal
+      const parts = [
+        [j?.sys_calls_count, 'call(s) logged'], [j?.sys_leads_contacted, 'lead(s) contacted'], [j?.sys_viewings_completed, 'viewing(s) completed'],
+        [j?.sys_tasks_completed, 'task(s) completed'], [j?.sys_offers_logged, 'offer(s) logged'],
+      ].filter(([n]) => Number(n) > 0).map(([n, t]) => `${n} ${t}`)
+      return parts.length ? `System-recorded activity today: ${parts.join(', ')}.` : ''
+    })()
+    if (summary.length < 10) {
+      showNotice('Write what you achieved today (at least 10 characters) before submitting your report.', 'warn')
+      return
+    }
     await runOrQueue(
       'daily_report',
       'End-of-Day Work Report',
       '/api/swk-one/daily-report/one-tap',
       {
-        self_summary:
-          eodSummary ||
-          'Completed Marina Gate & Downtown viewings, verified 2 owner mandates, and responded to WABA inquiries.',
-        blockers: eodBlockers,
-        next_day_priorities: eodPriorities,
+        self_summary: summary,
+        blockers: eodBlockers.trim() || 'None',
+        next_day_priorities: priorities,
       },
-      'End-of-Day Report verified & synced with SWK OS system counters!'
+      'End-of-day report submitted and checked against SWK OS activity counters.'
     )
   }
 
-  // 5. Sync Offline Queue
+  // 5. Sync Offline Queue: only items the server accepted are removed; failures stay queued with the reason
   const handleSyncOfflineQueue = async () => {
     const current = getOfflineQueue()
     if (current.length === 0) {
       showNotice('Offline queue is already empty and synced.')
       return
     }
-    setBusyAction('Syncing encrypted offline queue…')
+    setBusyAction('Syncing offline queue…')
     try {
       const dev = device || (await getDeviceIdentity())
-      await post('/api/swk-one/offline/sync', {
+      const res = await post<any>('/api/swk-one/offline/sync', {
         device_id: dev.device_id,
-        items: current.map(i => ({
+        items: [...current].reverse().map(i => ({
           client_queue_id: i.idempotency_key,
           action_type: i.action_type,
+          endpoint: i.endpoint,
           payload: i.payload,
+          queued_at: i.queued_at,
         })),
       })
-      clearAllOfflineQueue()
-      setOfflineQueue(getOfflineQueue())
-      setOfflineMode(false)
+      const results: Array<{ idempotency_key: string; status: string; error?: string }> = res?.results || []
+      const remaining = removeSyncedOfflineItems(results)
+      setOfflineQueue(remaining)
+      const failed = results.filter(r => r.status === 'error')
+      if (remaining.length === 0) setOfflineMode(false)
       await loadBootstrap()
-      showNotice(`Synced ${current.length} offline queued item(s) into SWK OS!`)
+      showNotice(
+        failed.length
+          ? `${results.length - failed.length} synced, ${failed.length} need attention: ${failed[0]?.error || 'rejected'}`
+          : `Synced ${current.length} queued item(s) into SWK OS.`,
+        failed.length ? 'warn' : 'ok'
+      )
+    } catch (e: any) {
+      showNotice(e?.message || 'Sync failed. Your queued items are kept.', 'warn')
     } finally {
       setBusyAction(null)
     }
@@ -405,7 +462,7 @@ export default function SwkOneApp() {
   }
   const todayAtt = data?.today_attendance
   const workday = data?.workday || { current_mode: 'Off Duty', checklist: [] }
-  const activityScore = Number(data?.verified_activity_score?.total_score || 92)
+  const activityScore = Number(data?.verified_activity_score?.total_score ?? 0)
   const activeCommunity = COMMUNITIES[pulseIndex]!
   const communityYoY = useMemo(
     () => ((activeCommunity.ppsf - activeCommunity.ppsfLY) / activeCommunity.ppsfLY) * 100,
@@ -652,16 +709,19 @@ export default function SwkOneApp() {
               {offlineMode ? `Offline (${offlineQueue.length})` : telemetry.network_type}
             </motion.button>
             <span className="flex items-center gap-0.5 text-[10px] text-[#d6deeb] font-mono">
-              <BatteryCharging size={12} className="text-[#4fd39a]" /> {telemetry.battery_pct}%
+              <BatteryCharging size={12} className="text-[#4fd39a]" /> {telemetry.battery_pct === null ? '–' : `${telemetry.battery_pct}%`}
             </span>
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={() => setBiometricLocked(true)}
-              className="p-1 rounded-full bg-white/10 hover:bg-white/20 text-[#dcc8a2] border-0 cursor-pointer"
-              title="Lock with Android Biometrics"
-            >
-              <Lock size={11} />
-            </motion.button>
+            {device?.biometric_supported && (
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setBiometricLocked(true)}
+                className="p-1 rounded-full bg-white/10 hover:bg-white/20 text-[#dcc8a2] border-0 cursor-pointer"
+                title="Lock SWK ONE (unlock with fingerprint, face or device PIN)"
+                aria-label="Lock SWK ONE"
+              >
+                <Lock size={11} />
+              </motion.button>
+            )}
             {!phoneFrameMode && (
               <motion.button
                 whileTap={{ scale: 0.9 }}
@@ -1438,13 +1498,14 @@ export default function SwkOneApp() {
                   onSafetyCheckIn={handleSafetyCheckIn}
                   onTriggerSos={handleTriggerSos}
                   onViewingArrive={async viewingId => {
-                    const coords = await getCurrentGpsPosition()
+                    const coords = await fixOrNotice()
+                    if (!coords) return
                     await runOrQueue(
                       'viewing_arrive',
                       `Viewing Arrival #${viewingId}`,
                       `/api/swk-one/viewings/${viewingId}/arrive`,
-                      { lat: coords.lat, lng: coords.lng },
-                      `Verified GPS Viewing Check-In recorded!`
+                      { lat: coords.lat, lng: coords.lng, accuracy_m: coords.accuracy_m },
+                      `Arrival recorded. A manager reviews it if you are not at the property.`
                     )
                   }}
                   onViewingFeedback={async (viewingId, payload) => {

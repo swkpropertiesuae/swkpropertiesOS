@@ -27,7 +27,7 @@ import { PrintPage } from './print/PrintPage'
 import { StudioHome, StudioEditor } from './pages/StudioPage'
 import { NewInvoicePage } from './pages/NewInvoicePage'
 import { Loading, ErrorBox } from './ui/kit'
-import { isCapacitorAndroid } from './mobile/native-bridge'
+import { isNativeAndroid } from './mobile/native-bridge'
 
 // SWK real-estate modules (code-split)
 const MarketPage = lazy(() => import('./pages/swk/MarketPage'))
@@ -52,7 +52,7 @@ const Statements = () => <ReportsPage fixed={['trial_balance', 'profit_loss', 'b
 export default function App() {
   const { me, loading } = useMeta()
   const loc = useLocation()
-  const defaultLanding = isCapacitorAndroid() ? '/swk-one' : '/home'
+  const defaultLanding = isNativeAndroid() ? '/swk-one' : '/home'
   if (loc.pathname.startsWith('/t/')) return <Routes><Route path="/t/:token" element={<PublicTrack />} /></Routes>
   if (loading) return <div className="h-full grid place-items-center"><Loading label="Starting SWK OS…" /></div>
   if (!me) return <Routes><Route path="/login" element={<Login />} /><Route path="*" element={<Navigate to="/login" replace state={{ from: loc.pathname }} />} /></Routes>

@@ -96,6 +96,11 @@ try {
   }, token)
   check('Reception QR + Office Wi-Fi + Enrolled Device check-in is Verified', checkInRes.statusCode === 200 && checkInRes.json().verification === 'Verified')
 
+  const noQrRes = await androidReq('/api/swk-one/attendance/qr-check-in', 'POST', { device_id: 'SWK-AND-TEST9901' }, token)
+  check('Check-in without a scanned QR code is rejected (no auto-verification)', noQrRes.statusCode === 400)
+  const fakeQrRes = await androidReq('/api/swk-one/attendance/qr-check-in', 'POST', { qr_token: 'AUTO-RECEPTION-QR', device_id: 'SWK-AND-TEST9901' }, token)
+  check('Unknown or guessed QR codes are never Verified', fakeQrRes.statusCode === 200 && fakeQrRes.json().verification !== 'Verified' && fakeQrRes.json().doubtful_reasons.includes('Unknown reception QR code'))
+
   // 4. Field Duty Foreground Service lifecycle & strict Off-Duty Location Rejection
   const startDutyRes = await androidReq('/api/swk-one/field-duty/start', 'POST', {
     assigned_location: 'Dubai Marina – Marina Gate Tower 1',
@@ -118,6 +123,15 @@ try {
   }, token)
   check('Active Field Duty accepts batched GPS telemetry', batchRes.statusCode === 200 && batchRes.json().accepted_points === 2)
 
+  const mockRes = await androidReq(`/api/swk-one/field-duty/${dutySession.id}/location-batch`, 'POST', {
+    points: [{ lat: 25.0891, lng: 55.1471, accuracy_m: 5, mock: true }],
+  }, token)
+  check('Mock-provider locations are rejected as duty evidence', mockRes.statusCode === 400)
+  const badFixRes = await androidReq(`/api/swk-one/field-duty/${dutySession.id}/location-batch`, 'POST', { points: [{ lat: 'x', lng: 999 }] }, token)
+  check('Batches with no valid fix are rejected', badFixRes.statusCode === 400)
+  const secondDutyRes = await androidReq('/api/swk-one/field-duty/start', 'POST', { assigned_location: 'Second duty' }, token)
+  check('A second concurrent field duty is rejected', secondDutyRes.statusCode === 400)
+
   const endDutyRes = await androidReq(`/api/swk-one/field-duty/${dutySession.id}/end`, 'POST', {
     lat: 25.0895,
     lng: 55.1474,
@@ -132,6 +146,8 @@ try {
 
   // 5. Verified Viewing Arrival & Structured Client Feedback
   const viewingId = boot.viewings[0].id
+  const noFixArriveRes = await androidReq(`/api/swk-one/viewings/${viewingId}/arrive`, 'POST', {}, token)
+  check('Viewing arrival without a location fix is rejected (no invented coordinates)', noFixArriveRes.statusCode === 400)
   const arriveRes = await androidReq(`/api/swk-one/viewings/${viewingId}/arrive`, 'POST', {
     lat: 25.0889,
     lng: 55.1469,
@@ -195,30 +211,21 @@ try {
   }, token)
   check('One-tap End-of-Day report auto-reconciles with system activity counters', eodRes.statusCode === 200 && !eodRes.json().report.variance_flag, eodRes.json())
 
-  // 9. Encrypted Offline Sync Queue with Idempotent Replay Protection
-  const syncRes = await androidReq('/api/swk-one/offline/sync', 'POST', {
-    device_id: 'SWK-AND-TEST9901',
-    items: [
-      {
-        client_queue_id: 'OFFLINE-TEST-ITEM-001',
-        action_type: 'office_check_in',
-        payload: { qr_code_or_token: 'AUTO-RECEPTION-QR', network_ssid: 'SWK-CORP-WIFI-DXB' },
-      },
-    ],
-  }, token)
-  check('Offline queue sync processes queued items', syncRes.statusCode === 200 && syncRes.json().synced_count === 1)
+  // 9. Offline Sync Queue: replay through the original endpoint, idempotent, whitelisted
+  const syncItems = [
+    { client_queue_id: 'OFFLINE-TEST-ITEM-001', endpoint: '/api/swk-one/workday/mode', action_type: 'office_check_in', payload: { mode: 'On Break' } },
+    { client_queue_id: 'OFFLINE-TEST-ITEM-002', endpoint: '/api/auth/logout', action_type: 'office_check_in', payload: {} },
+  ]
+  const syncRes = await androidReq('/api/swk-one/offline/sync', 'POST', { device_id: 'SWK-AND-TEST9901', items: syncItems }, token)
+  const syncBody = syncRes.json()
+  check('Offline queue replays an item through its original endpoint', syncRes.statusCode === 200 && syncBody.synced_count === 1 && syncBody.results[0].status === 'synced')
+  check('Offline queue refuses endpoints that are not replayable', syncBody.results[1].status === 'error')
 
-  const replayRes = await androidReq('/api/swk-one/offline/sync', 'POST', {
-    device_id: 'SWK-AND-TEST9901',
-    items: [
-      {
-        client_queue_id: 'OFFLINE-TEST-ITEM-001',
-        action_type: 'office_check_in',
-        payload: { qr_code_or_token: 'AUTO-RECEPTION-QR', network_ssid: 'SWK-CORP-WIFI-DXB' },
-      },
-    ],
-  }, token)
+  const replayRes = await androidReq('/api/swk-one/offline/sync', 'POST', { device_id: 'SWK-AND-TEST9901', items: [syncItems[0]] }, token)
   check('Offline queue sync is idempotent and prevents duplicate replay', replayRes.statusCode === 200 && replayRes.json().results[0].status === 'already_synced')
+
+  const stillSignedIn = await androidReq('/api/swk-one/bootstrap', 'GET', undefined, token)
+  check('A refused offline item (logout) did not run', stillSignedIn.statusCode === 200)
 
   console.log(`\nAll ${checks} SWK ONE Android checks passed!`)
 } finally {

@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import {
-  QrCode, ShieldCheck, Fingerprint, Camera, CheckCircle2, Wifi, Smartphone, X,
+  QrCode, ShieldCheck, Fingerprint, Camera, Wifi, Smartphone, X,
   Scale, CloudOff, UploadCloud, Server, Check,
 } from 'lucide-react'
 import { SWK_BRAND, resolvePropertyPhoto } from './SwkOneBrandAssets'
-import type { DeviceIdentity, OfflineQueueItem } from './native-bridge'
+import { authenticateBiometricSession, type DeviceIdentity, type OfflineQueueItem } from './native-bridge'
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1]
 
@@ -24,14 +24,19 @@ export function BiometricLockModal({
   onUnlock: () => Promise<void>
 }) {
   const [scanning, setScanning] = useState(false)
-  const [pinMode, setPinMode] = useState(false)
-  const [pin, setPin] = useState('')
+  const [error, setError] = useState('')
 
+  // The system BiometricPrompt also offers the device PIN / pattern, so there is no separate in-app PIN box.
   const triggerBio = async () => {
     setScanning(true)
-    await new Promise(r => setTimeout(r, 480))
-    await onUnlock()
-    setScanning(false)
+    setError('')
+    try {
+      const res = await authenticateBiometricSession('Unlock your SWK ONE session')
+      if (res.verified) await onUnlock()
+      else setError(res.method === 'Unavailable' ? 'Biometric unlock is not available on this device. Set a screen lock in Android settings.' : 'Not verified. Try again.')
+    } finally {
+      setScanning(false)
+    }
   }
 
   return (
@@ -73,7 +78,7 @@ export function BiometricLockModal({
 
             <div className="space-y-1">
               <div className="text-[10.5px] uppercase tracking-[0.22em] text-[#dcc8a2] font-bold">
-                SWK ONE · Android Biometric Guard
+                SWK ONE · Session lock
               </div>
               <h2 className="text-xl font-bold font-display text-white">Unlock Authenticated Session</h2>
               <p className="text-xs text-[#b8c6de]">
@@ -82,65 +87,23 @@ export function BiometricLockModal({
               </p>
             </div>
 
-            {!pinMode ? (
-              <div className="space-y-2.5">
-                <motion.button
-                  whileTap={{ scale: 0.96 }}
-                  onClick={() => void triggerBio()}
-                  disabled={scanning}
-                  className="w-full py-3.5 px-5 rounded-2xl text-[#0b1a33] font-bold text-sm flex items-center justify-center gap-2 border-0 cursor-pointer shadow-lg"
-                  style={{ background: 'linear-gradient(135deg, #f1e3c2 0%, #c9a96e 55%, #b08d52 100%)' }}
-                >
-                  <Fingerprint size={18} />
-                  {scanning ? 'Verifying Android Biometrics…' : 'Touch Fingerprint / Face Unlock'}
-                </motion.button>
-                <button
-                  onClick={() => setPinMode(true)}
-                  className="w-full py-2.5 px-4 rounded-2xl bg-white/10 hover:bg-white/15 text-xs text-[#d6deeb] font-semibold border border-white/15 cursor-pointer"
-                >
-                  Use Android Device PIN / Credential Instead
-                </button>
-              </div>
-            ) : (
-              <form
-                onSubmit={e => {
-                  e.preventDefault()
-                  if (pin.length >= 4) void triggerBio()
-                }}
-                className="space-y-3"
+            <div className="space-y-2.5">
+              <motion.button
+                whileTap={{ scale: 0.96 }}
+                onClick={() => void triggerBio()}
+                disabled={scanning}
+                className="w-full py-3.5 px-5 rounded-2xl text-[#0b1a33] font-bold text-sm flex items-center justify-center gap-2 border-0 cursor-pointer shadow-lg"
+                style={{ background: 'linear-gradient(135deg, #f1e3c2 0%, #c9a96e 55%, #b08d52 100%)' }}
               >
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  maxLength={6}
-                  value={pin}
-                  onChange={e => setPin(e.target.value)}
-                  placeholder="Enter 4–6 digit device PIN"
-                  className="w-full px-4 py-3 rounded-2xl bg-black/35 border border-[#c9a96e]/50 text-center text-lg tracking-[0.35em] text-white focus:outline-none focus:border-[#c9a96e]"
-                  autoFocus
-                />
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPinMode(false)}
-                    className="flex-1 py-2.5 rounded-2xl bg-white/10 text-xs text-white border-0 cursor-pointer"
-                  >
-                    Back
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 py-2.5 rounded-2xl text-xs font-bold text-[#0b1a33] border-0 cursor-pointer"
-                    style={{ background: 'linear-gradient(135deg, #f1e3c2, #c9a96e)' }}
-                  >
-                    Verify PIN
-                  </button>
-                </div>
-              </form>
-            )}
+                <Fingerprint size={18} />
+                {scanning ? 'Waiting for Android verification…' : 'Unlock with fingerprint, face or device PIN'}
+              </motion.button>
+              {error && <p role="alert" className="text-xs text-[#ffb4a8] m-0">{error}</p>}
+            </div>
 
             <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[10.5px] text-[#9aa3b8]">
               <span className="font-mono">ID: {device?.device_id}</span>
-              <span className="text-[#dcc8a2]">Android Keystore Active</span>
+              <span className="text-[#dcc8a2]">Verified by Android</span>
             </div>
           </motion.div>
         </motion.div>
@@ -166,63 +129,79 @@ export function ReceptionQrScannerModal({
   receptionQrPreview?: any
   activeQr?: any
   device: DeviceIdentity | null
-  onScanSubmit?: (tokenOrCode: string, networkSsid: string) => Promise<void>
+  onScanSubmit?: (tokenOrCode: string) => Promise<void>
   onSubmitCheckIn?: (payload: any) => Promise<any>
 }) {
-  const qrPreview = receptionQrPreview ?? activeQr
-  const submitScan = async (tok: string, ssid: string) => {
-    if (onScanSubmit) return onScanSubmit(tok, ssid)
-    if (onSubmitCheckIn) return onSubmitCheckIn({ qr_token: tok, short_code: tok, network_type: 'WiFi', wifi_ssid: ssid })
+  const submitScan = async (tok: string) => {
+    if (onScanSubmit) return onScanSubmit(tok)
+    if (onSubmitCheckIn) return onSubmitCheckIn({ qr_token: tok, short_code: tok })
   }
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [cameraActive, setCameraActive] = useState(false)
+  const [canDecode, setCanDecode] = useState(false)
   const [manualCode, setManualCode] = useState('')
-  const [networkSsid, setNetworkSsid] = useState('SWK-CORP-WIFI-DXB')
   const [submitting, setSubmitting] = useState(false)
+  const submittingRef = useRef(false)
 
+  const send = async (code: string) => {
+    if (submittingRef.current) return
+    submittingRef.current = true
+    setSubmitting(true)
+    try {
+      await submitScan(code)
+      onClose()
+    } finally {
+      submittingRef.current = false
+      setSubmitting(false)
+    }
+  }
+
+  // Camera + QR decoding (BarcodeDetector). Without it the agent types the 6-digit code shown on the reception screen.
   useEffect(() => {
     if (!open) return
     let stream: MediaStream | null = null
+    let timer: ReturnType<typeof setInterval> | null = null
+    let cancelled = false
+    const Detector = (window as any).BarcodeDetector
     if (navigator.mediaDevices?.getUserMedia) {
       navigator.mediaDevices
         .getUserMedia({ video: { facingMode: 'environment' } })
         .then(s => {
+          if (cancelled) { s.getTracks().forEach(t => t.stop()); return }
           stream = s
           setCameraActive(true)
           if (videoRef.current) {
             videoRef.current.srcObject = s
             void videoRef.current.play().catch(() => {})
           }
+          if (Detector) {
+            const detector = new Detector({ formats: ['qr_code'] })
+            setCanDecode(true)
+            timer = setInterval(async () => {
+              if (!videoRef.current || videoRef.current.readyState < 2 || submittingRef.current) return
+              try {
+                const found = await detector.detect(videoRef.current)
+                const raw = found?.[0]?.rawValue
+                if (raw) void send(String(raw))
+              } catch { /* keep scanning */ }
+            }, 450)
+          }
         })
         .catch(() => setCameraActive(false))
     }
     return () => {
+      cancelled = true
+      if (timer) clearInterval(timer)
       if (stream) stream.getTracks().forEach(t => t.stop())
       setCameraActive(false)
+      setCanDecode(false)
     }
   }, [open])
-
-  const handleScanLiveReception = async () => {
-    setSubmitting(true)
-    try {
-      const tok = qrPreview?.token_code || 'AUTO-RECEPTION-QR'
-      await submitScan(tok, networkSsid)
-      onClose()
-    } finally {
-      setSubmitting(false)
-    }
-  }
 
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!manualCode.trim()) return
-    setSubmitting(true)
-    try {
-      await submitScan(manualCode.trim(), networkSsid)
-      onClose()
-    } finally {
-      setSubmitting(false)
-    }
+    await send(manualCode.trim())
   }
 
   return (
@@ -257,7 +236,7 @@ export function ReceptionQrScannerModal({
                 <div>
                   <div className="font-bold font-display text-sm text-white">Office Reception QR Scanner</div>
                   <div className="text-[11px] text-[#dcc8a2]">
-                    Point camera at the SWK Office Reception PC screen
+                    Scan the QR on the reception screen, or type its 6-digit code
                   </div>
                 </div>
               </div>
@@ -296,53 +275,29 @@ export function ReceptionQrScannerModal({
                 <div className="relative z-10 w-44 h-40 border-2 border-dashed border-[#c9a96e] rounded-2xl flex flex-col items-center justify-center p-3 text-center bg-[#08142a]/65 backdrop-blur-xs">
                   <Camera size={26} className="text-[#c9a96e] mb-1.5" />
                   <span className="text-xs font-bold text-white">
-                    {cameraActive ? 'Camera Active · Align Reception QR' : 'Android MLKit Barcode Scanner Ready'}
-                  </span>
-                  <span className="text-[10px] text-[#f3ead8] mt-1 font-mono bg-white/10 px-2 py-0.5 rounded">
-                    Active Office Code: {qrPreview?.short_code || '849201'}
+                    {cameraActive ? (canDecode ? 'Align the reception QR in the frame' : 'Camera on · this device cannot read QR codes: type the code below') : 'Camera unavailable · type the code below'}
                   </span>
                 </div>
               </div>
 
-              {/* 3-Factor Hardware & Network Evidence */}
+              {/* What is checked */}
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="p-2.5 rounded-2xl bg-white border border-[#e7e1d4]">
                   <div className="font-bold text-[#14305c] flex items-center gap-1">
                     <Smartphone size={13} className="text-[#9a7a42]" /> Registered Device
                   </div>
                   <div className="text-[11px] font-semibold text-[#0b1a33] truncate mt-0.5">
-                    {device?.device_name || 'Enrolled Android'}
+                    {device?.device_name || 'This device'}
                   </div>
                 </div>
                 <div className="p-2.5 rounded-2xl bg-white border border-[#e7e1d4]">
                   <div className="font-bold text-[#14305c] flex items-center gap-1">
-                    <Wifi size={13} className="text-[#9a7a42]" /> Office Wi-Fi Evidence
+                    <Wifi size={13} className="text-[#9a7a42]" /> Office location
                   </div>
-                  <select
-                    value={networkSsid}
-                    onChange={e => setNetworkSsid(e.target.value)}
-                    className="w-full bg-transparent text-[11px] font-bold text-[#0b1a33] mt-0.5 focus:outline-none"
-                  >
-                    <option value="SWK-CORP-WIFI-DXB">SWK-CORP-WIFI-DXB (Trusted)</option>
-                    <option value="SWK-RECEPTION-5G">SWK-RECEPTION-5G (Trusted)</option>
-                    <option value="PUBLIC-CAFE-NET">External / Untrusted Network (Flag Review)</option>
-                  </select>
+                  <div className="text-[11px] font-semibold text-[#0b1a33] mt-0.5">Checked with GPS at check-in</div>
                 </div>
               </div>
-
-              {/* Instant Scan Button */}
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={() => void handleScanLiveReception()}
-                disabled={submitting}
-                className="w-full py-3.5 px-4 rounded-2xl text-[#0b1a33] font-bold text-sm flex items-center justify-center gap-2 border-0 cursor-pointer shadow-md"
-                style={{ background: 'linear-gradient(135deg, #f1e3c2 0%, #c9a96e 55%, #b08d52 100%)' }}
-              >
-                <CheckCircle2 size={18} />
-                {submitting
-                  ? 'Validating QR, Device & Network…'
-                  : `Scan Active Reception QR (${qrPreview?.short_code || 'Live'})`}
-              </motion.button>
+              {submitting && <p className="text-xs text-[#14305c] font-semibold m-0">Validating QR code, device and location…</p>}
 
               {/* Manual 6-Digit Reception Code Input */}
               <form onSubmit={handleManualSubmit} className="pt-2 border-t border-[#e7e1d4] flex gap-2">
@@ -350,7 +305,9 @@ export function ReceptionQrScannerModal({
                   type="text"
                   value={manualCode}
                   onChange={e => setManualCode(e.target.value)}
-                  placeholder="Or enter 6-digit reception code…"
+                  placeholder="6-digit reception code"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
                   className="flex-1 px-3.5 py-2.5 rounded-xl bg-white border border-[#d9d1c1] text-xs text-[#0b1a33]"
                 />
                 <button

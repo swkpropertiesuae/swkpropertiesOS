@@ -7,8 +7,7 @@ import {
   ShieldCheck, RefreshCw, Smartphone, Wifi, Clock, CheckCircle2,
   AlertTriangle, Building2, QrCode, Users,
 } from 'lucide-react'
-import { get, post } from '../../lib/api'
-import { useToast } from '../../lib/toast'
+import { get } from '../../lib/api'
 import { Loading } from '../../ui/kit'
 import { SWK_BRAND } from '../../mobile/SwkOneBrandAssets'
 
@@ -16,10 +15,8 @@ const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1]
 
 export default function ReceptionQrPage() {
   const qc = useQueryClient()
-  const toast = useToast()
   const [qrDataUrl, setQrDataUrl] = useState<string>('')
   const [countdown, setCountdown] = useState<number>(45)
-  const [simulatingScan, setSimulatingScan] = useState(false)
 
   const qrQuery = useQuery({
     queryKey: ['reception-qr-current'],
@@ -56,24 +53,6 @@ export default function ReceptionQrPage() {
     }, 1000)
     return () => clearInterval(timer)
   }, [qc])
-
-  const simulateEmployeeScan = async () => {
-    if (!data?.token_code) return
-    setSimulatingScan(true)
-    try {
-      const res = await post('/api/swk-one/attendance/office-check-in', {
-        qr_code_or_token: data.token_code,
-        device_id: 'AND-SWK-RECEPTION-TEST',
-        network_ssid: 'SWK-CORP-WIFI-DXB',
-      })
-      toast.ok(`Verified check-in recorded (${res.attendance_event?.event_no})`)
-      void qc.invalidateQueries({ queryKey: ['reception-qr-current'] })
-    } catch (e: any) {
-      toast.error(e?.message || 'Check-in failed')
-    } finally {
-      setSimulatingScan(false)
-    }
-  }
 
   if (qrQuery.isLoading && !data) return <Loading label="Starting Office Reception QR Terminal…" />
 
@@ -206,16 +185,6 @@ export default function ReceptionQrPage() {
             </div>
           </div>
 
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={simulateEmployeeScan}
-            disabled={simulatingScan}
-            className="w-full py-3.5 px-4 rounded-2xl text-white font-bold text-sm transition cursor-pointer border-0 flex items-center justify-center gap-2 shadow-md"
-            style={{ background: 'linear-gradient(135deg, #1b3a6b, #0b1a33)' }}
-          >
-            <Smartphone size={16} className="text-[#c9a96e]" />
-            {simulatingScan ? 'Verifying QR & Device…' : 'Test Scan with Current Logged-in Account'}
-          </motion.button>
         </motion.div>
 
         {/* Right: Live Verified Check-Ins & 4-Factor Validation Rules */}

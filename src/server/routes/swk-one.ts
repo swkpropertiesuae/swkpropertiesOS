@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
-import { tx } from '../db'
-import { body, idOf } from './helpers'
+import { q, tx } from '../db'
+import { nowIso } from '../util'
+import { body, idOf, need } from './helpers'
 import {
   askKnowledgeAssistant,
   cameraExtractInventoryFields,
@@ -43,7 +44,9 @@ export default async function (app: FastifyInstance) {
   app.post('/api/swk-one/initialize', async req => ({ ok: true, data: initializeSwkOneWorkspaceData(req.ctx) }))
 
   // 2. Reception QR Terminal & Office Attendance
+  // Only reception / HR staff may read the live code: a phone that can fetch it by itself would not prove presence in the office.
   app.get('/api/swk-one/reception-qr/current', async req => {
+    need(req, 'hr', 'edit')
     const branchId = Number((req.query as any)?.branch_id || 1)
     const qr = tx(() => getCurrentReceptionQr(branchId, req.ctx))
     return { ...qr, token: qr.token_code }
@@ -54,7 +57,7 @@ export default async function (app: FastifyInstance) {
     const res = tx(() =>
       officeQrCheckIn(
         {
-          qr_code_or_token: b.qr_code_or_token || b.qr_token || b.short_code || 'AUTO-RECEPTION-QR',
+          qr_code_or_token: b.qr_code_or_token || b.qr_token || b.short_code,
           device_id: b.device_id,
           network_ssid: b.network_ssid || b.wifi_ssid || b.network_type,
           gps_lat: b.gps_lat ? String(b.gps_lat) : b.lat ? String(b.lat) : undefined,
@@ -250,9 +253,9 @@ export default async function (app: FastifyInstance) {
     const report = tx(() =>
       submitOneTapDailyReport(
         {
-          outcomes_narrative: b.outcomes_narrative || b.self_summary || 'Completed scheduled field viewings and CRM follow-ups.',
+          outcomes_narrative: String(b.outcomes_narrative || b.self_summary || '').trim(),
           blockers_narrative: b.blockers_narrative || b.blockers || 'None',
-          next_day_priorities: b.next_day_priorities || 'Follow up on active offers and viewings.',
+          next_day_priorities: String(b.next_day_priorities || '').trim(),
           confidential_escalation: b.confidential_escalation,
         },
         req.ctx
@@ -304,21 +307,54 @@ export default async function (app: FastifyInstance) {
   app.post('/api/swk-one/devices/register', handleRegisterDevice)
   app.post('/api/swk-one/device/register', handleRegisterDevice)
 
+  /**
+   * Offline queue replay. Each queued item carries the endpoint it was meant for; it is replayed through that endpoint
+   * (so it gets the same validation, ownership and audit rules as an online request) and logged under its idempotency key.
+   * Items without an endpoint fall back to the typed handlers in the domain layer.
+   */
+  const REPLAYABLE = new RegExp('^/api/swk-one/(' + [
+    'attendance/(office-check-in|qr-check-in|office-check-out|check-out)',
+    'workday/(mode|checklist|handover)',
+    'field-duty/(start|sos)', 'field-duty/\\d+/(location-batch|end|safety-check-in|safety-checkin)',
+    'viewings/\\d+/(arrive|feedback|event)', 'leads/\\d+/quick-log',
+    'offers/(create|submit)', 'inventory/submit', 'inventory/\\d+/(reconfirm-price|owner-withdraw|owner-withdrawal)',
+    'keys/log', 'inventory/key-log', 'daily-report/one-tap',
+    'communications/(\\d+/)?(reply|escalate)', 'communications/escalate', 'hr/(leave|leave-request)',
+    'attendance/\\d+/correction',
+  ].join('|') + ')$')
+
   app.post('/api/swk-one/offline/sync', async req => {
     const b = body<{ items: any[]; device_id?: string }>(req)
-    const normalizedItems = (Array.isArray(b.items) ? b.items : []).map(i => ({
-      idempotency_key: i.idempotency_key || i.client_queue_id,
-      action_type: i.action_type,
-      payload: { ...(i.payload || {}), device_id: i.payload?.device_id || b.device_id },
-      queued_at: i.queued_at,
-    }))
-    const res = tx(() => syncOfflineQueue(normalizedItems, req.ctx))
-    return {
-      ...res,
-      results: res.results.map(r => ({
-        ...r,
-        status: r.status === 'duplicate_skipped' ? 'already_synced' : r.status,
-      })),
+    const items = (Array.isArray(b.items) ? b.items : []).slice(0, 100)
+    const results: Array<{ idempotency_key: string; status: string; result?: any; error?: string }> = []
+    const forwarded: Record<string, string> = { 'x-swk-client': String(req.headers['x-swk-client'] || 'android') }
+    for (const h of ['x-swk-session', 'cookie', 'authorization'] as const) if (typeof req.headers[h] === 'string') forwarded[h] = req.headers[h] as string
+
+    for (const i of items) {
+      const key = String(i?.idempotency_key || i?.client_queue_id || '').trim()
+      if (!key) { results.push({ idempotency_key: '', status: 'error', error: 'Queued item has no idempotency key' }); continue }
+      const done = q.get('SELECT result_json FROM offline_sync_queue_log WHERE idempotency_key = ? AND user_id = ?', key, req.user!.id)
+      if (done) { results.push({ idempotency_key: key, status: 'already_synced' }); continue }
+      const endpoint = typeof i.endpoint === 'string' ? i.endpoint.split('?')[0] : ''
+      if (endpoint) {
+        if (!REPLAYABLE.test(endpoint)) { results.push({ idempotency_key: key, status: 'error', error: 'This action cannot be replayed from the offline queue' }); continue }
+        const res = await app.inject({ method: 'POST', url: endpoint, payload: { ...(i.payload || {}), device_id: i.payload?.device_id || b.device_id }, headers: forwarded })
+        const out = res.json?.() ?? {}
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          q.run(`INSERT INTO offline_sync_queue_log(idempotency_key, user_id, device_id, action_type, payload_json, result_json, queued_at, synced_at) VALUES (?,?,?,?,?,?,?,?)`,
+            key, req.user!.id, String(i.payload?.device_id || b.device_id || ''), endpoint, JSON.stringify(i.payload || {}), JSON.stringify(out), i.queued_at || nowIso(), nowIso())
+          results.push({ idempotency_key: key, status: 'synced', result: out })
+        } else {
+          results.push({ idempotency_key: key, status: 'error', error: String(out?.error || `Rejected (${res.statusCode})`) })
+        }
+        continue
+      }
+      const typed = tx(() => syncOfflineQueue([{
+        idempotency_key: key, action_type: i.action_type,
+        payload: { ...(i.payload || {}), device_id: i.payload?.device_id || b.device_id }, queued_at: i.queued_at,
+      }], req.ctx))
+      results.push(...typed.results.map(r => ({ ...r, status: r.status === 'duplicate_skipped' ? 'already_synced' : r.status })))
     }
+    return { synced_count: results.filter(r => r.status === 'synced').length, results }
   })
 }

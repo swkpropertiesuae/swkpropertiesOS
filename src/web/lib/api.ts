@@ -1,4 +1,4 @@
-import { getStoredServerUrl, getStoredSessionToken, isCapacitorAndroid, setStoredServerUrl, setStoredSessionToken } from '../mobile/native-bridge'
+import { getStoredServerUrl, getStoredSessionToken, isNativeAndroid, setStoredServerUrl, setStoredSessionToken } from '../mobile/native-bridge'
 
 export const getSwkApiBaseUrl = getStoredServerUrl
 export const setSwkApiBaseUrl = setStoredServerUrl
@@ -17,7 +17,7 @@ function resolveApiUrl(path: string): { url: string; crossOrigin: boolean } {
 }
 
 function buildClientHeaders(extra?: Record<string, string>): Record<string, string> {
-  const isAndroid = isCapacitorAndroid()
+  const isAndroid = isNativeAndroid()
   const sessionToken = getStoredSessionToken()
   return {
     'x-swk-client': isAndroid ? 'android' : 'web',

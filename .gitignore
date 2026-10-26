@@ -12,3 +12,8 @@ android/app/src/main/assets/public/
 android/.gradle/
 android/app/build/
 android/build/
+
+android/local.properties
+android/.gradle/
+*.jks
+*.keystore

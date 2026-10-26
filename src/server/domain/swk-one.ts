@@ -1,5 +1,6 @@
 import crypto from 'node:crypto'
-import { q, tx } from '../db'
+import { q, tx, inDemo } from '../db'
+import { config } from '../config'
 import { createRecord, getDef, getRecord, listRecords, patchRecord, SYSTEM_CTX, type Ctx, type Rec } from '../engine'
 import { addDays, bad, forbidden, nowIso, safeJson, todayStr } from '../util'
 import { computeActivitySnapshot, recordEnterpriseAudit, submitDailyReport } from './enterprise'
@@ -32,8 +33,46 @@ const DEFAULT_EXIT_CHECKLIST = [
 ]
 
 /**
- * Finds or provisions (on explicit write action) the employee & DLD agent records
- * linked to the current authenticated user so mobile operations never fail on missing profile links.
+ * Demo records (a sample employee with placeholder Emirates ID / IBAN / salary, a "passed" DLD exam, a 98% compliance score,
+ * sample properties and leads) may only be fabricated outside production and inside the isolated demo workspace.
+ * A real workspace must never receive invented HR, payroll or compliance data: HR links the user to a real employee record.
+ */
+const demoProvisioningAllowed = () => !config.isProd || inDemo()
+
+const toNum = (v: unknown): number | null => {
+  const n = typeof v === 'string' ? Number(v.trim()) : (v as number)
+  return typeof n === 'number' && Number.isFinite(n) ? n : null
+}
+const validCoord = (lat: number | null, lng: number | null): lat is number =>
+  lat !== null && lng !== null && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 && !(lat === 0 && lng === 0)
+const distanceM = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+  const rad = (x: number) => x * Math.PI / 180
+  const a = Math.sin(rad(lat2 - lat1) / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(rad(lng2 - lng1) / 2) ** 2
+  return 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+/** Offline-queue replay and raw payloads store UTC timestamps without an offset. */
+const instantOf = (s: string) => Date.parse(/(Z|[+-]\d{2}:\d{2})$/.test(s) ? s : s + 'Z')
+
+/** Office geofence from SWK_OFFICE_LAT / SWK_OFFICE_LNG / SWK_OFFICE_RADIUS_M (same settings as /api/mobile/attendance). */
+function officeGeofence(lat: number | null, lng: number | null, accuracy: number | null): 'unconfigured' | 'missing' | 'outside' | 'inside' {
+  const oLat = toNum(process.env.SWK_OFFICE_LAT), oLng = toNum(process.env.SWK_OFFICE_LNG), radius = toNum(process.env.SWK_OFFICE_RADIUS_M)
+  if (oLat === null || oLng === null || radius === null || radius < 10 || radius > 500) return 'unconfigured'
+  if (!validCoord(lat, lng)) return 'missing'
+  return distanceM(lat as number, lng as number, oLat, oLng) + (accuracy ?? 0) <= radius ? 'inside' : 'outside'
+}
+
+/** The field duty session must belong to the signed-in user's own employee record. */
+function ownFieldSession(sessionId: number, ctx: Ctx): Rec {
+  const { employee } = resolveStaffContext(ctx, true)
+  const s = q.get(`SELECT * FROM field_sessions WHERE id = ? AND deleted_at IS NULL`, sessionId)
+  if (!s) throw bad('Field duty session not found')
+  if (!employee || s.employee_id !== employee.id) throw forbidden('This field duty session is not yours')
+  return s
+}
+
+/**
+ * Finds the employee & DLD agent records linked to the current authenticated user. Only in demo / non-production
+ * workspaces does createIfMissing provision sample records (see demoProvisioningAllowed).
  */
 export function resolveStaffContext(ctx: Ctx, createIfMissing = false): {
   userId: number
@@ -43,6 +82,7 @@ export function resolveStaffContext(ctx: Ctx, createIfMissing = false): {
 } {
   const u = ctx.user
   if (!u) throw forbidden('Authentication required')
+  createIfMissing = createIfMissing && demoProvisioningAllowed()
   let emp = q.get('SELECT * FROM employees WHERE user_id = ? AND deleted_at IS NULL ORDER BY id ASC LIMIT 1', u.id)
   if (!emp) {
     emp = q.get('SELECT * FROM employees WHERE lower(email) = lower(?) AND deleted_at IS NULL ORDER BY id ASC LIMIT 1', u.email)
@@ -287,31 +327,41 @@ export function officeQrCheckIn(
   if (!employee) throw bad('Employee profile is required for attendance check-in')
 
   const rawInput = String(payload.qr_code_or_token || '').trim()
+  if (!rawInput) throw bad('Scan the reception QR code or enter the 6-digit code shown on the reception screen')
   let parsedToken = rawInput
   try {
     if (rawInput.startsWith('{')) {
       const obj = JSON.parse(rawInput)
-      parsedToken = obj.token || obj.short_code || rawInput
+      parsedToken = String(obj.token || obj.short_code || rawInput)
     }
   } catch { /* plain string */ }
 
-  // Ensure current QR token exists so demo/instant scan works too
-  const currentQr = getCurrentReceptionQr(1, ctx)
-  let qrRow = q.get(
+  const qrRow = q.get(
     `SELECT * FROM reception_qr_tokens WHERE (token_code = ? OR short_code = ?) ORDER BY id DESC LIMIT 1`,
     parsedToken,
     parsedToken,
   )
-  if (!qrRow && parsedToken.toUpperCase() === 'AUTO-RECEPTION-QR') {
-    qrRow = q.get(`SELECT * FROM reception_qr_tokens WHERE token_code = ?`, currentQr.token_code)
-  }
 
   const now = nowIso()
-  const isExpired = qrRow ? new Date(qrRow.expires_at).getTime() < Date.now() - 120_000 : false
+  // The rotating code is only valid for a few seconds after it leaves the reception screen.
+  const isExpired = qrRow ? new Date(qrRow.expires_at).getTime() < Date.now() - 15_000 : false
   const device = registerMobileDevice({ device_id: payload.device_id || `AND-SWK-${userId}` }, ctx)
   if (!device) throw bad('Device registration failed. Please retry.')
-  const trustedNetwork = !payload.network_ssid || /swk|office|dxb|corp|wifi/i.test(payload.network_ssid)
-  const verified = !!qrRow && !isExpired && device?.status === 'Trusted' && trustedNetwork
+  // The Wi-Fi name is typed/claimed by the client and cannot be proven from the app: it can only contradict, never confirm.
+  const networkClaimOk = !payload.network_ssid || /swk|office|dxb|corp|wifi/i.test(payload.network_ssid)
+  const lat = toNum(payload.gps_lat), lng = toNum(payload.gps_lng), accuracy = toNum(payload.gps_accuracy_m)
+  const geofence = officeGeofence(lat, lng, accuracy)
+  const insideOffice = geofence === 'unconfigured' || geofence === 'inside'
+  const trustedNetwork = networkClaimOk
+  const verified = !!qrRow && !isExpired && device?.status === 'Trusted' && networkClaimOk && insideOffice
+  const doubtfulReasons = [
+    !qrRow ? 'Unknown reception QR code' : null,
+    qrRow && isExpired ? 'Reception QR code expired' : null,
+    device?.status !== 'Trusted' ? 'Device not trusted' : null,
+    !networkClaimOk ? 'Not on the office network' : null,
+    geofence === 'missing' ? 'No location fix' : null,
+    geofence === 'outside' ? 'Outside the office area' : null,
+  ].filter((r): r is string => !!r)
 
   if (qrRow) {
     q.run(`UPDATE reception_qr_tokens SET scans_count = scans_count + 1 WHERE id = ?`, qrRow.id)
@@ -333,13 +383,11 @@ export function officeQrCheckIn(
   if (existingToday && !existingToday.check_out_at) {
     eventRecord = patchRecord(getDef('attendance_events'), existingToday.id, {
       terminal_type: 'Dynamic QR',
-      qr_token_ref: qrRow ? qrRow.token_code : parsedToken || currentQr.token_code,
+      qr_token_ref: qrRow ? qrRow.token_code : parsedToken,
       check_in_at: existingToday.check_in_at || now.slice(0, 16),
-      gps_lat: payload.gps_lat || '25.1972',
-      gps_lng: payload.gps_lng || '55.2744',
-      gps_accuracy_m: payload.gps_accuracy_m ?? 12,
+      ...(validCoord(lat, lng) ? { gps_lat: String(lat), gps_lng: String(lng), gps_accuracy_m: accuracy ?? undefined } : {}),
       manager_verified: verified,
-      notes: `Verified via SWK ONE Android (${device.device_name}) · Network: ${payload.network_ssid || 'SWK-CORP-WIFI-DXB'}`,
+      notes: `${verified ? 'Verified' : `Doubtful (${doubtfulReasons.join('; ')})`} via SWK ONE Android (${device.device_name}) · Network claimed: ${payload.network_ssid || 'not provided'}`,
     }, { ...ctx, system: true })
   } else {
     eventRecord = createRecord(getDef('attendance_events'), {
@@ -349,15 +397,13 @@ export function officeQrCheckIn(
       shift_name: payload.shift_name || 'Standard 09:00–18:00',
       grace_minutes: 15,
       terminal_type: 'Dynamic QR',
-      qr_token_ref: qrRow ? qrRow.token_code : parsedToken || currentQr.token_code,
+      qr_token_ref: qrRow ? qrRow.token_code : parsedToken,
       check_in_at: now.slice(0, 16),
       duty_status: lateMins > 15 ? 'Late Arrival' : 'On Duty',
       late_minutes: lateMins > 15 ? lateMins : 0,
-      gps_lat: payload.gps_lat || '25.1972',
-      gps_lng: payload.gps_lng || '55.2744',
-      gps_accuracy_m: payload.gps_accuracy_m ?? 12,
+      ...(validCoord(lat, lng) ? { gps_lat: String(lat), gps_lng: String(lng), gps_accuracy_m: accuracy ?? undefined } : {}),
       manager_verified: verified,
-      notes: `${verified ? 'Verified Reception QR + Trusted Android Device' : 'Doubtful check-in flagged for manager review'} (${device.device_name})`,
+      notes: `${verified ? 'Verified Reception QR + Trusted Android Device' : `Doubtful check-in flagged for manager review: ${doubtfulReasons.join('; ')}`} (${device.device_name})`,
     }, { ...ctx, system: true })
   }
 
@@ -384,8 +430,10 @@ export function officeQrCheckIn(
 
   return {
     verified,
+    doubtful_reasons: doubtfulReasons,
     verification_summary: {
       qr_token_valid: !!qrRow && !isExpired,
+      office_location: geofence,
       device_enrolled: device?.status === 'Trusted',
       device_name: device?.device_name,
       office_network_verified: trustedNetwork,
@@ -597,6 +645,11 @@ export function startFieldDutySession(
 ) {
   const { userId, employee, agent } = resolveStaffContext(ctx, true)
   if (!employee) throw bad('Employee profile required for field duty')
+  if (q.val<number>(`SELECT COUNT(*) FROM field_sessions WHERE employee_id = ? AND status IN ('Active (On Duty)', 'SOS Emergency Active') AND deleted_at IS NULL`, employee.id)) {
+    throw bad('End your current field duty before starting another')
+  }
+  const startLat = toNum(payload.lat), startLng = toNum(payload.lng)
+  const hasStartFix = validCoord(startLat, startLng)
   const now = new Date()
   const startIso = now.toISOString().slice(0, 16)
   const durMins = Math.min(480, Math.max(30, Number(payload.scheduled_minutes || 120)))
@@ -610,13 +663,11 @@ export function startFieldDutySession(
     scheduled_end: endIso,
     started_at: startIso,
     status: 'Active (On Duty)',
-    assigned_location: payload.assigned_location.trim() || 'Dubai Marina – Assigned Viewing',
+    assigned_location: String(payload.assigned_location || '').trim() || 'Assigned field duty',
     viewing_id: payload.viewing_id ?? null,
     property_id: payload.property_id ?? null,
     appointment_ref: payload.viewing_id ? `VW-${payload.viewing_id}` : `DUTY-${todayStr()}`,
-    last_lat: payload.lat || '25.0805',
-    last_lng: payload.lng || '55.1403',
-    gps_accuracy_m: payload.accuracy_m ?? 8,
+    ...(hasStartFix ? { last_lat: String(startLat), last_lng: String(startLng), gps_accuracy_m: toNum(payload.accuracy_m) ?? undefined } : {}),
     retention_until: addDays(todayStr(), 90),
     notes: payload.notes || 'Started via SWK ONE Android Foreground Location Service',
   }, { ...ctx, system: true })
@@ -635,50 +686,59 @@ export function ingestDutyLocationBatch(
     device_id?: string
     battery_pct?: number
     network_type?: string
-    points: Array<{ lat: string | number; lng: string | number; accuracy_m?: number; timestamp?: string }>
+    points: Array<{ lat: string | number; lng: string | number; accuracy_m?: number; timestamp?: string; recorded_at?: string; mock?: boolean }>
   },
   ctx: Ctx,
 ) {
-  const { userId, employee } = resolveStaffContext(ctx, true)
-  const s = getRecord(getDef('field_sessions'), sessionId, { ...ctx, system: true })
+  const s = ownFieldSession(sessionId, ctx)
+  const { userId } = resolveStaffContext(ctx, true)
   // Strict Privacy Rule: Never accept or store location telemetry when session is Off-Duty / Completed
   if (s.status !== 'Active (On Duty)' && s.status !== 'SOS Emergency Active') {
     throw forbidden('Location Privacy Guard: Field duty session is no longer active. Off-duty location updates are strictly rejected.')
   }
+  const endMs = instantOf(String(s.scheduled_end || ''))
+  if (Number.isFinite(endMs) && endMs <= Date.now()) {
+    throw forbidden('Location Privacy Guard: Field duty session is no longer active (scheduled duty window has ended).')
+  }
 
-  const pts = Array.isArray(payload.points) && payload.points.length
-    ? payload.points
-    : [{ lat: s.last_lat || '25.0805', lng: s.last_lng || '55.1403', accuracy_m: 10, timestamp: nowIso() }]
+  const raw = Array.isArray(payload.points) ? payload.points.slice(-200) : []
+  if (raw.some(p => p && p.mock === true)) throw bad('Mock location cannot be used as duty evidence')
+  const pts = raw
+    .map(p => ({ lat: toNum(p?.lat), lng: toNum(p?.lng), accuracy_m: toNum(p?.accuracy_m), timestamp: p?.timestamp || p?.recorded_at }))
+    .filter((p): p is { lat: number; lng: number; accuracy_m: number | null; timestamp: string | undefined } => validCoord(p.lat, p.lng) && (p.accuracy_m === null || (p.accuracy_m >= 0 && p.accuracy_m <= 2000)))
+  if (!pts.length) throw bad('At least one valid location fix is required')
   const last = pts[pts.length - 1]!
   const now = nowIso()
+  const battery = toNum(payload.battery_pct)
+  const batteryPct = battery !== null && battery >= 0 && battery <= 100 ? Math.round(battery) : null
 
   q.run(
     `INSERT INTO duty_location_batches(field_session_id, employee_id, user_id, device_id, points_json, points_count, last_lat, last_lng, accuracy_m, battery_pct, network_type, recorded_at, received_at)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     sessionId,
-    employee?.id ?? s.employee_id,
+    s.employee_id,
     userId,
-    payload.device_id || `AND-SWK-${userId}`,
+    String(payload.device_id || `AND-SWK-${userId}`).slice(0, 100),
     JSON.stringify(pts),
     pts.length,
     String(last.lat),
     String(last.lng),
-    Number(last.accuracy_m ?? 10),
-    payload.battery_pct ?? 85,
-    payload.network_type || '5G / WiFi',
+    last.accuracy_m ?? null,
+    batteryPct,
+    String(payload.network_type || '').slice(0, 60) || null,
     last.timestamp || now,
     now,
   )
 
-  const lowBatteryNote = payload.battery_pct !== undefined && payload.battery_pct < 20
-    ? `\n[Low Battery Telemetry Warning ${now.slice(11, 16)}: ${payload.battery_pct}%]`
+  const lowBatteryNote = batteryPct !== null && batteryPct < 20
+    ? `\n[Low Battery Telemetry Warning ${now.slice(11, 16)}: ${batteryPct}%]`
     : ''
 
   const updated = patchRecord(getDef('field_sessions'), sessionId, {
     last_lat: String(last.lat),
     last_lng: String(last.lng),
-    gps_accuracy_m: Number(last.accuracy_m ?? 10),
-    notes: `${s.notes || ''}${lowBatteryNote}`.trim(),
+    ...(last.accuracy_m !== null ? { gps_accuracy_m: last.accuracy_m } : {}),
+    ...(lowBatteryNote ? { notes: `${s.notes || ''}${lowBatteryNote}`.trim() } : {}),
   }, { ...ctx, system: true })
 
   return {
@@ -689,7 +749,7 @@ export function ingestDutyLocationBatch(
     last_lat: updated.last_lat,
     last_lng: updated.last_lng,
     gps_accuracy_m: updated.gps_accuracy_m,
-    battery_warning: payload.battery_pct !== undefined && payload.battery_pct < 20,
+    battery_warning: batteryPct !== null && batteryPct < 20,
   }
 }
 
@@ -698,14 +758,15 @@ export function endFieldDutySession(
   payload: { lat?: string; lng?: string; notes?: string },
   ctx: Ctx,
 ) {
-  const s = getRecord(getDef('field_sessions'), sessionId, { ...ctx, system: true })
+  const s = ownFieldSession(sessionId, ctx)
+  if (s.status === 'Completed (Off Duty)') return s
   const now = nowIso().slice(0, 16)
   const updated = patchRecord(getDef('field_sessions'), sessionId, {
     ended_at: now,
     site_departure_at: s.site_departure_at || now,
     status: 'Completed (Off Duty)',
-    last_lat: payload.lat || s.last_lat,
-    last_lng: payload.lng || s.last_lng,
+    last_lat: validCoord(toNum(payload.lat), toNum(payload.lng)) ? String(payload.lat) : s.last_lat,
+    last_lng: validCoord(toNum(payload.lat), toNum(payload.lng)) ? String(payload.lng) : s.last_lng,
     notes: `${s.notes || ''}\n[Duty Ended ${now}]: ${payload.notes || 'Foreground service stopped; location sharing terminated.'}`.trim(),
   }, { ...ctx, system: true })
 
@@ -722,7 +783,7 @@ export function triggerFieldEmergencySos(
   if (!employee) throw bad('Employee profile required')
   const now = nowIso().slice(0, 16)
   let session: Rec | null | undefined = payload.session_id
-    ? q.get(`SELECT * FROM field_sessions WHERE id = ? AND deleted_at IS NULL`, payload.session_id)
+    ? ownFieldSession(Number(payload.session_id), ctx)
     : q.get(`SELECT * FROM field_sessions WHERE employee_id = ? AND status = 'Active (On Duty)' AND deleted_at IS NULL ORDER BY id DESC LIMIT 1`, employee.id)
 
   if (!session) {
@@ -735,9 +796,7 @@ export function triggerFieldEmergencySos(
       started_at: now,
       status: 'SOS Emergency Active',
       assigned_location: 'Emergency Field Location',
-      last_lat: payload.lat || '25.1972',
-      last_lng: payload.lng || '55.2744',
-      gps_accuracy_m: 6,
+      ...(validCoord(toNum(payload.lat), toNum(payload.lng)) ? { last_lat: String(payload.lat), last_lng: String(payload.lng) } : {}),
       sos_triggered: true,
       sos_reason: payload.reason || 'Field Emergency SOS triggered from SWK ONE Android App',
     }, { ...ctx, system: true })
@@ -775,15 +834,13 @@ export function triggerFieldEmergencySos(
 }
 
 export function confirmFieldSafetyCheckIn(sessionId: number, ctx: Ctx) {
-  const { userId, employee } = resolveStaffContext(ctx, true)
+  const { userId } = resolveStaffContext(ctx, true)
   const now = nowIso()
   if (sessionId) {
-    const s = q.get(`SELECT * FROM field_sessions WHERE id = ?`, sessionId)
-    if (s) {
-      patchRecord(getDef('field_sessions'), sessionId, {
-        notes: `${s.notes || ''}\n[Safety Check-In Confirmed ${now.slice(11, 16)}: Agent confirmed well-being]`.trim(),
-      }, { ...ctx, system: true })
-    }
+    const s = ownFieldSession(sessionId, ctx)
+    patchRecord(getDef('field_sessions'), sessionId, {
+      notes: `${s.notes || ''}\n[Safety Check-In Confirmed ${now.slice(11, 16)}: Agent confirmed well-being]`.trim(),
+    }, { ...ctx, system: true })
   }
   q.run(`UPDATE workday_states SET safety_confirmed_at = ?, updated_at = ? WHERE user_id = ? AND work_date = ?`, now, now, userId, todayStr())
   return { ok: true, confirmed_at: now }
@@ -801,8 +858,16 @@ export function recordViewingArrival(
   const v = getRecord(getDef('viewings'), viewingId, { ...ctx, system: true })
   const now = nowIso().slice(0, 16)
 
+  const lat = toNum(payload.lat), lng = toNum(payload.lng), accuracy = toNum(payload.accuracy_m)
+  if (!validCoord(lat, lng)) throw bad('A location fix is required to confirm arrival. Enable location and try again.')
+  // Arrival is "Verified" only when the fix is within 300 m (plus its own accuracy) of the property; otherwise a manager reviews it.
+  const prop = v.property_id ? q.get(`SELECT latitude, longitude FROM properties WHERE id = ? AND deleted_at IS NULL`, v.property_id) : null
+  const pLat = toNum(prop?.latitude), pLng = toNum(prop?.longitude)
+  const nearProperty = validCoord(pLat, pLng) && distanceM(lat, lng as number, pLat, pLng as number) + (accuracy ?? 0) <= 300
+  const reviewStatus = nearProperty ? 'Verified' : 'Pending Human Review'
+
   // Ensure an active field session exists and link it
-  let session = q.get(`SELECT * FROM field_sessions WHERE viewing_id = ? AND deleted_at IS NULL ORDER BY id DESC LIMIT 1`, viewingId)
+  let session = q.get(`SELECT * FROM field_sessions WHERE viewing_id = ? AND employee_id = ? AND deleted_at IS NULL ORDER BY id DESC LIMIT 1`, viewingId, employee?.id ?? -1)
   if (!session && employee) {
     session = createRecord(getDef('field_sessions'), {
       employee_id: employee.id,
@@ -817,18 +882,18 @@ export function recordViewingArrival(
       viewing_id: viewingId,
       property_id: v.property_id,
       appointment_ref: v.viewing_no,
-      last_lat: payload.lat || '25.0805',
-      last_lng: payload.lng || '55.1403',
-      gps_accuracy_m: payload.accuracy_m ?? 9,
-      review_status: 'Verified',
+      last_lat: String(lat),
+      last_lng: String(lng),
+      gps_accuracy_m: accuracy ?? undefined,
+      review_status: reviewStatus,
     }, { ...ctx, system: true })
   } else if (session) {
     session = patchRecord(getDef('field_sessions'), session.id, {
       site_arrival_at: now,
-      last_lat: payload.lat || session.last_lat,
-      last_lng: payload.lng || session.last_lng,
-      gps_accuracy_m: payload.accuracy_m ?? session.gps_accuracy_m,
-      review_status: 'Verified',
+      last_lat: String(lat),
+      last_lng: String(lng),
+      gps_accuracy_m: accuracy ?? session.gps_accuracy_m,
+      review_status: reviewStatus,
     }, { ...ctx, system: true })
   }
 
@@ -842,20 +907,20 @@ export function recordViewingArrival(
       check_in_at: now,
       duty_status: 'Client Viewing',
       viewing_id: viewingId,
-      gps_lat: payload.lat || '25.0805',
-      gps_lng: payload.lng || '55.1403',
-      gps_accuracy_m: payload.accuracy_m ?? 9,
-      manager_verified: true,
-      notes: `Arrived at property for viewing ${v.viewing_no}`,
+      gps_lat: String(lat),
+      gps_lng: String(lng),
+      gps_accuracy_m: accuracy ?? undefined,
+      manager_verified: nearProperty,
+      notes: `Arrived at property for viewing ${v.viewing_no}${nearProperty ? '' : ' (location not confirmed near the property: manager review)'}`,
     }, { ...ctx, system: true })
   }
 
   const updatedViewing = patchRecord(getDef('viewings'), viewingId, {
     status: 'Confirmed',
-    agent_notes: `${v.agent_notes || ''}\n[GPS Arrival Confirmed at ${now}]`.trim(),
+    agent_notes: `${v.agent_notes || ''}\n[GPS Arrival ${nearProperty ? 'Confirmed' : 'Recorded'} at ${now}]`.trim(),
   }, { ...ctx, system: true })
 
-  return { viewing: updatedViewing, field_session: session }
+  return { viewing: updatedViewing, field_session: session, arrival_verified: nearProperty }
 }
 
 export function submitViewingOutcomeAndFeedback(
@@ -1238,6 +1303,8 @@ export function submitOneTapDailyReport(
 ) {
   const { userId, employee } = resolveStaffContext(ctx, true)
   if (!employee) throw bad('Employee profile required for daily report')
+  if (String(payload.outcomes_narrative || '').trim().length < 10) throw bad('Describe what you achieved today (at least 10 characters)')
+  if (!String(payload.next_day_priorities || '').trim()) throw bad('Add at least one priority for tomorrow')
   const date = todayStr()
 
   let existing = q.get(
@@ -1462,6 +1529,7 @@ export function syncOfflineQueue(
  * "Initialize SWK ONE Field Workspace" (never runs automatically on server startup so clean-start tests pass).
  */
 export function initializeSwkOneWorkspaceData(ctx: Ctx) {
+  if (!demoProvisioningAllowed()) throw forbidden('Sample SWK ONE data can only be created in the demo workspace, never in the live company database')
   return tx(() => {
     const { userId, employee, agent, authorisation } = resolveStaffContext(ctx, true)
     if (!employee || !agent) throw bad('Could not initialize staff profile')
@@ -1982,7 +2050,7 @@ export function getSwkOneBootstrap(ctx: Ctx) {
     reports_history: dailyReports,
   }
   const qrPreviewRaw = getCurrentReceptionQr(1, ctx)
-  const qrPreview = { ...qrPreviewRaw, token: qrPreviewRaw.token_code }
+  const publicQrInfo = { branch: qrPreviewRaw.branch, office_network_hint: qrPreviewRaw.office_network_hint, ttl_seconds: qrPreviewRaw.ttl_seconds }
 
   return {
     server_time: nowIso(),
@@ -2051,7 +2119,8 @@ export function getSwkOneBootstrap(ctx: Ctx) {
     devices,
     colleagues,
     notifications,
-    reception_qr_preview: qrPreview,
-    reception_qr: qrPreview,
+    // The live code is never sent to staff phones: it must be scanned from the reception screen.
+    reception_qr_preview: publicQrInfo,
+    reception_qr: publicQrInfo,
   }
 }
