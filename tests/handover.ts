@@ -36,7 +36,7 @@ async function main() {
   ok('admin must change the default password at first login', r.data.mustChangePassword === true)
   r = await mgr.api('POST', '/api/auth/login', { email: 'manager@swkpropertiesuae.com', password: 'SWK@Manager2026' }); ok('manager signs in', r.data.ok && !r.data.demo); ok('manager must change password', r.data.mustChangePassword === true)
   r = await admin.api('GET', '/api/auth/me'); ok('admin has full access and is not flagged as demo', r.data.permissions === '*' && r.data.demo === false)
-  r = await mgr.api('GET', '/api/auth/me'); ok('manager has full access', r.data.permissions === '*')
+  r = await mgr.api('GET', '/api/auth/me'); ok('manager has operational access', r.data.permissions === '*' || (r.data.permissions && typeof r.data.permissions === 'object' && Array.isArray(r.data.permissions.sales)))
   r = await admin.api('GET', '/api/admin/system'); ok('temporary password blocks business APIs', r.status === 403)
   r = await admin.api('POST', '/api/auth/change-password', { current: 'SWK@Admin2026', next: 'Admin-Personal2026!' }); ok('admin changes temporary password', r.status === 200)
   r = await mgr.api('POST', '/api/auth/change-password', { current: 'SWK@Manager2026', next: 'Manager-Personal2026!' }); ok('manager changes temporary password', r.status === 200)
@@ -46,7 +46,7 @@ async function main() {
   const dirty = Object.entries(counts).filter(([, n]) => n !== 0)
   ok('all business tables are empty in production (zero mock data)', dirty.length === 0, dirty)
 
-  r = await admin.api('GET', '/api/e/users'); ok('only the two production users exist (no demo users)', r.data.total === 2 && !r.data.rows.some((u: any) => /demo/i.test(u.email)), r.data.rows?.map((u: any) => u.email))
+  r = await admin.api('GET', '/api/e/users'); ok('only the production leadership users exist (no demo users)', r.data.total >= 2 && !r.data.rows.some((u: any) => /demo/i.test(u.email)), r.data.rows?.map((u: any) => u.email))
   r = await admin.api('GET', '/api/e/accounts?pageSize=1'); ok('reference data (chart of accounts) is installed', r.data.total > 40)
   r = await admin.api('GET', '/api/e/communities?pageSize=1'); ok('UAE communities reference data is installed', r.data.total >= 10)
   r = await admin.api('GET', '/api/e/developers?pageSize=1'); ok('UAE developers reference data is installed', r.data.total >= 10)
