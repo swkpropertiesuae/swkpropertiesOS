@@ -1,0 +1,163 @@
+import path from 'node:path'
+import fs from 'node:fs'
+import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify'
+import cookie from '@fastify/cookie'
+import helmet from '@fastify/helmet'
+import multipart from '@fastify/multipart'
+import rateLimit from '@fastify/rate-limit'
+import fstatic from '@fastify/static'
+import { config } from './config'
+import { HttpError } from './util'
+import { userFromToken, userFromApiKey } from './auth'
+import { enterDb, q } from './db'
+import { can } from './engine'
+import { getDemoDb } from './demo/workspace'
+import type { Ctx, SessionUser } from './engine'
+import { ZodError } from 'zod'
+
+declare module 'fastify' {
+  interface FastifyRequest { user: SessionUser | null; ctx: Ctx; sessionHash?: string }
+}
+
+export const COOKIE = 'swk_sid'
+export const DEMO_PREFIX = 'demo.'
+const PUBLIC = [/^\/api\/demo\/status$/, /^\/api\/health$/, /^\/api\/auth\/login$/, /^\/api\/public\//, /^\/api\/auth\/branding$/]
+/**
+ * Everything a customer-portal user may call. The record API (/api/e) is scoped to their company by the engine; the rest read their own data only.
+ * Any other endpoint is company-wide (bank balances, rate cards, other customers' open items) and stays closed to portal accounts, whatever module permissions the portal role carries.
+ */
+const PORTAL_OK = [
+  /^\/api\/auth\//, /^\/api\/meta$/, /^\/api\/dashboard$/, /^\/api\/notifications(\/read)?$/, /^\/api\/calendar(\/context)?$/, /^\/api\/tags$/, /^\/api\/search\/(jobs|global)$/,
+  /^\/api\/e\/[a-z_]+(\/\d+|\/lookup)?$/, /^\/api\/print\/[a-z_]+\/\d+\/parties$/, /^\/api\/pdf\/(status|[a-z_]+\/\d+)$/, /^\/api\/files\/\d+\/download$/, /^\/api\/finance\/statement\/\d+$/, /^\/api\/jobs\/\d+\/tracking-token$/,
+]
+const PASSWORD_SETUP = new Set(['/api/auth/me', '/api/meta', '/api/auth/change-password', '/api/auth/logout', '/api/auth/sessions', '/api/auth/login-history'])
+
+export async function buildApp(): Promise<FastifyInstance> {
+  // Webhook secrets and tracking tokens travel in the URL path; keep them out of the request log.
+  const redactUrl = (u: string) => u.replace(/^(\/api\/public\/(?:bank|voice|tracking|track|deal)\/)[^/?#]+/, '$1[redacted]')
+  const logger = { level: config.isProd ? 'info' : 'warn', serializers: { req: (r: any) => ({ method: r.method, url: redactUrl(String(r.url ?? '')), host: r.host, remoteAddress: r.ip, remotePort: r.socket?.remotePort }) } }
+  const app = Fastify({ logger, trustProxy: config.trustProxy, bodyLimit: 12 * 1024 * 1024 })
+
+  // tolerate empty JSON bodies (action endpoints such as POST .../post)
+  app.removeContentTypeParser('application/json')
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (req, raw, done) => {
+    ;(req as any).rawBody = raw
+    if (!raw || !(raw as string).trim()) return done(null, {})
+    try { done(null, JSON.parse(raw as string)) } catch { const e: any = new Error('Invalid JSON body'); e.statusCode = 400; done(e) }
+  })
+
+  await app.register(helmet, {
+    contentSecurityPolicy: { directives: { defaultSrc: ["'self'"], imgSrc: ["'self'", 'data:', 'blob:'], styleSrc: ["'self'", "'unsafe-inline'"], scriptSrc: ["'self'"], fontSrc: ["'self'", 'data:'], connectSrc: ["'self'", 'https:', 'http:'], objectSrc: ["'self'"], frameSrc: ["'self'"], frameAncestors: ["'self'"], baseUri: ["'self'"], formAction: ["'self'"] } },
+    crossOriginEmbedderPolicy: false, hsts: config.isProd ? { maxAge: 15552000 } : false,
+  })
+  await app.register(cookie)
+  await app.register(multipart, { limits: { fileSize: config.maxUploadMb * 1024 * 1024, files: 10 } })
+  await app.register(rateLimit, { global: false })
+
+  app.decorateRequest('user', null)
+  app.decorateRequest('ctx', null as any)
+
+  // Demo sessions (cookie prefix "demo.") and demo tracking links run against the isolated demo database.
+  app.addHook('onRequest', (req: FastifyRequest, reply, done) => {
+    const origin = req.headers.origin
+    if (origin && (/^https?:\/\/localhost(:\d+)?$/i.test(origin) || /^capacitor:\/\/localhost$/i.test(origin) || req.headers['x-swk-client'] === 'android')) {
+      reply.header('Access-Control-Allow-Origin', origin)
+      reply.header('Access-Control-Allow-Credentials', 'true')
+      reply.header('Access-Control-Allow-Methods', 'GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS')
+      reply.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-SWK-Client, X-SWK-Session, X-SWK-Audit-Reason, X-SWK-Recycle')
+      reply.header('Vary', 'Origin')
+      if (req.method === 'OPTIONS') {
+        reply.status(204).send()
+        return
+      }
+    }
+    const raw = req.cookies?.[COOKIE]
+    const mobSession = typeof req.headers['x-swk-session'] === 'string' ? req.headers['x-swk-session'].trim() : undefined
+    const url = req.url.split('?')[0]
+    const bearer = req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.slice(7).trim() : undefined
+    const publicRequest = PUBLIC.some(r => r.test(url))
+    // Public links select their workspace by the link, never by an unrelated browser cookie.
+    // API keys always belong to production; a demo cookie must not change their database.
+    const demoRequest = url.startsWith('/api/public/deal/demo-') || url.startsWith('/api/public/track/demo-') || (!publicRequest && !bearer && !!(raw || mobSession)?.startsWith(DEMO_PREFIX))
+    const demoDb = demoRequest ? getDemoDb() : null
+    if (demoRequest && !demoDb) return done(new HttpError(503, 'The demo workspace is unavailable'))
+    enterDb(demoDb ?? undefined, () => {
+      try {
+        req.user = null
+        if (!publicRequest && bearer) {
+          req.user = userFromApiKey(bearer)
+        } else if (!publicRequest) {
+          const tok = mobSession || raw
+          const found = userFromToken(tok && tok.startsWith(DEMO_PREFIX) ? tok.slice(DEMO_PREFIX.length) : tok)
+          if (found) { req.user = found.user; req.sessionHash = found.hash }
+        }
+        const rawReason = typeof req.headers['x-swk-audit-reason'] === 'string' ? req.headers['x-swk-audit-reason'] : undefined
+        let auditReason: string | undefined
+        if (rawReason) {
+          try { auditReason = decodeURIComponent(rawReason).trim() } catch { auditReason = rawReason.trim() }
+        }
+        const recycleBin = req.headers['x-swk-recycle'] === '1'
+        req.ctx = { user: req.user, ip: req.ip, auditReason, recycleBin }
+        done()
+      } catch (e: any) { done(e) }
+    })
+  })
+
+  app.addHook('preHandler', async (req) => {
+    const url = req.url.split('?')[0]
+    if (!url.startsWith('/api/')) return
+    if (PUBLIC.some(r => r.test(url))) return
+    if (!req.user) throw new HttpError(401, 'Please sign in')
+    // CSRF: cookie/session-authenticated mutations must carry the custom header ('web' or 'android')
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && !req.user.apiKey && req.headers['x-swk-client'] !== 'web' && req.headers['x-swk-client'] !== 'android') throw new HttpError(403, 'Missing client header')
+    const mustChange = q.val<number>('SELECT must_change_password FROM users WHERE id = ?', req.user.id)
+    if (mustChange && !(PASSWORD_SETUP.has(url) && !req.user.apiKey)) throw new HttpError(403, 'Change your temporary password before using the application')
+    if (req.user.party_id && !PORTAL_OK.some(r => r.test(url))) throw new HttpError(403, 'This area is for company staff')
+    // Account security changes require the browser session, not an integration key.
+    if (req.user.apiKey && url.startsWith('/api/auth/') && url !== '/api/auth/me') throw new HttpError(403, 'Use your signed-in browser to manage account security')
+  })
+
+  app.setErrorHandler((err: any, req, reply) => {
+    if (err instanceof HttpError) return reply.status(err.status).send({ error: err.message, details: err.details })
+    if (err instanceof ZodError) return reply.status(400).send({ error: err.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ') })
+    if (err?.statusCode && err.statusCode < 500) return reply.status(err.statusCode).send({ error: err.message })
+    if (typeof err?.code === 'string' && (err.code.startsWith('SQLITE_CONSTRAINT') || /^23\d{3}$/.test(err.code))) {
+      req.log.warn({ err }, 'constraint')
+      return reply.status(409).send({ error: /UNIQUE/.test(err.message) || err.code === '23505' || /duplicate key/.test(err.message) ? 'A record with the same unique value already exists' : 'The change conflicts with existing data' })
+    }
+    req.log.error({ err, url: redactUrl(req.url) }, 'unhandled')
+    return reply.status(500).send({ error: config.isProd ? 'Unexpected server error' : String(err?.message ?? err) })
+  })
+
+  // routes
+  const mods = await Promise.all([
+    import('./routes/mobile'), import('./routes/studio'), import('./routes/writing'), import('./routes/email'), import('./routes/auth'), import('./routes/meta'), import('./routes/crud'), import('./routes/panel'), import('./routes/files'),
+    import('./routes/enterprise'), import('./routes/work'), import('./routes/jobs'), import('./routes/sales'), import('./routes/finance'), import('./routes/insights'), import('./routes/admin'), import('./routes/integrations'), import('./routes/compliance'), import('./routes/demo'),
+    import('./routes/properties'), import('./routes/mandates'), import('./routes/transactions'), import('./routes/leases'), import('./routes/aml'), import('./routes/voice'),
+    import('./routes/swk-one'), import('./routes/swk-ops'),
+  ])
+  for (const m of mods) await app.register(m.default)
+  app.get('/api/health', async () => ({ ok: true, time: new Date().toISOString() }))
+  // Database round-trip time. The app talks to PostgreSQL synchronously, so this is the number that decides whether the host is close enough to the database.
+  app.get('/api/health/db', { config: { rateLimit: { max: 12, timeWindow: '1 minute' } } }, async (req) => {
+    if (req.user!.party_id || !can(req.user, 'admin', 'view')) throw new HttpError(403, 'Administrators only')
+    const { q, isPg } = await import('./db')
+    const t = process.hrtime.bigint(); const n = 10
+    for (let i = 0; i < n; i++) q.val('SELECT 1')
+    const ms = Number(process.hrtime.bigint() - t) / 1e6 / n
+    return { ok: true, driver: isPg ? 'postgresql' : 'sqlite', avg_query_ms: Math.round(ms * 100) / 100, verdict: !isPg ? 'local database' : ms < 10 ? 'excellent' : ms < 40 ? 'good' : ms < 100 ? 'slow - pages will feel sluggish' : 'too slow - move the app closer to the database' }
+  })
+
+  // static web app
+  const webDir = path.resolve('dist/web')
+  if (fs.existsSync(webDir)) {
+    await app.register(fstatic, { root: webDir, wildcard: false, cacheControl: false, setHeaders(res, p) { if (/\/assets\//.test(p)) res.header('Cache-Control', 'public, max-age=31536000, immutable'); else res.header('Cache-Control', 'no-cache') } })
+    app.setNotFoundHandler((req, reply) => {
+      if (req.url.startsWith('/api/')) return reply.status(404).send({ error: 'Not found' })
+      return reply.sendFile('index.html')
+    })
+  } else {
+    app.setNotFoundHandler((req, reply) => reply.status(404).send({ error: 'Not found' }))
+  }
+  return app
+}

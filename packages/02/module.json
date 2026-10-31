@@ -1,0 +1,9 @@
+{
+  "id": "02",
+  "name": "CRM",
+  "description": "Leads, contacts, companies, pipelines, activities and follow-ups. Email, WhatsApp and website enquiry history with duplicate detection. Lead scoring, assignment, decay and lost-reason analysis. Source, conversion, pipeline and revenue attribution reports.",
+  "category": "sales",
+  "key_features": ["leads", "contacts", "companies", "pipelines", "activities", "follow-ups", "duplicate-detection", "lead-scoring", "assignment", "decay-analysis", "lost-reason", "revenue-reports"],
+  "brand": "SWKPROPOS",
+  "os": "SWK OS"
+}

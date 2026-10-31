@@ -1,0 +1,9 @@
+{
+  "id": "01",
+  "name": "Company & Administration",
+  "description": "Legal entities, branches, departments, teams and users. Currencies, languages, tax settings, numbering and custom fields. Role, department, record and field-level permissions with audit history. Multi-company and multi-branch without duplicated master data.",
+  "category": "administration",
+  "key_features": ["legal-entities", "branches", "departments", "teams", "users", "currencies", "languages", "tax-settings", "numbering", "custom-fields", "role-permissions", "audit-history", "multi-company"],
+  "brand": "SWKPROPOS",
+  "os": "SWK OS"
+}

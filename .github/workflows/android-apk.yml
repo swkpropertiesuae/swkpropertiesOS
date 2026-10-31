@@ -1,0 +1,77 @@
+name: Build SWK ONE Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    paths:
+      - 'android/**'
+      - 'src/web/mobile/**'
+      - 'tools/android/**'
+      - '.github/workflows/android-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-android-apk:
+    runs-on: ubuntu-latest
+    env:
+      # Optional release signing (Settings > Secrets). Without them only the debug APK is produced.
+      SWK_KEYSTORE_B64: ${{ secrets.SWK_KEYSTORE_B64 }}
+      SWK_KEYSTORE_PASSWORD: ${{ secrets.SWK_KEYSTORE_PASSWORD }}
+      SWK_KEY_ALIAS: ${{ secrets.SWK_KEY_ALIAS }}
+      SWK_KEY_PASSWORD: ${{ secrets.SWK_KEY_PASSWORD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Java JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install dependencies, check server and web, bundle the web app into the APK
+        run: |
+          npm ci
+          npm run typecheck
+          npm run test:swk-one
+          npm run test:mobile
+          npm run android:sync
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.9
+
+      - name: Lint and build the debug APK
+        working-directory: android
+        run: gradle lintDebug assembleDebug
+
+      - name: Build the signed release APK
+        if: env.SWK_KEYSTORE_B64 != ''
+        working-directory: android
+        run: |
+          echo "$SWK_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/swk-release.jks"
+          SWK_KEYSTORE_FILE="$RUNNER_TEMP/swk-release.jks" gradle assembleRelease
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: swk-one-android-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+
+      - name: Upload signed release APK
+        if: env.SWK_KEYSTORE_B64 != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: swk-one-android-release-apk
+          path: android/app/build/outputs/apk/release/*.apk

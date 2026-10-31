@@ -1,0 +1,9 @@
+{
+  "id": "07",
+  "name": "Inventory & Warehousing",
+  "description": "Items, variants, SKUs, barcodes, warehouses, bins, batch, serial and expiry. Receipts, transfers, reservations, cycle counts and replenishment. Landed cost, valuation, returns and pick-pack-ship.",
+  "category": "operations",
+  "key_features": ["items", "variants", "skus", "barcodes", "warehouses", "bins", "batch-tracking", "serial-tracking", "expiry-dates", "receipts", "transfers", "reservations", "cycle-counts", "replenishment", "landed-cost", "valuation", "returns", "pick-pack-ship"],
+  "brand": "SWKPROPOS",
+  "os": "SWK OS"
+}

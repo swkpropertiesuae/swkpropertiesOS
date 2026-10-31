@@ -1,0 +1,9 @@
+{
+  "id": "13",
+  "name": "Communications & Dashboards",
+  "description": "WhatsApp Business for enquiries, quotes, payments and owner briefs. Unified inbox across WhatsApp, email and website chat. Owner Command Center: cash, receivables, profit, approvals and exceptions. Department dashboards for sales, finance, HR, inventory and more.",
+  "category": "communications",
+  "key_features": ["whatsapp-business", "unified-inbox", "owner-command-center", "cash-receivables", "profit-dashboard", "sales-dashboard", "finance-dashboard", "hr-dashboard", "inventory-dashboard", "department-dashboards", "phone-integration", "email-integration"],
+  "brand": "SWKPROPOS",
+  "os": "SWK OS"
+}

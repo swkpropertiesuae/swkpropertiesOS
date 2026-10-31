@@ -1,0 +1,54 @@
+import fs from 'node:fs'
+import path from 'node:path'
+import { chromium, type Browser } from 'playwright-core'
+import { corporatePdfFooter } from '../../shared/corporate-footer'
+import { publicSettings } from '../settings'
+import { config } from '../config'
+import { bad } from '../util'
+
+function findChrome(): string | undefined {
+  const cand = [process.env.CHROME_PATH, '/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable'].filter(Boolean) as string[]
+  const pw = process.env.PLAYWRIGHT_BROWSERS_PATH
+  if (pw && fs.existsSync(pw)) for (const d of fs.readdirSync(pw).filter(x => /^chromium-\d+/.test(x))) cand.push(path.join(pw, d, 'chrome-linux', 'chrome'), path.join(pw, d, 'chrome-linux64', 'chrome'))
+  return cand.find(p => { try { return fs.existsSync(p) } catch { return false } })
+}
+export const pdfAvailable = () => !!findChrome()
+
+let browser: Browser | null = null, idle: NodeJS.Timeout | null = null
+async function getBrowser(): Promise<Browser> {
+  if (idle) clearTimeout(idle)
+  if (!browser || !browser.isConnected()) {
+    const exe = findChrome()
+    if (!exe) throw bad('PDF engine (Chromium) is not installed on this server. Set CHROME_PATH or use the Docker image, which includes it.')
+    browser = await chromium.launch({ executablePath: exe, args: ['--no-sandbox', '--disable-gpu', '--font-render-hinting=none'] })
+  }
+  idle = setTimeout(() => { void browser?.close().catch(() => {}); browser = null }, 60_000)
+  idle.unref()
+  return browser
+}
+
+/** Render one of the app's own print pages to a PDF, authenticated with the requester's session cookie. */
+export async function renderPrintPdf(printPath: string, cookie: { name: string; value: string }, opts: { landscape?: boolean; pageNumbers?: boolean; footerText?: string } = {}): Promise<Buffer> {
+  if (!/^\/print\/[\w-]+\/[\w,-]+(\?[\w=&,%-]*)?$/.test(printPath)) throw bad('Invalid print path')
+  const b = await getBrowser()
+  const ctx = await b.newContext({ viewport: { width: 1000, height: 1400 } })
+  try {
+    await ctx.addCookies([{ name: cookie.name, value: cookie.value, domain: '127.0.0.1', path: '/', httpOnly: true, secure: false }])
+    const page = await ctx.newPage()
+    await page.goto(`http://127.0.0.1:${config.port}${printPath}`, { waitUntil: 'networkidle', timeout: 30000 })
+    await page.waitForSelector('.print-sheet[data-print-ready="true"]', { timeout: 15000 }).catch(async () => {
+      const message = await page.locator('.print-sheet [role=alert]').first().textContent().catch(() => '')
+      throw bad(message || 'The document could not finish loading. Check the record and try again.')
+    })
+    await page.evaluate(async () => {
+      await Promise.all(Array.from(document.querySelectorAll<HTMLImageElement>('.print-sheet img')).map(img => img.decode()))
+    })
+    await page.evaluate(() => (document as any).fonts?.ready)
+    await page.waitForTimeout(250)
+    // Use Chromium's repeated footer area; reserve space on every page.
+    await page.evaluate(() => document.documentElement.classList.add('pdf-export'))
+    await page.addStyleTag({ content: '@page { margin-bottom: 27mm !important; } .print-sheet { min-height: 0 !important; padding-bottom: 0 !important; }' })
+    const footerTemplate = corporatePdfFooter(publicSettings(), opts)
+    return Buffer.from(await page.pdf({ format: 'A4', printBackground: true, preferCSSPageSize: true, landscape: opts.landscape, displayHeaderFooter: true, headerTemplate: '<span></span>', footerTemplate, margin: { top: '10mm', bottom: '27mm', left: '10mm', right: '10mm' } }))
+  } finally { await ctx.close().catch(() => {}) }
+}

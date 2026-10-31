@@ -1,0 +1,67 @@
+apply plugin: 'com.android.application'
+
+// Release signing is read from the environment (CI secrets); without it `assembleRelease` yields an unsigned APK.
+def swkKeystore = System.getenv('SWK_KEYSTORE_FILE')
+
+android {
+    namespace "ae.swkproperties.one"
+    compileSdk rootProject.ext.compileSdkVersion
+
+    defaultConfig {
+        applicationId "ae.swkproperties.one"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 201
+        versionName "2.0.1"
+        // Server the bundled workspace talks to until staff set another one in Settings.
+        buildConfigField "String", "SWK_SERVER_URL", "\"https://os.swkpropertiesuae.com\""
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    signingConfigs {
+        if (swkKeystore) {
+            release {
+                storeFile file(swkKeystore)
+                storePassword System.getenv('SWK_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('SWK_KEY_ALIAS')
+                keyPassword System.getenv('SWK_KEY_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (swkKeystore) signingConfig signingConfigs.release
+        }
+        debug {
+            // Lets the debug build install next to a release build.
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError true
+        checkReleaseBuilds true
+    }
+}
+
+dependencies {
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation "androidx.biometric:biometric:$androidxBiometricVersion"
+    implementation "com.google.android.gms:play-services-location:$playServicesLocationVersion"
+    implementation "androidx.webkit:webkit:$androidxWebkitVersion"
+    testImplementation "junit:junit:$junitVersion"
+}

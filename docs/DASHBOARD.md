@@ -1,0 +1,63 @@
+# Dashboard and workspace navigation
+
+This page documents the implemented dashboard and navigation refinements. The existing SWK OS identity, colors, font families and SWK OS attribution remain the source of truth in the application.
+
+## Dashboard sections
+
+The staff dashboard at `/dashboard` refreshes its business data every two minutes. Sections depend on the returned data and the signed-in user's permissions.
+
+1. **Welcome and actions:** Email, Schedule and New deal, where permitted.
+2. **Business at a glance:** four available figures, normally Active deals, Pipeline value, Revenue this month and Receivables.
+3. **Needs attention:** all returned alerts in a neutral, collapsible list; danger icons identify urgent exceptions. Report links require report access.
+4. **Closing soon:** the next five deals by target close date, with links to each deal and the schedule.
+5. **Latest deals:** directly accessible on the main desk.
+6. **Deal workflow:** an expandable guide from enquiry through handover; collapsed by default.
+7. **AI briefing:** expandable when available to a company-wide AI user.
+8. **Business details and reports:** collapsed by default; contains quick workspace links, detailed charts, calls, schedules, tasks and additional figures. Financial metrics/charts require finance view access, even for staff who can view deals.
+
+Dashboard status labels stay on one line. Narrow tables scroll within their panels rather than splitting status words or widening the page.
+
+The customer portal instead shows Your deals, three deal/balance figures and a recent deals table.
+
+## Sidebar explanatory popups
+
+The workspace rail uses labeled buttons with native title hints. Activating a workspace opens a dialog containing a short explanation, its permitted task links and an Open workspace action. All workspaces opens a dialog listing the available workspaces. Quick guide opens the existing guide.
+
+Buttons can be reached with Tab and activated with Enter or Space. The shared modal initially focuses its first available control, keeps Tab and Shift+Tab within the dialog, and closes with Escape, the Close button or a click on the backdrop. Closing restores focus to the previous element when it still exists. Selecting a task or Open workspace closes the popup and navigates. Task links use two columns, becoming one below 700px. Ctrl+K or Cmd+K opens Search.
+
+## Typography and retained assets
+
+Font families remain **Instrument Sans** for body text and controls and **Plus Jakarta Sans** for headings and display figures, with the existing system fallbacks. Arabic retains **Noto Sans Arabic**. The local font declarations remain in `src/web/index.css`; the final screen sizes below are applied by `src/web/reference.css`.
+
+| Element | Implemented size |
+| --- | --- |
+| Body and form input text | 16px |
+| Buttons, primary navigation, breadcrumbs and form labels | 14px |
+| Dashboard small supporting text, table headings and KPI labels | 14px |
+| Dashboard title | `clamp(26px, 2.5vw, 36px)` |
+| Workflow section heading | 22px |
+| Workflow card heading and step number | 18px |
+| Workflow descriptions and figures | 15px |
+| Dashboard KPI values | 27px |
+| Chart axis labels | 14px |
+
+Some existing compact text retains its individual size: compact buttons 12.5px. Dashboard introductions are 15px, table cells 14px, panel headings 16px and status badges 12px. The refinement does not claim that every label is 16px.
+
+The palette continues to use the existing emerald (`#007b52`), graphite (`#161d1a`) and module chart colors defined in `index.css` and `Dashboard.tsx`. `reference.css` retains its existing neutral surface overrides. The header retains `/brand/logo-primary.png`.
+
+## Related implementation and guidance
+
+- [Dashboard source](../src/web/pages/Dashboard.tsx)
+- [Shell and workspace explanations](../src/web/components/Shell.tsx)
+- [Shared dialog behavior](../src/web/ui/kit.tsx)
+- [Applied screen styles](../src/web/reference.css) and [base fonts and colors](../src/web/index.css)
+- [Product attribution](../src/web/components/ProductBrand.tsx)
+- [Email screen](../src/web/pages/EmailPage.tsx) and [email operation guide](EMAIL.md)
+
+The Email screen uses the same typography and controls. Write email contains explicit From, To, Cc, Subject and Message labels; Sent & queued shows outgoing status, and Sender settings is available to administrators with edit access.
+
+## Quiet operating surfaces
+
+White/neutral surfaces, subtle dividers and readable text replace the earlier multicolor cards. Emerald remains an action/navigation accent; urgent exceptions retain their red icons. Charts use a restrained grey/green palette. Duplicate ledger, cash and receivables cards were removed; these values remain available in the KPI sections. Light/dark themes and mobile scrolling remain supported.
+
+The extra E image in the Workspace introduction has been removed. Sidebar workspace dialogs enter from the sidebar direction over 280 ms; link arrows acknowledge hover. Reduced-motion settings disable those effects. Keyboard focus and Escape handling remain in the shared dialog.

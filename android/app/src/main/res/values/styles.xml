@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- SWK ONE "Midnight & Champagne" native theme (shown behind / around the WebView) -->
+    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/swk_royal</item>
+        <item name="colorPrimaryDark">@color/swk_midnight</item>
+        <item name="colorAccent">@color/swk_champagne</item>
+        <item name="android:statusBarColor">@color/swk_midnight</item>
+        <item name="android:navigationBarColor">@color/swk_midnight_raised</item>
+        <item name="android:windowBackground">@color/swk_midnight</item>
+    </style>
+
+    <!-- Launch theme: system splash (Android 12+) / compat splash (older). Icon is the high-resolution splash_icon. -->
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/swk_midnight</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+        <item name="postSplashScreenTheme">@style/AppTheme</item>
+    </style>
+</resources>

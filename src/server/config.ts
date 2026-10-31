@@ -1,0 +1,81 @@
+import path from 'node:path'
+import fs from 'node:fs'
+import crypto from 'node:crypto'
+
+const env = process.env
+const bool = (v: string | undefined, d: boolean) => (v === undefined || v === '' ? d : ['1', 'true', 'yes', 'on'].includes(v.toLowerCase()))
+
+if (process.env.REQUIRE_DATABASE_URL === 'true' && !process.env.DATABASE_URL) {
+  // Hosts with a disposable disk (e.g. Cloudflare Containers) set this so a missing secret can never silently create a throw-away SQLite database.
+  throw new Error('DATABASE_URL is required on this host but is not set. Refusing to start on a local database file.')
+}
+
+/** In production the well-known default passwords are never used: without an explicit env value a random one is generated and printed once at first start. */
+const production = (env.NODE_ENV ?? 'development') === 'production'
+const initialPassword = (value: string | undefined, fallback: string) => value ? { password: value, generated: false } : production ? { password: crypto.randomBytes(12).toString('base64url') + 'aA1', generated: true } : { password: fallback, generated: false }
+const adminInit = initialPassword(env.ADMIN_PASSWORD, 'SWK@Admin2026')
+const managerInit = initialPassword(env.MANAGER_PASSWORD, 'SWK@Manager2026')
+const bdmInit = initialPassword(env.BDM_PASSWORD, 'SWK@Talha2026')
+const advisorInit = initialPassword(env.ADVISOR_PASSWORD, 'SWK@Advisor2026')
+
+export const config = {
+  env: env.NODE_ENV ?? 'development',
+  isProd: (env.NODE_ENV ?? 'development') === 'production',
+  port: Number(env.PORT ?? 8080),
+  host: env.HOST ?? '0.0.0.0',
+  dataDir: path.resolve(env.DATA_DIR ?? 'data'),
+  /** When set, the app runs on PostgreSQL (e.g. Supabase) instead of the local SQLite file. */
+  databaseUrl: env.DATABASE_URL ?? '',
+  pgSchema: (env.PG_SCHEMA ?? 'swk').replace(/[^a-z0-9_]/gi, '').toLowerCase() || 'swk',
+  baseUrl: env.PUBLIC_URL ?? '',
+  timezone: env.APP_TIMEZONE ?? 'Asia/Dubai',
+  /** Keep production database clean at first start unless STARTER_DATA=true is explicitly set. */
+  starterData: bool(env.STARTER_DATA, false),
+  /** Set to a new token (for example a date) to clear all business data once, after taking a backup, on the next start. */
+  resetToken: (env.RESET_BUSINESS_DATA_ON_START ?? '').trim(),
+  baseCurrency: env.BASE_CURRENCY ?? 'AED',
+  cookieSecure: env.COOKIE_SECURE === undefined ? undefined : bool(env.COOKIE_SECURE, true),
+  sessionHours: Number(env.SESSION_HOURS ?? 12),
+  trustProxy: bool(env.TRUST_PROXY, false),
+  maxUploadMb: Number(env.MAX_UPLOAD_MB ?? 25),
+  demo: { enabled: bool(env.DEMO_ENABLED, false), email: (env.DEMO_EMAIL ?? 'demo@swkpropertiesuae.com').toLowerCase(), password: env.DEMO_PASSWORD ?? 'Demo@SWK2026' },
+  accounts: {
+    adminEmail: (env.ADMIN_EMAIL ?? 'admin@swkpropertiesuae.com').toLowerCase(),
+    adminName: env.ADMIN_NAME ?? 'Shabib Siraj',
+    adminPassword: adminInit.password,
+    adminPasswordGenerated: adminInit.generated,
+    managerEmail: (env.MANAGER_EMAIL ?? 'manager@swkpropertiesuae.com').toLowerCase(),
+    managerName: env.MANAGER_NAME ?? 'Mohammad Haseeb',
+    managerPassword: managerInit.password,
+    managerPasswordGenerated: managerInit.generated,
+    bdmEmail: (env.BDM_EMAIL ?? 'talha@swkpropertiesuae.com').toLowerCase(),
+    bdmName: env.BDM_NAME ?? 'Talha Shabbir',
+    bdmPassword: bdmInit.password,
+    bdmPasswordGenerated: bdmInit.generated,
+    advisorPassword: advisorInit.password,
+  },
+  smtp: {
+    host: env.SMTP_HOST ?? '',
+    port: Number(env.SMTP_PORT ?? 587),
+    user: env.SMTP_USER ?? '',
+    pass: env.SMTP_PASS ?? '',
+    from: env.SMTP_FROM ?? '',
+    secure: bool(env.SMTP_SECURE, false),
+  },
+}
+
+export const dirs = {
+  demo: path.join(config.dataDir, 'demo'),
+  data: config.dataDir,
+  uploads: path.join(config.dataDir, 'uploads'),
+  backups: path.join(config.dataDir, 'backups'),
+  db: path.join(config.dataDir, 'swk.db'),
+}
+
+export function ensureDirs() {
+  for (const d of [dirs.data, dirs.uploads, dirs.backups, dirs.demo]) fs.mkdirSync(d, { recursive: true })
+}
+
+/** Backup files: a copy of the SQLite file, or a gzip NDJSON snapshot when running on PostgreSQL. */
+export const BACKUP_EXT = config.databaseUrl ? '.json.gz' : '.db'
+export const isBackupFile = (f: string) => f.endsWith('.db') || f.endsWith('.json.gz')

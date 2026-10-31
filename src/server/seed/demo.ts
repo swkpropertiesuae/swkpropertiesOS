@@ -1,0 +1,540 @@
+const V = ["view"], VE = ["view", "export"], CRUD = ["view", "create", "edit", "delete", "export"], CE = ["view", "create", "edit", "export"]
+import { q } from '../db'
+import { createRecord, getDef, type Ctx } from '../engine'
+import { loadUser } from '../auth'
+import { config } from '../config'
+import { addDays, todayStr } from '../util'
+import { postInvoice, postReceipt } from '../domain/finance'
+
+const idBy = (table: string, col: string, v: string) => q.val<number>(`SELECT id FROM ${table} WHERE ${col} = ? AND deleted_at IS NULL`, v)!
+// Starter data must never stop the server from booting: a record that fails validation is logged and skipped.
+const mk = (ctx: Ctx, e: string, p: any): any => {
+  try { return createRecord(getDef(e), p, ctx) }
+  catch (err: any) { console.warn(`[seed] skipped ${e}: ${err?.message ?? err}`); return { id: null } }
+}
+
+const STAFF: [string, string, string, string][] = [
+  ['Ahmed Al Mansoori', 'ahmed@demo.swkproperties.ae', 'Sales Advisor', 'OFFPLAN'],
+  ['Fatima Al Hashimi', 'fatima@demo.swkproperties.ae', 'Sales Advisor', 'LEASING'],
+  ['Omar Khalid', 'omar@demo.swkproperties.ae', 'Sales Advisor', 'SECONDARY'],
+  ['Sarah Williams', 'sarah@demo.swkproperties.ae', 'Sales Advisor', 'SECONDARY'],
+  ['Mohammed Al Qubaisi', 'mohammed@demo.swkproperties.ae', 'HR', 'HR'],
+]
+
+export async function seedDemoScenarios(): Promise<void> {
+  const sys: Ctx = { user: null, system: true }
+  
+  // Ensure roles exist (fallback in case seedReference hasn't run or failed)
+  const V = ["view"], VE = ["view", "export"], CRUD = ["view", "create", "edit", "delete", "export"], CE = ["view", "create", "edit", "export"], FULL_MOD = [...CRUD, "approve", "post", "void", "lock"]
+  const defaultRoles = [
+    { name: 'Owner', description: 'Company Owner (Shabib Siraj) — complete authority over all company operations, approvals, and deletions', system: true, permissions: '*' },
+    { name: 'Admin', description: 'Full system access, including administration (Owner: Shabib Siraj)', system: true, permissions: '*' },
+    { name: 'Manager', description: 'Operations Manager (Mohammad Haseeb) — majority operational access; administrative decisions and deletions require Owner approval', system: true, permissions: { dashboard: V, crm: FULL_MOD, sales: FULL_MOD, leases: FULL_MOD, mandates: FULL_MOD, transactions: FULL_MOD, properties: FULL_MOD, finance: FULL_MOD, hr: FULL_MOD, support: FULL_MOD, projects: FULL_MOD, documents: FULL_MOD, compliance: FULL_MOD, reports: VE, masters: CRUD, admin: V } },
+    { name: 'BDM & IT Admin', description: 'Business Development Manager & IT/CRM/ERP/Marketing Admin (Talha Shabbir)', system: true, permissions: { dashboard: V, crm: FULL_MOD, sales: FULL_MOD, leases: FULL_MOD, mandates: FULL_MOD, transactions: FULL_MOD, properties: FULL_MOD, finance: VE, hr: VE, support: FULL_MOD, projects: FULL_MOD, documents: FULL_MOD, compliance: FULL_MOD, reports: VE, masters: FULL_MOD, admin: ['view', 'create', 'edit', 'export'] } },
+    { name: 'Sales Advisor', description: 'Company-Visa Sales Advisor (0 basic salary, 50-50% net commission split with SWK Properties)', system: true, permissions: { dashboard: V, crm: CRUD, sales: [...CRUD, 'export'], properties: CE, mandates: CE, leases: CE, transactions: CE, hr: ['view', 'create', 'edit'], documents: CE, support: CE, projects: CRUD, reports: VE, masters: V } },
+    { name: 'Sales', description: 'CRM, quotations and customer follow-up', permissions: { dashboard: V, crm: CRUD, sales: [...CRUD, 'export'], properties: CE, mandates: CE, transactions: CE, hr: CE, documents: CE, support: CE, projects: CRUD, reports: VE, masters: V } },
+    { name: 'Leasing', description: 'Leasing and tenant management', permissions: { dashboard: V, crm: V, sales: V, leases: CRUD, documents: CE, projects: CE, masters: V } },
+    { name: 'Operations', description: 'Deals, leases, transactions and properties', permissions: { dashboard: V, crm: V, sales: CRUD, leases: CRUD, transactions: CRUD, properties: CRUD, documents: CRUD, support: CE, projects: CRUD, reports: VE, masters: V } },
+    { name: 'Accounts', description: 'Invoicing, bills, banking and financial reports', permissions: { dashboard: V, crm: V, sales: V, finance: [...CRUD, 'approve'], documents: CE, reports: VE, masters: CE, hr: V, leases: CRUD } },
+    { name: 'Property Mgmt', description: 'Leases, maintenance and inspections', permissions: { dashboard: V, sales: V, leases: CRUD, documents: CE, projects: CE, masters: V } },
+    { name: 'HR', description: 'Employees, leave, attendance and payroll', permissions: { dashboard: V, hr: [...CRUD, 'approve'], documents: CE, projects: CE, masters: V } },
+    { name: 'Viewer', description: 'Read-only access to business modules', permissions: { dashboard: V, crm: V, sales: V, leases: V, transactions: V, properties: V, finance: V, support: V, projects: V, documents: V, reports: V } },
+    { name: 'Customer Portal', description: 'External customers — own deals, invoices and documents only', permissions: { dashboard: V, crm: V, sales: V, finance: V, leases: V, mandates: V, transactions: V, documents: V, support: ['view', 'create'] } },
+  ]
+  for (const r of defaultRoles) {
+    const existing = q.get<{ id: number }>(`SELECT id FROM roles WHERE name = ?`, r.name)
+    if (!existing) {
+      createRecord(getDef('roles'), { name: r.name, description: r.description, is_system: r.system || false, permissions: r.permissions }, sys)
+    }
+  }
+  q.run(`UPDATE roles SET is_system = 1 WHERE name IN ('Owner','Admin','Manager','BDM & IT Admin','Sales Advisor')`)
+  for (const [code, name, description] of [
+    ['OFFPLAN', 'Sales of Off-Plan Projects', 'Developer launches, EOIs, Oqood bookings, and payment-plan advisory'],
+    ['SECONDARY', 'Secondary Projects', 'Ready resale properties, seller/3rd-party mandates, Form F (MOU), NOC, and DLD trustee transfer'],
+    ['LEASING', 'Leasing', 'Residential & commercial rentals, Bayut/Dubizzle syndication, A2A matching, and Ejari'],
+  ] as const) {
+    if (!idBy('departments', 'code', code)) mk(sys, 'departments', { code, name, description, active: true })
+  }
+  
+  const role = (n: string) => q.val<number>(`SELECT id FROM roles WHERE name = ?`, n)!
+  const dept = (c: string) => idBy('departments', 'code', c) || idBy('departments', 'code', 'SAL')
+  const dxb = idBy('branches', 'code', 'DXB')
+  const presenter = createRecord(getDef('users'), { name: 'Shabib Siraj (Owner Demo)', email: config.demo.email, password: config.demo.password, role_id: role('Admin'), branch_id: dxb, department_id: dept('MGT'), designation: 'Owner & Managing Director', active: true, must_change_password: false }, sys)
+  // Create or update Owner (Shabib Siraj), Manager (Mohammad Haseeb), and BDM & IT Admin (Talha Shabbir)
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@swkpropertiesuae.com'
+  const adminPassword = process.env.ADMIN_PASSWORD || 'SWK@Admin2026'
+  const existingAdmin = idBy('users', 'email', adminEmail)
+  if (!existingAdmin) {
+    createRecord(getDef('users'), { name: 'Shabib Siraj', email: adminEmail, password: adminPassword, role_id: role('Admin'), branch_id: dxb, department_id: dept('MGT'), designation: 'Owner & Managing Director', active: true, must_change_password: false }, sys)
+  } else {
+    const { hashPassword } = await import('../auth')
+    q.run(`UPDATE users SET name = 'Shabib Siraj', designation = 'Owner & Managing Director', password_hash = ?, must_change_password = 0 WHERE id = ?`, hashPassword(adminPassword), existingAdmin)
+  }
+  if (!idBy('users', 'email', 'manager@swkpropertiesuae.com')) {
+    createRecord(getDef('users'), { name: 'Mohammad Haseeb', email: 'manager@swkpropertiesuae.com', password: config.accounts.managerPassword, role_id: role('Manager'), branch_id: dxb, department_id: dept('MGT'), designation: 'Operations Manager', active: true, must_change_password: false }, sys)
+  }
+  if (!idBy('users', 'email', 'talha@swkpropertiesuae.com')) {
+    createRecord(getDef('users'), { name: 'Talha Shabbir', email: 'talha@swkpropertiesuae.com', password: config.accounts.bdmPassword, role_id: role('BDM & IT Admin'), branch_id: dxb, department_id: dept('IT'), designation: 'BDM & IT / CRM / Digital Marketing Admin', active: true, must_change_password: false }, sys)
+  }
+  for (const [name, email, r, d] of STAFF) createRecord(getDef('users'), { name, email, password: 'Demo-' + Math.random().toString(36).slice(2) + 'Aa1!x', role_id: role(r) || role('Sales'), branch_id: dxb, department_id: dept(d), designation: r === 'Sales Advisor' ? 'Sales Advisor (50/50 Commission)' : r, active: true, must_change_password: false }, sys)
+
+  const admin = loadUser(presenter.id) as NonNullable<ReturnType<typeof loadUser>>
+  const ctx: Ctx = { user: admin, system: true }
+  const today = todayStr(), d = (n: number) => addDays(today, n)
+  const net30 = idBy('payment_terms', 'name', 'Net 30 days')
+  const uae = idBy('countries', 'code', 'AE')
+  
+  // Create a party record for the owner (SWK Properties LLC)
+  const owner_party = mk(ctx, 'parties', { name: 'SWK Properties LLC', is_customer: true, is_vendor: false, status: 'Active', payment_term_id: net30, country_id: uae, city: 'Dubai', address1: 'Al Saqr Business Tower', trn: '100515171234567', currency: 'AED', industry: 'Construction', source: 'Other' })
+  const owner = owner_party.id
+
+  // Create a buyer party + lead (required by viewings and offers)
+  const buyer_party = mk(ctx, 'parties', { name: 'Horizon Investments LLC', is_customer: true, status: 'Active', payment_term_id: net30, country_id: uae, city: 'Dubai', address1: 'Business Bay', currency: 'AED', industry: 'Construction', source: 'Other' })
+  const buyer = buyer_party.id
+  const lead = mk(ctx, 'leads', { company: 'Horizon Investments LLC', contact_name: 'James Carter', email: 'james.carter@horizon.example', phone: '+971 50 999 8888', source: 'Referral', status: 'Qualified', est_value: 3000000, owner_id: admin.id, interest: 'Apartment Sale' })
+  const lead_id = lead.id
+
+  // Create employees first (required for agents) — Sales Advisors on Company Visa with 0 Basic Salary & 50/50 Commission Split
+  const emp_ahmed = mk(ctx, 'employees', { name: 'Ahmed Al Mansoori', designation: 'Senior Sales Advisor', branch_id: dxb, department_id: dept('OFFPLAN'), join_date: today, status: 'Active', phone: '+971 50 123 4567', email: 'ahmed@demo.swkproperties.ae', contract_type: 'Unlimited', compensation_model: 'Commission Only (50/50 Company Visa – 0 Basic)', company_visa_sponsored: true, basic_salary: 0, commission_split_company_pct: 50, commission_split_agent_pct: 50 })
+  const emp_fatima = mk(ctx, 'employees', { name: 'Fatima Al Hashimi', designation: 'Leasing Advisor', branch_id: dxb, department_id: dept('LEASING'), join_date: today, status: 'Active', phone: '+971 50 234 5678', email: 'fatima@demo.swkproperties.ae', contract_type: 'Unlimited', compensation_model: 'Commission Only (50/50 Company Visa – 0 Basic)', company_visa_sponsored: true, basic_salary: 0, commission_split_company_pct: 50, commission_split_agent_pct: 50 })
+  const emp_omar = mk(ctx, 'employees', { name: 'Omar Khalid', designation: 'Secondary Sales Advisor', branch_id: dxb, department_id: dept('SECONDARY'), join_date: today, status: 'Active', phone: '+971 50 345 6789', email: 'omar@demo.swkproperties.ae', contract_type: 'Unlimited', compensation_model: 'Commission Only (50/50 Company Visa – 0 Basic)', company_visa_sponsored: true, basic_salary: 0, commission_split_company_pct: 50, commission_split_agent_pct: 50 })
+  const emp_sarah = mk(ctx, 'employees', { name: 'Sarah Williams', designation: 'Secondary Sales Advisor', branch_id: dxb, department_id: dept('SECONDARY'), join_date: today, status: 'Active', phone: '+971 50 456 7890', email: 'sarah@demo.swkproperties.ae', contract_type: 'Unlimited', compensation_model: 'Commission Only (50/50 Company Visa – 0 Basic)', company_visa_sponsored: true, basic_salary: 0, commission_split_company_pct: 50, commission_split_agent_pct: 50 })
+  const emp_mohammed = mk(ctx, 'employees', { name: 'Mohammed Al Qubaisi', designation: 'HR Manager', branch_id: dxb, department_id: dept('HR'), join_date: today, status: 'Active', phone: '+971 50 567 8901', email: 'mohammed@demo.swkproperties.ae', contract_type: 'Unlimited', compensation_model: 'Salaried (Management / Admin)', company_visa_sponsored: true, basic_salary: 12000, commission_split_company_pct: 100, commission_split_agent_pct: 0 })
+
+  // Create agents linked to employees (using employee IDs)
+  const agent_ahmed = mk(ctx, 'agents', { name: 'Ahmed Al Mansoori', employee_id: emp_ahmed.id, dld_broker_id: 'BRK-001', rera_card_no: 'RERA-001', dld_expiry: d(365), dld_license_type: 'Real Estate Broker', specialization: 'Residential Sales', department_division: 'Sales of Off-Plan Projects', company_visa_no_basic: true, phone: '+971 50 123 4567', email: 'ahmed@demo.swkproperties.ae', branch_id: dxb, status: 'Active', join_date: today, commission_split_pct: 50, commission_tier: 'Senior', bank_iban: 'AE070331234567890123456', bank_name: 'Emirates NBD', portal_access: true, bio: 'Off-Plan & luxury sales advisor (50/50 commission split)' })
+  const agent_fatima = mk(ctx, 'agents', { name: 'Fatima Al Hashimi', employee_id: emp_fatima.id, dld_broker_id: 'BRK-002', rera_card_no: 'RERA-002', dld_expiry: d(365), dld_license_type: 'Real Estate Broker', specialization: 'Leasing', department_division: 'Leasing', company_visa_no_basic: true, phone: '+971 50 234 5678', email: 'fatima@demo.swkproperties.ae', branch_id: dxb, status: 'Active', join_date: today, commission_split_pct: 50, commission_tier: 'Senior', bank_iban: 'AE070331234567890123457', bank_name: 'Emirates NBD', portal_access: true, bio: 'Leasing advisor for Bayut & Dubizzle residential and commercial properties (50/50 split)' })
+  const agent_omar = mk(ctx, 'agents', { name: 'Omar Khalid', employee_id: emp_omar.id, dld_broker_id: 'BRK-003', rera_card_no: 'RERA-003', dld_expiry: d(365), dld_license_type: 'Real Estate Broker', specialization: 'Residential Sales', department_division: 'Secondary Projects', company_visa_no_basic: true, phone: '+971 50 345 6789', email: 'omar@demo.swkproperties.ae', branch_id: dxb, status: 'Active', join_date: today, commission_split_pct: 50, commission_tier: 'Standard', bank_iban: 'AE070331234567890123458', bank_name: 'Emirates NBD', portal_access: true, bio: 'Secondary resale & A2A specialist (50/50 split)' })
+  const agent_sarah = mk(ctx, 'agents', { name: 'Sarah Williams', employee_id: emp_sarah.id, dld_broker_id: 'BRK-004', rera_card_no: 'RERA-004', dld_expiry: d(365), dld_license_type: 'Real Estate Broker', specialization: 'Commercial Sales', department_division: 'Secondary Projects', company_visa_no_basic: true, phone: '+971 50 456 7890', email: 'sarah@demo.swkproperties.ae', branch_id: dxb, status: 'Active', join_date: today, commission_split_pct: 50, commission_tier: 'Senior', bank_iban: 'AE070331234567890123459', bank_name: 'Emirates NBD', portal_access: true, bio: 'Secondary & commercial property advisor (50/50 split)' })
+  const agent_mohammed = mk(ctx, 'agents', { name: 'Mohammed Al Qubaisi', employee_id: emp_mohammed.id, dld_broker_id: 'BRK-005', rera_card_no: 'RERA-005', dld_expiry: d(365), dld_license_type: 'Real Estate Broker', specialization: 'HR & Admin', phone: '+971 50 567 8901', email: 'mohammed@demo.swkproperties.ae', branch_id: dxb, status: 'Active', join_date: today, commission_split_pct: 0, commission_tier: 'Standard', bank_iban: 'AE070331234567890123460', bank_name: 'Emirates NBD', portal_access: false, bio: 'HR and administration' })
+
+  // Communities (from SWK data)
+  const comm = (code: string, name: string, emirate: string, extra: any = {}) => mk(ctx, 'communities', { code, name, emirate, area: emirate, master_developer: extra.dev, rera_community_id: extra.rera, description: extra.desc, active: true, ...extra })
+  const marinas = comm('DMAR', 'Dubai Marina', 'Dubai', { dev: 'Emaar Properties', rera: 'DM-001', desc: 'Waterfront community with luxury towers and marina promenade' })
+  const palm = comm('PALM', 'Palm Jumeirah', 'Dubai', { dev: 'Nakheel', rera: 'PJ-001', desc: 'Iconic palm-shaped island with luxury villas and apartments' })
+  const downtown = comm('DTWN', 'Downtown Dubai', 'Dubai', { dev: 'Emaar Properties', rera: 'DT-001', desc: 'Heart of Dubai with Burj Khalifa and Dubai Mall' })
+  const hills = comm('DHLS', 'Dubai Hills Estate', 'Dubai', { dev: 'Emaar Properties', rera: 'DH-001', desc: 'Master-planned community with golf course and parks' })
+  const arabian = comm('ARAB', 'Arabian Ranches', 'Dubai', { dev: 'Emaar Properties', rera: 'AR-001', desc: 'Gated villa community with equestrian facilities' })
+  const jvc = comm('JVC', 'Jumeirah Village Circle', 'Dubai', { dev: 'Nakheel', rera: 'JVC-001', desc: 'Family-friendly community with parks and schools' })
+  const business = comm('BBAY', 'Business Bay', 'Dubai', { dev: 'Dubai Properties', rera: 'BB-001', desc: 'Central business district with commercial and residential towers' })
+
+  // Developers
+  const dev = (name: string, extra: any = {}) => mk(ctx, 'developers', { code: name.substring(0,4).toUpperCase(), name, rera_id: extra.rera, trade_license: extra.license, contact_person: extra.contact, phone: extra.phone, email: extra.email, active: true })
+  const emaar = dev('Emaar Properties', { rera: 'DEV-001', license: 'DM-12345', contact: 'Ahmed Al Falasi', phone: '+971 4 367 3333', email: 'info@emaar.ae' })
+  const nakheel = dev('Nakheel', { rera: 'DEV-002', license: 'DM-67890', contact: 'Khalid Al Malik', phone: '+971 4 390 8888', email: 'info@nakheel.com' })
+  const dubai_props = dev('Dubai Properties', { rera: 'DEV-003', license: 'DM-54321', contact: 'Saeed Al Qatami', phone: '+971 4 281 8888', email: 'info@dubaiproperties.ae' })
+  const damac = dev('DAMAC Properties', { rera: 'DEV-004', license: 'DM-98765', contact: 'Hussain Sajwani', phone: '+971 4 203 9999', email: 'info@damac.com' })
+
+  // Properties (14 from SWK data)
+  const prop = (title: string, comm_id: number, dev_id: number, agent_id: number, extra: any) => mk(ctx, 'properties', { title, community_id: comm_id, developer_id: dev_id, branch_id: dxb, agent_id, status: 'Available', active: true, ...extra })
+
+  const p1 = prop('Marina Crown Tower - 2BR Sea View', marinas.id, emaar.id, agent_ahmed.id, { property_type: 'Apartment', bedrooms: 2, bathrooms: 2, area_sqft: 1450, area_sqm: 135, price: 2850000, price_per_sqft: 1965, rent_annual: 140000, furnishing: 'Fully Furnished', tenure: 'Freehold', year_built: 2015, payment_plan: '100% on completion', is_off_plan: false, is_exclusive: true, rera_permit_no: 'RERA-2024-001', address: 'Marina Crown, Dubai Marina', latitude: 25.0795, longitude: 55.1390, description: 'Stunning 2BR apartment with full marina views', features: 'Balcony, Marina view, High floor', amenities: 'Pool, Gym, Concierge, Marina access', listed_date: d(-30) })
+  const p2 = prop('Palm Jumeirah Frond G - 4BR Villa', palm.id, nakheel.id, agent_ahmed.id, { property_type: 'Villa', bedrooms: 4, bathrooms: 5, area_sqft: 5200, area_sqm: 483, plot_area_sqft: 6800, price: 14500000, price_per_sqft: 2788, rent_annual: 450000, furnishing: 'Fully Furnished', tenure: 'Freehold', year_built: 2018, payment_plan: '100% on completion', is_off_plan: false, is_exclusive: true, rera_permit_no: 'RERA-2024-002', address: 'Frond G, Palm Jumeirah', latitude: 25.1124, longitude: 55.1390, description: 'Luxury 4BR villa with private beach access', features: 'Private pool, Beach access, Maid room', amenities: 'Private beach, Clubhouse, Security', listed_date: d(-45) })
+  const p3 = prop('Downtown Dubai - Address Residences 1BR', downtown.id, emaar.id, agent_ahmed.id, { property_type: 'Apartment', bedrooms: 1, bathrooms: 1, area_sqft: 850, area_sqm: 79, price: 1650000, price_per_sqft: 1941, rent_annual: 85000, furnishing: 'Fully Furnished', tenure: 'Freehold', year_built: 2020, payment_plan: '100% on completion', is_off_plan: false, is_exclusive: false, rera_permit_no: 'RERA-2024-003', address: 'The Address Residences, Downtown Dubai', latitude: 25.1972, longitude: 55.2744, description: 'Elegant 1BR in Address Residences', features: 'Burj Khalifa view, Smart home', amenities: 'Pool, Spa, Direct mall access', listed_date: d(-20) })
+  const p4 = prop('Dubai Hills - Park Heights 3BR', hills.id, emaar.id, agent_ahmed.id, { property_type: 'Apartment', bedrooms: 3, bathrooms: 3, area_sqft: 1850, area_sqm: 172, price: 3200000, price_per_sqft: 1730, rent_annual: 160000, furnishing: 'Semi-Furnished', tenure: 'Freehold', year_built: 2022, completion_year: 2023, payment_plan: 'Post-handover 2y', is_off_plan: true, is_exclusive: true, rera_permit_no: 'RERA-2024-004', address: 'Park Heights, Dubai Hills Estate', latitude: 25.1014, longitude: 55.2298, description: 'Off-plan 3BR with golf course views', features: 'Golf view, Modern finishes, Balcony', amenities: 'Golf course, Parks, Schools, Mall', listed_date: d(-10) })
+  const p5 = prop('Arabian Ranches - Reem 4BR Villa', arabian.id, emaar.id, agent_ahmed.id, { property_type: 'Villa', bedrooms: 4, bathrooms: 4, area_sqft: 3450, area_sqm: 320, plot_area_sqft: 4200, price: 5800000, price_per_sqft: 1681, rent_annual: 220000, furnishing: 'Unfurnished', tenure: 'Freehold', year_built: 2016, payment_plan: '100% on completion', is_off_plan: false, is_exclusive: true, rera_permit_no: 'RERA-2024-005', address: 'Reem Community, Arabian Ranches', latitude: 25.0721, longitude: 55.3012, description: 'Spacious family villa in gated community', features: 'Garden, Maid room, Study, Covered parking', amenities: 'Equestrian center, Golf, Clubhouse', listed_date: d(-60) })
+  const p6 = prop('JVC - District 12 Studio', jvc.id, nakheel.id, agent_fatima.id, { property_type: 'Studio', bedrooms: 0, bathrooms: 1, area_sqft: 420, area_sqm: 39, price: 680000, price_per_sqft: 1619, rent_annual: 42000, furnishing: 'Fully Furnished', tenure: 'Freehold', year_built: 2019, payment_plan: '100% on completion', is_off_plan: false, is_exclusive: false, rera_permit_no: 'RERA-2024-006', address: 'District 12, JVC', latitude: 25.0328, longitude: 55.1865, description: 'Affordable studio for investors', features: 'High rental yield, Metro nearby', amenities: 'Pool, Gym, Parks', listed_date: d(-15) })
+  const p7 = prop('Business Bay - Bay Square 2BR', business.id, dubai_props.id, agent_ahmed.id, { property_type: 'Apartment', bedrooms: 2, bathrooms: 2, area_sqft: 1250, area_sqm: 116, price: 1950000, price_per_sqft: 1560, rent_annual: 95000, furnishing: 'Fully Furnished', tenure: 'Freehold', year_built: 2018, payment_plan: '100% on completion', is_off_plan: false, is_exclusive: true, rera_permit_no: 'RERA-2024-007', address: 'Bay Square, Business Bay', latitude: 25.1857, longitude: 55.2600, description: 'Modern 2BR with canal views', features: 'Canal view, Balcony, Smart home', amenities: 'Pool, Gym, Canal promenade', listed_date: d(-25) })
+
+  // Create units for each property
+  for (const [p, prefix, beds, baths, area, price, rent] of [
+    [p1, 'MCT', 2, 2, 1450, 2850000, 140000],
+    [p2, 'PJG', 4, 5, 5200, 14500000, 450000],
+    [p3, 'ADR', 1, 1, 850, 1650000, 85000],
+    [p4, 'PHG', 3, 3, 1850, 3200000, 160000],
+    [p5, 'ARR', 4, 4, 3450, 5800000, 220000],
+    [p6, 'JVC', 0, 1, 420, 680000, 42000],
+    [p7, 'BYS', 2, 2, 1250, 1950000, 95000],
+  ] as const) {
+    mk(ctx, 'units', { unit_no: `${prefix}-01`, property_id: p.id, unit_type: 'Residential', status: 'Available', bedrooms: beds, bathrooms: baths, area_sqft: area, sale_price: price, rent_annual: rent, furnishing: 'Fully Furnished', floor_no: 10, view: 'Sea View', parking_slots: '1', has_balcony: true, agent_id: agent_ahmed.id, available_from: today })
+  }
+
+  // Mandates
+  const m1 = mk(ctx, 'mandates', { property_id: p1.id, mandate_type: 'Exclusive Sale', status: 'Active', owner_id: owner, agent_id: agent_ahmed.id, asking_price: 2850000, commission_pct_seller: 2, commission_pct_buyer: 2, start_date: today, end_date: d(90), exclusive: true, marketing_notes: 'Featured on Property Finder & Bayut', portal_publish: true, portal_featured: true })
+  const m2 = mk(ctx, 'mandates', { property_id: p2.id, mandate_type: 'Exclusive Sale', status: 'Active', owner_id: owner, agent_id: agent_ahmed.id, asking_price: 14500000, commission_pct_seller: 2, start_date: today, end_date: d(120), exclusive: true })
+  const m3 = mk(ctx, 'mandates', { property_id: p3.id, mandate_type: 'Exclusive Lease', status: 'Active', owner_id: owner, agent_id: agent_ahmed.id, asking_rent: 85000, commission_pct_landlord: 5, commission_pct_tenant: 5, start_date: today, end_date: d(60), exclusive: true })
+
+  // Viewings
+  mk(ctx, 'viewings', { mandate_id: m1.id, property_id: p1.id, lead_id: lead_id, agent_id: agent_ahmed.id, scheduled_at: `${d(2)}T10:00`, duration_min: 30, status: 'Scheduled', meeting_point: 'Building lobby' })
+  mk(ctx, 'viewings', { mandate_id: m2.id, property_id: p2.id, lead_id: lead_id, agent_id: agent_ahmed.id, scheduled_at: `${d(5)}T15:00`, duration_min: 60, status: 'Scheduled', meeting_point: 'Villa entrance' })
+
+  // Offers
+  mk(ctx, 'offers', { lead_id: lead_id, property_id: p1.id, buyer_id: buyer, listing_agent_id: agent_ahmed.id, offer_type: 'Purchase', status: 'Under Review', offer_price: 2750000, deposit_amount: 275000, payment_terms: 'Cash', offer_date: today, valid_until: d(14), special_conditions: 'Subject to DLD approval' })
+  mk(ctx, 'offers', { lead_id: lead_id, property_id: p3.id, buyer_id: buyer, listing_agent_id: agent_ahmed.id, offer_type: 'Lease', status: 'Accepted', offer_price: 85000, deposit_amount: 8500, payment_terms: 'Annual', offer_date: today, valid_until: d(7) })
+
+  // Deal Files (jobs)
+  const deal = (p: any) => mk(ctx, 'jobs', { branch_id: dxb, deal_status: 'Active Mandate', ...p })
+  const dl1 = deal({ deal_name: 'Marina Crown 2BR Sale', deal_type: 'Sale', property_id: p1.id, unit_id: 1, client_id: buyer, agent_id: agent_ahmed.id, deal_value: 2850000, commission_pct: 2, deal_date: today, target_close: d(60), operational_status: 'Offer', mandate_id: m1.id })
+  const dl2 = deal({ deal_name: 'Palm Villa Sale', deal_type: 'Sale', property_id: p2.id, unit_id: 2, client_id: buyer, agent_id: agent_ahmed.id, deal_value: 14500000, commission_pct: 2, deal_date: today, target_close: d(90), operational_status: 'Viewing', mandate_id: m2.id })
+  const dl3 = deal({ deal_name: 'Address Residences Lease', deal_type: 'Lease', property_id: p3.id, unit_id: 3, client_id: buyer, agent_id: agent_ahmed.id, deal_value: 85000, commission_pct: 5, deal_date: today, target_close: d(30), operational_status: 'Contract', mandate_id: m3.id })
+
+  // Deal charges for invoicing
+  for (const [dl, revCode, costCode] of [[dl1, 'COMM-SALE', 'COMM-SALE'], [dl2, 'COMM-SALE', 'COMM-SALE'], [dl3, 'COMM-LEASE', 'COMM-LEASE']] as const) {
+    const ccRev = idBy('charge_codes', 'code', revCode)
+    const ccCost = idBy('charge_codes', 'code', costCode)
+    if (ccRev) mk(ctx, 'job_charges', { job_id: dl.id, kind: 'Revenue', charge_code_id: ccRev, description: 'Brokerage commission', qty: 1, rate: (dl.deal_value ?? 0) * (dl.commission_pct || 2) / 100, currency: 'AED', status: 'Unbilled' })
+    if (ccCost) mk(ctx, 'job_charges', { job_id: dl.id, kind: 'Cost', charge_code_id: ccCost, description: 'Referral fee', qty: 1, rate: (dl.deal_value ?? 0) * 0.5 / 100, currency: 'AED', party_id: owner, status: 'Unbilled' })
+  }
+
+  // Sales Contract (for dl3 - accepted offer)
+  mk(ctx, 'sales_contracts', { property_id: p3.id, unit_id: 3, seller_id: owner, buyer_id: 1, listing_agent_id: agent_ahmed.id, sale_price: 85000, deposit_amount: 8500, contract_date: today, completion_date: d(30), payment_method: 'Bank Transfer', dld_fee_pct: 4, agency_fee_pct: 5, status: 'Signed', signed_date: today, prepared_by_id: owner })
+
+  // Leases
+  const lease = mk(ctx, 'leases', { unit_id: 3, property_id: p3.id, landlord_id: owner, tenant_id: buyer, agent_id: agent_fatima.id, lease_type: 'Residential', status: 'Ejari Registered', start_date: d(1), end_date: addDays(d(1), 365), notice_date: d(270), annual_rent: 85000, payment_frequency: 'Annual', cheque_count: 1, security_deposit: 8500, agency_fee: 4250, ejari_no: 'EJ-2024-001234', ejari_date: today, service_charge_annual: 15000, special_clauses: 'Tenant responsible for DEWA', prepared_by_id: admin.id, signed_date: today })
+  // Rent schedule
+  mk(ctx, 'rent_schedules', { lease_id: lease.id, due_date: d(1), amount: 85000, vat_amount: 4250, total_amount: 89250, status: 'Pending' })
+  mk(ctx, 'rent_schedules', { lease_id: lease.id, due_date: addDays(d(1), 365), amount: 85000, vat_amount: 4250, total_amount: 89250, status: 'Pending' })
+
+  // Maintenance
+  mk(ctx, 'maintenance', { lease_id: lease.id, unit_id: 3, tenant_id: buyer, landlord_id: owner, category: 'HVAC', priority: 'Medium', status: 'Scheduled', description: 'AC unit not cooling properly', location_details: 'Living room unit', scheduled_at: `${d(3)}T09:00`, estimated_cost: 500, cost_responsibility: 'Landlord', requires_approval: true })
+
+  // Invoices for commissions
+  const inv1 = mk(ctx, 'invoices', { doc_type: 'Tax Invoice', party_id: buyer, property_id: p1.id, branch_id: dxb, invoice_date: today, due_date: d(30), payment_term_id: net30, currency: 'AED', status: 'Posted' })
+  const ccComm = idBy('charge_codes', 'code', 'COMM-SALE')
+  if (ccComm) mk(ctx, 'invoice_lines', { invoice_id: inv1.id, charge_code_id: ccComm, description: 'Brokerage commission - Marina Crown 2BR', qty: 1, rate: 57000, currency: 'AED', vat_code_id: idBy('vat_codes', 'code', 'STD') })
+
+  // Create a bank account
+  const main_bank = mk(ctx, 'bank_accounts', { name: 'Main AED Account', type: 'Bank', currency: 'AED', gl_account_id: idBy('accounts', 'code', '1100'), active: true })
+
+  const rec1 = mk(ctx, 'receipts', { party_id: buyer, bank_account_id: main_bank.id, receipt_date: today, method: 'Bank transfer', currency: 'AED', amount: 57000, status: 'Posted' })
+
+  // =========================================================================
+  // Master Specification v1.0 Enterprise Aggregates (3.01 – 3.35)
+  // =========================================================================
+  const legalEntId = idBy('legal_entities', 'code', 'SWK')
+  const ahmedUserId = idBy('users', 'email', 'ahmed@demo.swkproperties.ae')
+  const fatimaUserId = idBy('users', 'email', 'fatima@demo.swkproperties.ae')
+  const sarahUserId = idBy('users', 'email', 'sarah@demo.swkproperties.ae')
+  const mohammedUserId = idBy('users', 'email', 'mohammed@demo.swkproperties.ae')
+
+  // 3.01 Corporate Governance
+  mk(ctx, 'corporate_governance_items', {
+    title: 'FY2026 Delegated Signature & Bank Signatory Matrix',
+    category: 'Signature Authority',
+    legal_entity_id: legalEntId,
+    branch_id: dxb,
+    department_id: dept('MGT'),
+    owner_id: admin.id,
+    authority_limit: 500000,
+    effective_date: d(-60),
+    expiry_date: d(305),
+    status: 'Active',
+    version_no: 2,
+    evidence_ref: 'RES-2026-04-B',
+    description: 'Four-eyes dual signatory required for treasury payouts > AED 50,000, listing price reductions, and developer NOC fee disbursements.',
+  })
+
+  // 3.03 Visa, Immigration & PRO
+  mk(ctx, 'immigration_cases', {
+    employee_id: emp_ahmed.id,
+    pro_user_id: mohammedUserId,
+    legal_entity_id: legalEntId,
+    sponsorship_type: 'Company Sponsored',
+    case_type: 'Visa & Permit Renewal',
+    work_permit_category: 'Skilled Level 1–5',
+    status: 'Officially Approved',
+    eligibility_checked: true,
+    offer_contract_signed: true,
+    application_ref: 'MOHRE-2026-88412',
+    submitted_date: d(-14),
+    expected_decision_date: d(-4),
+    medical_status: 'Fit',
+    eid_status: 'Card Delivered',
+    health_insurance_status: 'Active',
+    official_approval_ref: 'ICP-EP-2026-99201',
+    officially_approved_on: d(-5),
+    permit_expiry_date: d(720),
+    government_fee: 3850,
+    typing_vendor_fee: 250,
+    receipt_ref: 'RCP-ICP-99201',
+  })
+
+  // 3.04 Broker Authorisations
+  mk(ctx, 'agent_authorisations', {
+    agent_id: agent_ahmed.id,
+    employee_id: emp_ahmed.id,
+    user_id: ahmedUserId,
+    brn_number: 'BRK-001',
+    rera_card_no: 'RERA-001',
+    rera_expiry_date: d(365),
+    registration_status: 'Active',
+    dld_exam_passed: true,
+    dld_exam_score: 94,
+    work_auth_verified: true,
+    aml_training_completed: true,
+    conduct_policy_acknowledged: true,
+    conflict_declaration_status: 'None Declared',
+    territories: 'Dubai Marina, Palm Jumeirah, Downtown Dubai',
+    communities_scope: 'Waterfront & Luxury Towers',
+    languages: 'English, Arabic, Hindi',
+    commission_structure: 'Senior 60/40 Split',
+    compliance_score: 98,
+    status: 'Authorised',
+  })
+
+  // 3.05 Attendance & 3.10 Work-hours Field Presence
+  mk(ctx, 'attendance_events', {
+    employee_id: emp_ahmed.id,
+    user_id: ahmedUserId,
+    work_date: today,
+    shift_name: 'Standard 09:00–18:00',
+    terminal_type: 'Dynamic QR',
+    qr_token_ref: 'QR-DXB-HQ-0902',
+    check_in_at: `${today}T08:56`,
+    duty_status: 'On Duty',
+    manager_verified: true,
+  })
+  mk(ctx, 'field_sessions', {
+    employee_id: emp_ahmed.id,
+    agent_id: agent_ahmed.id,
+    duty_date: today,
+    scheduled_start: `${today}T08:00`,
+    scheduled_end: `${today}T20:00`,
+    started_at: `${today}T09:30`,
+    status: 'Active (On Duty)',
+    assigned_location: 'Marina Crown Tower, Dubai Marina',
+    property_id: p1.id,
+    appointment_ref: 'VW-MARINA-1000',
+    last_lat: '25.0795',
+    last_lng: '55.1390',
+    gps_accuracy_m: 8,
+    review_status: 'Normal',
+    retention_until: d(90),
+  })
+
+  // 3.06 Daily Staff Accountability
+  mk(ctx, 'daily_reports', {
+    employee_id: emp_ahmed.id,
+    user_id: ahmedUserId,
+    department_id: dept('SAL'),
+    manager_id: admin.id,
+    report_date: today,
+    day_type: 'Assigned Workday',
+    outcomes_narrative: 'Completed 2 viewings at Marina Crown and progressed Horizon Investments offer (AED 2.75M) toward Form F signing.',
+    blockers_narrative: 'Awaiting seller service-charge clearance statement from Emaar community management.',
+    evidence_links: 'Offer #1, Viewing #1, Property P1',
+    next_day_priorities: '1. Finalise Form F MOU with buyer and seller\n2. Submit Developer NOC request once Form F is signed',
+  })
+
+  // 3.07 Daily Inventory Acquisition & 3.12 Listing Mandates
+  mk(ctx, 'inventory_submissions', {
+    community_id: marinas.id,
+    building_name: 'Marina Gate Tower 1',
+    unit_no: '2404',
+    property_type: 'Apartment',
+    purpose: 'Sale',
+    asking_price: 3450000,
+    area_sqft: 1520,
+    floor_no: 24,
+    bedrooms: 2,
+    bathrooms: 3,
+    occupancy_status: 'Vacant',
+    owner_party_id: owner,
+    owner_name: 'SWK Properties LLC',
+    owner_phone: '+971 50 111 2233',
+    owner_contact_verified: true,
+    inventory_source: 'Direct Owner Cold Call',
+    source_permission_evidence: 'FORM-A-2026-9012',
+    price_confirmed_date: today,
+    trakheesi_permit_no: '7149281920',
+    permit_expiry_date: d(120),
+    sourcing_agent_id: agent_ahmed.id,
+    sourcing_user_id: ahmedUserId,
+  })
+  mk(ctx, 'listing_mandates', {
+    property_id: p1.id,
+    mandate_id: m1.id,
+    owner_id: owner,
+    listing_agent_id: agent_ahmed.id,
+    form_a_ref: 'FORM-A-2026-0001',
+    title_deed_verified: true,
+    passport_eid_verified: true,
+    trakheesi_permit_no: 'RERA-2024-001',
+    permit_expiry_date: d(180),
+    authorized_price: 2850000,
+    authorized_rent: 140000,
+    status: 'Verified & Active',
+    price_history: [{ price: 2850000, approved_by: admin.id, at: today, reason: 'Initial Form A mandate' }],
+  })
+
+  // 3.08 Developer NOC & Clearance
+  const nocReq = mk(ctx, 'developer_requests', {
+    developer_id: emaar.id,
+    property_id: p3.id,
+    sales_contract_id: 1,
+    job_id: dl1.id,
+    seller_id: owner,
+    buyer_id: buyer,
+    transaction_type: 'Secondary Resale',
+    checklist_completed: true,
+    owner_authorisation_ref: 'AUTH-NOC-2026-01',
+    outstanding_service_charges: 0,
+    service_charges_cleared: true,
+    service_charge_receipt_ref: 'EMAAR-SC-CLEAR-881',
+    noc_fee_amount: 5250,
+    portal_application_ref: 'EMAAR-NOC-2026-7712',
+    authorised_sender_email: 'noc@swkpropertiesuae.com',
+  })
+
+  // 3.09 Supervised Communications
+  mk(ctx, 'communications', {
+    channel: 'WhatsApp Business',
+    business_account_ref: 'SWK-WABA-PRIMARY',
+    customer_phone: '+971509998888',
+    party_id: buyer,
+    lead_id: lead_id,
+    property_id: p1.id,
+    job_id: dl1.id,
+    assigned_user_id: ahmedUserId,
+    direction: 'Inbound',
+    delivery_status: 'Read',
+    status: 'Responded',
+    message_summary: 'Client confirmed readiness to sign Form F for Marina Crown 2BR at AED 2.85M and requested trustee office schedule.',
+    ai_summary: 'Buyer confirmed Form F terms and requested DLD trustee appointment options.',
+  })
+
+  // 3.13 / 3.14 Enterprise Transactions & 3.17 Commission Entitlements
+  const entTxn = mk(ctx, 'transactions', {
+    transaction_category: 'Secondary Sale',
+    lead_id: lead_id,
+    property_id: p1.id,
+    job_id: dl1.id,
+    seller_id: owner,
+    buyer_id: buyer,
+    primary_agent_id: agent_ahmed.id,
+    co_agent_id: agent_fatima.id,
+    developer_id: emaar.id,
+    deal_value: 2850000,
+    deposit_amount: 285000,
+    deposit_held_status: 'Held in Escrow / Trust',
+    kyc_cleared: true,
+    forms_completed: true,
+    noc_request_id: nocReq.id,
+    invoice_id: inv1.id,
+    receipt_id: rec1.id,
+    projected_commission: 57000,
+  })
+  mk(ctx, 'commission_entitlements', {
+    transaction_id: entTxn.id,
+    job_id: dl1.id,
+    agent_id: agent_ahmed.id,
+    employee_id: emp_ahmed.id,
+    developer_id: emaar.id,
+    agreement_version: 'v2026.1',
+    deal_type: 'Secondary Sale',
+    gross_commission: 57000,
+    split_pct: 50,
+    entitlement_amount: 28500,
+    earned_amount: 28500,
+    invoiced_amount: 57000,
+    collected_amount: 57000,
+    payable_amount: 28500,
+    invoice_id: inv1.id,
+    receipt_id: rec1.id,
+    payee_iban: 'AE070331234567890123456',
+  })
+
+  // 3.20 / 3.29 / 3.30 / 4.09 Compliance & Risk Cases
+  mk(ctx, 'compliance_cases', {
+    title: 'Routine QA & AML Source-of-Funds Review – Marina Crown Deal',
+    case_category: 'AML / Sanctions Escalation (3.20)',
+    source_type: 'Internal Audit',
+    severity: 'Medium',
+    subject_user_id: ahmedUserId,
+    investigator_id: admin.id,
+    party_id: buyer,
+    property_id: p1.id,
+    transaction_id: entTxn.id,
+    linked_entity: 'transactions',
+    linked_record_id: entTxn.id,
+    legal_hold: true,
+    evidence_summary: 'Standard high-value corporate buyer UBO & source-of-funds verification check prior to DLD transfer.',
+  })
+
+  // 3.27 Universal Approvals, 3.26 HR Lifecycle, 3.25 Procurement, 3.33 QA & 3.35 DR Drills
+  mk(ctx, 'universal_approvals', {
+    title: 'Four-Eyes Approval: Exclusive Marketing Budget – Palm Jumeirah Villa',
+    department_id: dept('SAL'),
+    workflow_type: 'High-Risk Financial Payment',
+    target_entity: 'properties',
+    target_id: p2.id,
+    risk_level: 'High – Four-Eyes Required',
+    approval_mode: 'Four-Eyes Sequential',
+    requester_id: ahmedUserId,
+    step1_approver_id: sarahUserId,
+    step2_approver_id: admin.id,
+    sla_due_at: `${d(2)}T17:00`,
+    supporting_evidence: 'Signed Exclusive Form A Mandate #M2 for Palm Jumeirah Frond G Villa (AED 14.5M).',
+  })
+  mk(ctx, 'hr_lifecycle_cases', {
+    case_type: 'Probation Review & Confirmation',
+    employee_id: emp_sarah.id,
+    user_id: sarahUserId,
+    candidate_or_subject_name: 'Sarah Williams',
+    department_id: dept('SAL'),
+    branch_id: dxb,
+    effective_date: today,
+    confidential_notes: 'Completed 90-day probation with 100% RERA compliance score and verified DLD BRN card.',
+  })
+  mk(ctx, 'procurement_requests', {
+    title: 'Property Finder & Bayut Enterprise Portal Package Renewal',
+    category: 'Portal / SaaS Subscription',
+    department_id: dept('SAL'),
+    requester_id: admin.id,
+    vendor_id: owner,
+    amount: 48000,
+    renewal_date: d(180),
+    serial_or_plate_no: 'PF-ENT-2026-DXB',
+    quotation_refs: 'QT-PF-2026-01, QT-BAYUT-2026-04',
+    status: 'Active / In Use',
+    invoice_matched: true,
+  })
+  mk(ctx, 'qa_reviews', {
+    agent_id: agent_ahmed.id,
+    user_id: ahmedUserId,
+    reviewer_id: admin.id,
+    channel: 'WhatsApp Business Sample',
+    property_id: p1.id,
+    accuracy_score: 96,
+    etiquette_score: 94,
+    commitment_audit_passed: true,
+    overall_score: 95,
+    findings: 'Prompt 4-minute response on company WhatsApp line; accurate Trakheesi permit and service-charge disclosure.',
+    coaching_plan: 'Maintain current standard; exemplar thread shared in weekly sales briefing.',
+  })
+  mk(ctx, 'dr_exercises', {
+    title: 'Q4 Production SQLite/PostgreSQL Backup Restore & Checksum Drill',
+    exercise_type: 'Backup Restore Verification Drill',
+    target_rto_minutes: 30,
+    actual_rto_minutes: 11,
+    target_rpo_minutes: 5,
+    actual_rpo_minutes: 1,
+    backup_file_tested: 'swk-os-prod-backup-verified.zip',
+    records_verified_count: 1420,
+    checksum_verified: true,
+    status: 'Passed – RTO/RPO Verified',
+    conducted_by: admin.id,
+    verified_by: mohammedUserId,
+    evidence_report: 'Restored full production snapshot into isolated staging workspace; verified SHA-256 checksums, ledger trial balance equality, and document vault attachments.',
+    rollback_plan: 'Automated snapshot swap with zero-data-loss WAL replay.',
+  })
+
+  // DLD Daily Market Transactions & Real Estate News for Market Pulse
+  for (const t of [
+    { transaction_date: today, community_id: downtown.id, area_name_en: 'Downtown Dubai', project_name_en: 'Address Residences Dubai Opera', building_name_en: 'Tower 1', trans_group_en: 'Sales', procedure_name_en: 'Sell - Pre registration (Oqood)', reg_type_en: 'Off-Plan Properties', property_type_en: 'Unit', rooms_en: '2 B/R', actual_worth: 5850000, meter_sale_price: 42391, price_per_sqft: 3938, area_sqft: 1485, data_source: 'DLD Open Data / GitHub Daily Sync' },
+    { transaction_date: today, community_id: marinas.id, area_name_en: 'Dubai Marina', project_name_en: 'Marina Gate', building_name_en: 'Marina Gate II', trans_group_en: 'Sales', procedure_name_en: 'Sell (Ready Title Deed)', reg_type_en: 'Existing Properties', property_type_en: 'Unit', rooms_en: '2 B/R', actual_worth: 3650000, meter_sale_price: 26838, price_per_sqft: 2493, area_sqft: 1464, data_source: 'DLD Open Data / GitHub Daily Sync' },
+    { transaction_date: today, community_id: palm.id, area_name_en: 'Palm Jumeirah', project_name_en: 'Signature Villas', building_name_en: 'Frond G', trans_group_en: 'Sales', procedure_name_en: 'Sell (Ready Title Deed)', reg_type_en: 'Existing Properties', property_type_en: 'Villa', rooms_en: '5 B/R', actual_worth: 48500000, meter_sale_price: 74615, price_per_sqft: 6928, area_sqft: 7000, data_source: 'DLD Open Data / GitHub Daily Sync' },
+    { transaction_date: today, community_id: hills.id, area_name_en: 'Dubai Hills Estate', project_name_en: 'Park Field', building_name_en: 'Park Field Tower A', trans_group_en: 'Sales', procedure_name_en: 'Sell - Pre registration (Oqood)', reg_type_en: 'Off-Plan Properties', property_type_en: 'Unit', rooms_en: '1 B/R', actual_worth: 1780000, meter_sale_price: 25985, price_per_sqft: 2415, area_sqft: 737, data_source: 'DLD Open Data / GitHub Daily Sync' },
+    { transaction_date: today, community_id: jvc.id, area_name_en: 'Jumeirah Village Circle', project_name_en: 'Binghatti Corner', building_name_en: 'Binghatti Corner', trans_group_en: 'Sales', procedure_name_en: 'Sell (Ready Title Deed)', reg_type_en: 'Existing Properties', property_type_en: 'Unit', rooms_en: '1 B/R', actual_worth: 1080000, meter_sale_price: 16875, price_per_sqft: 1568, area_sqft: 689, data_source: 'DLD Open Data / GitHub Daily Sync' },
+  ]) {
+    mk(ctx, 'dld_market_transactions', t)
+  }
+  for (const n of [
+    { published_date: today, title: 'Dubai Metro Blue Line 2029 Construction Accelerates Connectivity for Creek Harbour & Silicon Oasis', category: 'Infrastructure & Metro', community_id: downtown.id, area_code: 'CREEK', impact_sentiment: 'Bullish (+)', horizon_years: '5-Year Medium Term (2026–2031)', source_name: 'RTA & DLD Market Intelligence', summary: '30km Blue Line with 14 stations connects Dubai Creek Harbour, Festival City, International City, and Academic City.', agent_talking_point: 'Mention the 22–28% historical capital appreciation near new Metro stations within 24 months of handover.', broadcast_to_staff: true },
+    { published_date: today, title: 'Al Maktoum International Airport (DWC) AED 128B Expansion Drives Record Demand in Southern Corridor', category: 'Masterplan & D33 / 2040 Vision', community_id: palm.id, area_code: 'DSOUTH', impact_sentiment: 'Bullish (+)', horizon_years: '15-Year Dubai 2040 Masterplan (2026–2041)', source_name: 'Dubai Aviation Engineering Projects', summary: 'World’s largest airport capacity (260M passengers) expected to draw 1M+ new residents into Dubai South & Palm Jebel Ali.', agent_talking_point: 'Position Dubai South and Palm Jebel Ali as the next 15-year generational wealth corridor under the Dubai 2040 Urban Master Plan.', broadcast_to_staff: true },
+  ]) {
+    mk(ctx, 'real_estate_news', n)
+  }
+
+  console.log('SWK OS demo data seeded')
+}

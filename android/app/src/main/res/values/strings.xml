@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SWK ONE</string>
+    <string name="duty_channel_name">SWK ONE Active Field Duty Location Sharing</string>
+    <string name="duty_channel_description">Persistent status indicator while an authorised SWK ONE field duty session is active.</string>
+    <string name="duty_notification_title">SWK ONE · Field duty active</string>
+    <string name="duty_notification_stop">End field duty</string>
+    <string name="biometric_title">SWK ONE verification</string>
+    <string name="biometric_default_reason">Unlock your staff session</string>
+</resources>

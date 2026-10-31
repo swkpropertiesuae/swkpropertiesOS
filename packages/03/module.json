@@ -1,0 +1,9 @@
+{
+  "id": "03",
+  "name": "Sales Management",
+  "description": "Products, price lists, customer pricing, volume tiers and discount approvals. Quotations, revisions, contracts, orders, invoices and returns. Commissions, targets and a visual sales lifecycle.",
+  "category": "sales",
+  "key_features": ["products", "price-lists", "customer-pricing", "volume-tiers", "discount-approvals", "quotations", "revisions", "contracts", "orders", "invoices", "returns", "commissions", "targets", "sales-lifecycle"],
+  "brand": "SWKPROPOS",
+  "os": "SWK OS"
+}

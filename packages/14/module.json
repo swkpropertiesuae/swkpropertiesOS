@@ -1,0 +1,9 @@
+{
+  "id": "14",
+  "name": "Complete Service Catalogue",
+  "description": "Every service your business runs on, delivered by SWK OS. From accounting and CRM to supply chain, HR, marketing and projects — SWK OS implements, customises, migrates and supports every service natively in the Business OS or alongside your existing systems, with AI, growth and industry layers built in.",
+  "category": "catalogue",
+  "key_features": ["full-service-catalogue", "implementation", "customisation", "migration", "support", "ai-layer", "growth-layer", "industry-layer", "native-integration", "third-party-integration"],
+  "brand": "SWKPROPOS",
+  "os": "SWK OS"
+}

@@ -1,0 +1,9 @@
+{
+  "id": "06",
+  "name": "Procurement",
+  "description": "Suppliers, purchase requests, approvals, RFQs and comparisons. Purchase orders, goods receipts, supplier bills and returns. Supplier scoring and contract management.",
+  "category": "operations",
+  "key_features": ["suppliers", "purchase-requests", "approvals", "rfqs", "comparisons", "purchase-orders", "goods-receipts", "supplier-bills", "returns", "supplier-scoring", "contract-management"],
+  "brand": "SWKPROPOS",
+  "os": "SWK OS"
+}

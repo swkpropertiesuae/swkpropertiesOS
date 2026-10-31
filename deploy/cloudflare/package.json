@@ -1,0 +1,20 @@
+{
+  "name": "swkpropos-cloudflare",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Cloudflare Containers wrapper for SWK OS – SWKPROPOS",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "deploy": "wrangler deploy",
+    "logs": "wrangler tail",
+    "check": "wrangler deploy --dry-run --outdir .wrangler-dry"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "latest"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261007.1",
+    "typescript": "^5.9.3",
+    "wrangler": "latest"
+  }
+}

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- SWK ONE "Midnight & Champagne" -->
+    <color name="swk_midnight">#08142A</color>
+    <color name="swk_midnight_raised">#0B1A33</color>
+    <color name="swk_royal">#14305C</color>
+    <color name="swk_champagne">#C9A96E</color>
+</resources>

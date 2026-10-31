@@ -1,0 +1,143 @@
+import type { EntityDef } from '../types'
+import { T, TA, I, N, M, P, B, E, PH, S, R, D, DT, U } from '../dsl'
+
+export const LEAD_SOURCES = ['Website', 'Property Finder', 'Bayut', 'Dubizzle', 'Referral', 'Cold call', 'Exhibition / event', 'Email campaign', 'WhatsApp', 'LinkedIn', 'Agent network', 'Existing customer', 'Portal enquiry', 'Inbound call', 'Other']
+export const MODES = ['Apartment Sale', 'Villa Sale', 'Off-Plan Sale', 'Apartment Lease', 'Villa Lease', 'Commercial Sale', 'Commercial Lease', 'Property Management', 'Land Sale', 'Bulk Deal']
+
+export const crm: EntityDef[] = [
+  {
+    key: 'parties', label: 'Customer / Party', plural: 'Customers & Parties', module: 'crm', icon: 'Building', title: ['name'], panel: true, customFields: true,
+    numbering: { field: 'code', pattern: 'P{seq:5}' }, statusField: 'status', print: 'party',
+    fields: [
+      T('code', 'Code', { readonly: true, list: true, search: true, section: 'Company' }),
+      T('name', 'Company name', { required: true, list: true, search: true, span: 2 }),
+      T('legal_name', 'Legal name', { span: 2 }), S('status', 'Status', ['Prospect', 'Active', 'On hold', 'Blocked', 'Inactive'], { default: 'Active', list: true }),
+      B('is_customer', 'Customer', { default: true, list: true }), B('is_landlord', 'Landlord'), B('is_tenant', 'Tenant'), B('is_notify', 'Notify party'),
+      B('is_vendor', 'Vendor', { list: true }), B('is_agent', 'Agent'), B('is_custodian', 'Custodian'), B('is_broker', 'Broker'),
+      T('address1', 'Address line 1', { section: 'Address & contact', span: 2 }), T('address2', 'Address line 2'), T('city', 'City', { list: true }), T('state', 'Emirate / state'),
+      R('country_id', 'Country', 'countries', { list: true }), T('po_box', 'PO box / postcode'),
+      PH('phone', 'Phone', { list: true }), E('email', 'E-mail', { list: true }), U('website', 'Website'), T('contact_person', 'Primary contact'),
+      T('trn', 'Tax registration no. (TRN)', { section: 'Tax & credit' }), T('trade_license', 'Trade licence no.'), T('eori', 'EORI / importer code'),
+      M('credit_limit', 'Credit limit'), I('credit_days', 'Credit days'), R('payment_term_id', 'Payment term', 'payment_terms'),
+      S('currency', 'Billing currency', ['AED', 'USD', 'EUR', 'GBP', 'SAR', 'INR', 'CNY', 'ZAR'], { default: 'AED' }),
+      S('kyc_status', 'KYC status', ['Pending', 'Verified', 'Expired', 'Rejected'], { default: 'Pending' }), D('kyc_expiry', 'KYC / licence expiry'),
+      S('sanctions_status', 'Sanctions screening', ['Not screened', 'Clear', 'Potential match', 'Confirmed match'], { default: 'Not screened', section: 'Compliance (UAE)', list: false, help: 'Screen against the UAE Local Terrorist List and UN Consolidated List. A confirmed match blocks new jobs, quotations and invoices.' }),
+      D('sanctions_screened_on', 'Screened on'), S('risk_rating', 'Risk rating', ['Low', 'Medium', 'High']), B('is_related_party', 'Related party / connected person', { help: 'Owner, shareholders, group companies – disclosed in the corporate tax return' }),
+      B('is_pep', 'Politically exposed person (PEP)', { default: false, help: 'Tick for a PEP, or a family member or close associate of one. Needs senior approval and enhanced due diligence.' }), T('pep_details', 'PEP details'),
+      TA('ubo_details', 'Beneficial owners (25%+)', { span: 3, help: 'Names, nationality and percentage held by each person who ultimately owns or controls a company client.' }), D('ubo_verified_on', 'Beneficial owners verified on'),
+      S('source_of_funds', 'Source of funds', ['Salary / employment', 'Business income', 'Savings', 'Sale of property', 'Inheritance', 'Investment returns', 'Loan / mortgage', 'Other']), T('source_of_funds_notes', 'Source of funds notes', { span: 2 }),
+      D('kyc_last_review', 'Last KYC review'),
+      S('marketing_consent', 'Marketing consent (PDPL)', ['Unknown', 'Opted in', 'Opted out'], { default: 'Unknown' }), D('consent_date', 'Consent date'),
+      R('salesperson_id', 'Salesperson', 'users', { section: 'Relationship', list: true }), S('industry', 'Industry', ['Manufacturing', 'Trading', 'FMCG', 'Automotive', 'Pharma / healthcare', 'Oil & gas', 'Construction', 'Retail', 'Electronics', 'Agriculture / food', 'Textiles', 'Other']),
+      S('source', 'Source', LEAD_SOURCES), TA('notes', 'Notes'),
+    ],
+    defaultSort: { field: 'name', dir: 'asc' },
+  },
+  {
+    key: 'contacts', label: 'Contact', plural: 'Contacts', module: 'crm', icon: 'Contact', title: ['name'], panel: true,
+    fields: [
+      T('name', 'Name', { required: true, list: true, search: true, section: 'Contact' }), R('party_id', 'Company', 'parties', { list: true }),
+      T('designation', 'Designation', { list: true }), E('email', 'E-mail', { list: true, search: true }), PH('phone', 'Phone', { list: true }), PH('mobile', 'Mobile / WhatsApp'),
+      B('is_primary', 'Primary contact'), B('receives_invoices', 'Receives invoices'), B('receives_tracking', 'Receives tracking updates'), TA('notes', 'Notes'),
+    ],
+  },
+  {
+    key: 'campaigns', label: 'Campaign', plural: 'Campaigns', module: 'crm', icon: 'Megaphone', title: ['name'], panel: true, statusField: 'status',
+    fields: [
+      T('name', 'Campaign', { required: true, list: true, search: true, span: 2, section: 'Campaign' }),
+      S('type', 'Channel', ['E-mail', 'WhatsApp', 'Exhibition', 'Webinar', 'LinkedIn', 'Direct visit', 'Referral'], { list: true }),
+      S('status', 'Status', ['Planned', 'Running', 'Completed', 'Cancelled'], { default: 'Planned', list: true }),
+      D('start_date', 'Start', { list: true }), D('end_date', 'End', { list: true }), M('budget', 'Budget', { list: true }), M('actual_cost', 'Actual cost'),
+      R('owner_id', 'Owner', 'users'), TA('description', 'Target audience & notes'),
+    ],
+  },
+  {
+    key: 'leads', label: 'Lead', plural: 'Leads', module: 'crm', icon: 'UserPlus', title: ['lead_no', 'company'], titleSep: ' – ', panel: true,
+    numbering: { field: 'lead_no', pattern: 'L{YY}{seq:5}' }, statusField: 'status',
+    fields: [
+      T('lead_no', 'Lead no.', { readonly: true, list: true, search: true, section: 'Lead' }), T('company', 'Company / Client Name', { required: true, list: true, search: true, span: 2 }),
+      S('department_division', 'Department', ['Sales of Off-Plan Projects', 'Secondary Projects', 'Leasing'], { default: 'Sales of Off-Plan Projects', list: true }),
+      T('contact_name', 'Contact person', { list: true, search: true }), E('email', 'E-mail', { list: true }), PH('phone', 'Phone / WhatsApp', { list: true }),
+      S('status', 'Status', ['New', 'Contacted', 'Qualified', 'Unqualified', 'Converted'], { default: 'New', list: true }),
+      S('source', 'Source', LEAD_SOURCES, { list: true }), S('marketing_consent', 'Marketing consent (PDPL)', ['Unknown', 'Opted in', 'Opted out'], { default: 'Unknown' }), R('campaign_id', 'Campaign', 'campaigns'), R('owner_id', 'Owner', 'users', { list: true }),
+      S('interest', 'Interested in', MODES, { list: true }),
+      S('buyer_finance_type', 'Client Finance Status', ['Cash Buyer', 'Mortgage Pre-Approved', 'Mortgage Required (In Process)', 'Developer Payment Plan', 'Annual / Multi-Cheque Tenant'], { default: 'Cash Buyer', list: true }),
+      T('origin', 'Current area (where you own / live)'), T('destination', 'Target area (community / building)', { list: true }), M('est_value', 'Estimated value (AED)', { list: true }),
+      B('requires_third_party_sourcing', 'Search 3rd-Party Agent (A2A) Inventory', { default: false, list: true }),
+      S('non_conversion_reason', 'Non-Conversion / Lost Reason', ['None (Active / Converted)', 'Price / Budget Mismatch', 'Location / Community Preference Changed', 'Mortgage Rejection / Financing Delay', 'Unit Sold / Leased to Another Client', 'Bought Through Competitor / Direct Developer', 'Client Postponed Decision', 'Payment Plan / Cheque Terms Not Agreed', 'Unresponsive / Invalid Contact'], { default: 'None (Active / Converted)', list: true }),
+      TA('non_conversion_notes', 'Non-Conversion Detailed Explanation', { span: 3 }),
+      R('converted_party_id', 'Converted to customer', 'parties', { readonly: true }), TA('notes', 'Notes'),
+    ],
+    defaultSort: { field: 'id', dir: 'desc' },
+  },
+  {
+    key: 'opportunities', label: 'Opportunity', plural: 'Opportunities', module: 'crm', icon: 'Target', title: ['opp_no', 'title'], titleSep: ' – ', panel: true,
+    numbering: { field: 'opp_no', pattern: 'OPP{YY}{seq:5}' }, statusField: 'stage', kanban: { field: 'stage' },
+    fields: [
+      T('opp_no', 'Opp. no.', { readonly: true, list: true, search: true, section: 'Opportunity' }), T('title', 'Title', { required: true, list: true, search: true, span: 2 }),
+      S('department_division', 'Department', ['Sales of Off-Plan Projects', 'Secondary Projects', 'Leasing'], { default: 'Sales of Off-Plan Projects', list: true }),
+      R('party_id', 'Customer', 'parties', { required: true, list: true }), R('contact_id', 'Contact', 'contacts'),
+      S('stage', 'Stage', ['Prospecting', 'Qualification', 'Quotation', 'Negotiation', 'Won', 'Lost'], { default: 'Prospecting', list: true }),
+      M('value', 'Expected revenue', { list: true }), P('probability', 'Probability %', { default: 20, list: true }), D('expected_close', 'Expected close', { list: true }),
+      R('owner_id', 'Owner', 'users', { list: true }), S('mode', 'Service', MODES), T('origin', 'Selling / current area'), T('destination', 'Target area'),
+      S('buyer_finance_type', 'Client Finance Status', ['Cash Buyer', 'Mortgage Pre-Approved', 'Mortgage Required (In Process)', 'Developer Payment Plan', 'Annual / Multi-Cheque Tenant'], { default: 'Cash Buyer', list: true }),
+      S('legal_payment_mode', 'Legal UAE Payment Channel', ['SWK Company Bank Account (AED/FX)', 'Developer DLD Escrow Account', 'Manager Cheque (In Seller/Developer Name)', 'Post-Dated Cheques (PDC to Landlord/Company)', 'Worldwide Currency Exchange (Licensed UAE Exchange House)', 'UAE-Permitted Crypto / USDT (VARA-Licensed Gateway to Company Account)'], { default: 'SWK Company Bank Account (AED/FX)', list: true }),
+      S('frequency', 'Volume', ['One-off', 'Monthly', 'Quarterly', 'Annual contract']), T('lost_reason', 'Lost / Non-Conversion Reason', { list: true }), TA('notes', 'Notes'),
+    ],
+    defaultSort: { field: 'id', dir: 'desc' },
+  },
+  {
+    key: 'activities', label: 'Activity', plural: 'Calls & Activities', module: 'crm', icon: 'PhoneCall', title: ['subject'], panel: true, statusField: 'status',
+    calendar: { field: 'start_at' },
+    fields: [
+      S('type', 'Type', ['Call', 'Meeting', 'E-mail', 'Visit', 'Video call', 'WhatsApp'], { required: true, default: 'Call', list: true, section: 'Activity' }),
+      T('subject', 'Subject', { required: true, list: true, search: true, span: 2 }),
+      R('party_id', 'Company', 'parties', { list: true }), R('contact_id', 'Contact', 'contacts'), T('contact_name', 'Contact name', { list: true }), PH('phone', 'Phone'),
+      S('direction', 'Direction', ['Outbound', 'Inbound'], { default: 'Outbound', list: true }), S('status', 'Status', ['Planned', 'Done', 'Cancelled'], { default: 'Done', list: true }),
+      S('outcome', 'Outcome', ['Connected', 'No answer', 'Voicemail', 'Callback requested', 'Quote requested', 'Not interested', 'Follow-up needed']),
+      DT('start_at', 'Date & time', { default: 'now', list: true }), DT('end_at', 'Ends'), I('duration_min', 'Duration (min)'),
+      R('owner_id', 'Owner', 'users', { default: 'me', list: true }), T('location', 'Location'), U('video_link', 'Video call link'),
+      D('followup_date', 'Follow-up date'), T('link_entity', 'Linked record type', { hidden: true }), I('link_id', 'Linked record id', { hidden: true }), TA('notes', 'Notes'),
+    ],
+    defaultSort: { field: 'start_at', dir: 'desc' },
+  },
+  // ---- Service quotations (real-estate professional services)
+  {
+    key: 'quotations', label: 'Quotation', plural: 'Quotations', module: 'sales', icon: 'FileSignature', title: ['quote_no'], panel: true, statusField: 'status', print: 'quotation',
+    numbering: { field: 'quote_no', pattern: 'QT{YY}{MM}{seq:4}' }, customFields: true,
+    children: [{ key: 'lines', label: 'Charges', entity: 'quotation_lines', fk: 'quote_id', columns: ['description', 'basis', 'qty', 'rate', 'cost_rate', 'vat_code_id', 'amount'] }],
+    fields: [
+      T('quote_no', 'Quote no.', { readonly: true, list: true, search: true, section: 'Quotation' }), D('quote_date', 'Date', { required: true, default: 'today', list: true }), D('valid_until', 'Valid until', { list: true }),
+      R('customer_id', 'Customer', 'parties', { required: true, refFilter: { is_customer: 1 }, list: true }), R('contact_id', 'Contact', 'contacts'), R('salesperson_id', 'Salesperson', 'users', { default: 'me', list: true }),
+      S('mode', 'Service', ['Sale commission', 'Lease commission', 'Off-Plan purchase', 'Property management', 'Valuation', 'Marketing package'], { required: true, list: true }),
+      S('currency', 'Currency', ['AED', 'USD', 'EUR', 'GBP', 'SAR', 'INR'], { default: 'AED', section: 'Commercials' }), N('ex_rate', 'Exchange rate to AED', { default: 1 }), R('payment_term_id', 'Payment term', 'payment_terms'),
+      S('status', 'Status', ['Draft', 'Pending approval', 'Approved', 'Sent', 'Accepted', 'Rejected', 'Expired', 'Converted to job'], { default: 'Draft', list: true }),
+      M('subtotal', 'Sell total', { computed: true, list: true }), M('vat_total', 'VAT', { computed: true }), M('total', 'Total', { computed: true, list: true }),
+      M('total_cost', 'Estimated cost', { computed: true }), M('margin', 'Margin', { computed: true, list: true }), P('margin_pct', 'Margin %', { computed: true }),
+      R('opportunity_id', 'Opportunity', 'opportunities'), R('job_id', 'Converted deal', 'jobs', { readonly: true }), I('revision', 'Revision', { default: 1, readonly: true }),
+      S('approval_status', 'Approval', ['Not required', 'Pending', 'Approved', 'Rejected'], { default: 'Not required', readonly: true }), T('rejection_reason', 'Rejection reason'),
+      TA('terms', 'Terms & conditions', { section: 'Notes' }), TA('notes', 'Internal notes'),
+    ],
+    defaultSort: { field: 'id', dir: 'desc' },
+  },
+  {
+    key: 'quotation_lines', label: 'Quotation line', plural: 'Quotation lines', module: 'sales', icon: 'List', title: ['description'], child: true,
+    fields: [
+      R('quote_id', 'Quotation', 'quotations', { hidden: true }), R('charge_code_id', 'Service item', 'charge_codes'), T('description', 'Description'), T('basis', 'Basis', { placeholder: 'Fixed fee, per transaction…' }),
+      N('qty', 'Qty', { default: 1 }), M('rate', 'Sell rate'), M('cost_rate', 'Cost rate'), R('vat_code_id', 'Tax', 'vat_codes'), P('vat_pct', 'VAT %', { hidden: true }),
+      M('amount', 'Amount', { computed: true }), M('vat_amount', 'VAT', { computed: true, hidden: true }), M('cost_amount', 'Cost', { computed: true, hidden: true }), T('remarks', 'Remarks', { hidden: true }),
+    ],
+  },
+  {
+    key: 'contracts', label: 'Contract', plural: 'Contracts & agreements', module: 'sales', icon: 'FileCheck2', title: ['contract_no', 'title'], titleSep: ' – ', panel: true, statusField: 'status',
+    numbering: { field: 'contract_no', pattern: 'CTR{YY}{seq:4}' },
+    fields: [
+      T('contract_no', 'Contract no.', { readonly: true, list: true, search: true, section: 'Contract' }), T('title', 'Title', { required: true, list: true, search: true, span: 2 }),
+      R('party_id', 'Counterparty', 'parties', { required: true, list: true }), S('type', 'Type', ['Service agreement', 'Rate contract', 'Lease', 'Maintenance', 'Agency', 'NDA', 'Other'], { list: true }),
+      S('status', 'Status', ['Draft', 'Active', 'Expired', 'Terminated'], { default: 'Draft', list: true }), D('start_date', 'Start', { list: true }), D('end_date', 'End', { list: true }),
+      M('value', 'Contract value'), I('credit_days', 'Credit days'), B('auto_renew', 'Auto-renew'), I('renewal_notice_days', 'Renewal reminder (days)', { default: 30 }),
+      R('owner_id', 'Owner', 'users'), TA('terms', 'Key terms'),
+    ],
+    defaultSort: { field: 'end_date', dir: 'asc' },
+  },
+]

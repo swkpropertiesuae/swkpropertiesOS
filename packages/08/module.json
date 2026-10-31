@@ -1,0 +1,9 @@
+{
+  "id": "08",
+  "name": "HR & Payroll",
+  "description": "Employee records, contracts, onboarding, offboarding, shifts and leave. Identity, permit and visa document tracking with expiry alerts. Expenses, performance, goals, training, policies and HR helpdesk. Employee self-service portal.",
+  "category": "hr",
+  "key_features": ["employee-records", "contracts", "onboarding", "offboarding", "shifts", "leave", "permit-visa-tracking", "expiry-alerts", "expenses", "performance", "goals", "training", "policies", "helpdesk", "self-service-portal"],
+  "brand": "SWKPROPOS",
+  "os": "SWK OS"
+}
