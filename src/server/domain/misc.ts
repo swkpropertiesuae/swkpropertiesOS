@@ -167,7 +167,7 @@ export function generatePayroll(period: string, ctx: any): { created: number; sk
     const unpaid = q.all(`SELECT from_date, to_date FROM leave_requests WHERE employee_id = ? AND type = 'Unpaid' AND status = 'Approved' AND deleted_at IS NULL AND from_date <= ? AND to_date >= ?`, e.id, last, first)
     let days = 0
     for (const l of unpaid) days += weekdays(l.from_date < first ? first : l.from_date, l.to_date > last ? last : l.to_date)
-    const isCommissionOnly = e.compensation_model === 'Commission Only (50/50 Company Visa – 0 Basic)'
+    const isCommissionOnly = e.compensation_model === 'Commission Only (50/50 Company Visa – 0 Basic)' && !(Number(e.basic_salary) > 0)
     const basic = isCommissionOnly ? 0 : (e.basic_salary ?? 0) / 100, allow = ((e.housing_allowance ?? 0) + (e.transport_allowance ?? 0) + (e.other_allowance ?? 0)) / 100
     const ded = r2(((basic + allow) / 30) * days * (30 / 22))
     const now = new Date().toISOString()

@@ -24,7 +24,7 @@ export function can(user: SessionUser | null, module: string, action: Action): b
   const p = user.permissions
   // Current AI tools read company-wide data. Limit them to company-wide users
   // until every tool carries the caller's record/branch scope.
-  if (module === 'ai' && (p !== '*' || user.party_id)) return false
+  if (module === 'ai' && ((p !== '*' && user.role_name !== 'Manager') || user.party_id)) return false
   if (p === '*') return true
   const m = p[module]
   return !!m && (m.includes('*') || m.includes(action))
