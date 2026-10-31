@@ -1,57 +1,34 @@
-# SWK ONE for Android
+# SWK ONE for Android (`v1.0.0`)
 
-`ae.swkproperties.one` is a native Android shell around the SWK ONE web app (`src/web/mobile`). The bundled UI is served from
-`https://localhost` inside a WebView and talks to the company server (`https://os.swkpropertiesuae.com` by default, changeable at
-sign-in). Native code only does what a browser cannot: the foreground duty-location service, biometric unlock and device identity.
+`ae.swkproperties.one` is the native Android field & attendance application for **SWK Properties LLC (Dubai, UAE)** (`src/web/mobile/SwkOneApp.tsx` + `android/`). The bundled UI is served from `https://localhost` inside a WebView and connects to `https://os.swkpropertiesuae.com` by default.
 
-## Build
+## Core UAE Real Estate Field Capabilities
+
+1. **Official Working Hours & 10:05 AM Grace Period (`Asia/Dubai`)**:
+   - **Monday – Friday**: `10:00 AM – 7:00 PM` (`19:00`)
+   - **Saturday**: `10:00 AM – 4:00 PM` (`16:00`)
+   - **Sunday**: Official Holiday (supports logging client-based variable hours when a Sales Advisor attends scheduled Sunday viewings/meetings)
+   - **Grace Window**: Check-in up to **10:05 AM** is recorded as **On-Time**; **10:06 AM+** is marked **Late** with exact late minutes.
+   - **Continuous Contemptor Detection**: 3 or more late check-ins (`>10:05 AM`) within 7 rolling days automatically alerts Owner **Shabib Siraj** and Manager **Mohammad Haseeb**.
+
+2. **Dual Check-In Modes**:
+   - **In-Office Reception QR Scan**: Scans the rotating 15-second QR / 6-digit code displayed on the Reception terminal (`/swk/reception-qr` → `POST /api/swk-one/attendance/qr-check-in`).
+   - **Out-of-Office Site Visit (Live GPS Check-In)**: When a Sales Advisor is outside the office for a scheduled site visit, checking in via live GPS on `/api/swk-one/viewings/:id/arrive` or starting a field session automatically registers their attendance check-in (`Field Site Visit Live GPS`) and links it to the viewing schedule.
+
+3. **Mandatory Checkout Gate (`GET /api/swk-one/checkout-gate`)**:
+   - A Sales Advisor **cannot check out** (from office or field) until:
+     1. Every scheduled site visit (`viewings`) for today has its arrival and client outcome recorded, **AND**
+     2. Today's **Daily Report (`daily_reports`)** has been submitted (`POST /api/swk-one/daily-reports`).
+
+4. **Site-Visit Area Companion & UAE Mortgage Calculator**:
+   - Gives the Sales Advisor live stock-style area metrics (price/sqft, YoY change, rental yield), nearby landmarks & metro connectivity, ongoing developments, a **15-year future outlook (2026–2041)**, and **top closing pitch keywords** to excite the client during the viewing.
+
+## Build Commands
 
 ```bash
 npm ci
 npm run android:sync          # builds the web app and copies it into android/app/src/main/assets/public
-cd android && gradle assembleDebug     # app/build/outputs/apk/debug/app-debug.apk (id ae.swkproperties.one.debug)
+cd android && ./gradlew assembleDebug   # outputs app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Requires JDK 17+ and the Android SDK (platform 34). CI (`.github/workflows/android-apk.yml`) also runs typecheck, the SWK ONE and
-mobile API tests and `lintDebug`. A signed release APK (`ae.swkproperties.one`, R8-minified) is built when the repository secrets
-`SWK_KEYSTORE_B64`, `SWK_KEYSTORE_PASSWORD`, `SWK_KEY_ALIAS` and `SWK_KEY_PASSWORD` exist; locally set `SWK_KEYSTORE_FILE` and the
-same variables, then `gradle assembleRelease`.
-
-## Icons
-
-Everything comes from `assets-src/swk-logo.png` (the official white mark) through `python3 tools/android/generate-icons.py`
-(needs Pillow). It resizes with Lanczos and writes exact Android density sizes (everything is a down-scale except the splash icon
-on xxhdpi/xxxhdpi screens, up to 1.4x):
-
-* adaptive launcher icon (foreground inside the 66 dp safe zone, navy `#0B1A33` background, Android 13 themed monochrome layer),
-* status-bar glyph (`ic_stat_swk`), Android 12 splash icon, Play Store icon
-  (`android/app/src/main/ic_launcher-playstore.png`, 512x512),
-* the web app's PWA icons and favicons in `public/`.
-
-`npm run android:sync` does **not** touch icons. To change the brand colour edit `BACKGROUND` in the script and re-run it.
-The source mark is 339x275 px, so a vector (SVG) master would be the next step if icons larger than 512 px are ever needed.
-
-## Duty location sharing
-
-Starting a duty creates the session on the server, then `SwkDutyLocationService` (foreground service, `location` type, persistent
-notification with an *End field duty* button) collects fixes and posts them in batches to
-`/api/swk-one/field-duty/{id}/location-batch` with the staff session token. Nothing is collected before a duty starts or after it
-ends, and the app never asks for background-location permission. The server rejects batches for sessions that are not the caller's,
-that have ended or whose scheduled window has passed, and any fix flagged as coming from a mock provider.
-
-## Check-in, arrival and offline rules (server)
-
-* The reception QR / 6-digit code is only visible to HR/reception users (`GET /api/swk-one/reception-qr/current`); staff phones scan it
-  with the camera. A missing, unknown or expired (>15 s) code is never `Verified`.
-* If `SWK_OFFICE_LAT`, `SWK_OFFICE_LNG` and `SWK_OFFICE_RADIUS_M` are set, a check-in is `Verified` only when the GPS fix is inside that
-  area. The Wi-Fi name is a client claim and can only make a check-in doubtful, never verified.
-* Viewing arrival needs a real fix and is `Verified` only within 300 m of the property; otherwise it is queued for manager review.
-* Offline items are replayed through the endpoint they were created for (allow-listed), once per idempotency key; items the server
-  rejects stay in the queue.
-* Sample HR/agent/compliance records and the "Initialize SWK ONE" demo data are created only outside production or inside the demo
-  workspace. A real workspace needs the user linked to a real employee record by HR.
-
-## Before publishing to Google Play
-
-Target SDK is 34. Google Play currently requires a newer target; moving to 35/36 also means handling edge-to-edge insets in
-`MainActivity` and AGP/Gradle upgrades. Sideloaded/enterprise APKs are not affected.
+Requires JDK 17+ and Android SDK (platform 34). GitHub Actions (`.github/workflows/android-apk.yml`) automatically runs `npm run typecheck`, `tests/swk-one-android.ts`, `tests/mobile.ts`, `lintDebug`, and `assembleDebug` on every push and uploads the `swk-one-android-debug-apk` artifact.
