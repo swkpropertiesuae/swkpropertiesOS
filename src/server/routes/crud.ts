@@ -49,6 +49,7 @@ function referencingModules(key: string): Set<string> {
 /** A reference picker may list an entity's titles only to people who can view it, or who can create or edit something that refers to it. */
 export function canLookup(user: any, def: EntityDef): boolean {
   if (can(user, def.module, 'view')) return true
+  if (def.key === 'employees') return can(user, 'hr', 'view') || can(user, 'sales', 'view') || can(user, 'admin', 'view')
   return [...referencingModules(def.key)].some(m => can(user, m, 'create') || can(user, m, 'edit'))
 }
 

@@ -158,6 +158,48 @@ export function Dashboard() {
         ))}
       </Reveal>
 
+      {/* ------------------------------------------------------------ 10-Step Sequential UAE Real Estate Dedicated Buttons */}
+      <Reveal className="card p-5 border border-[#efe9dc] bg-white">
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+          <div>
+            <span className="text-[10.5px] font-extrabold uppercase tracking-widest text-[#9a7a42]">STEP-BY-STEP COMPANY OPERATIONS</span>
+            <h2 className="font-display font-bold text-base text-ink m-0 mt-0.5">Sequential UAE Real Estate Execution Buttons (Click Any Step)</h2>
+          </div>
+          <Link to="/home" className="btn outline sm">
+            Open Full 8-Stage Step-by-Step Directory <ArrowRight size={13} />
+          </Link>
+        </div>
+        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
+          {[
+            { step: 'Step 01', title: 'Inventory & 3rd-Party A2A', sub: 'Dev, Seller, Landlord & A2A Units', to: '/e/properties' },
+            { step: 'Step 02', title: 'Promote (Bayut & Dubizzle)', sub: 'Connected Portal Ads & Form A', to: '/listings' },
+            { step: 'Step 03', title: 'Platform Leads Intake', sub: 'Bayut, Dubizzle, PF & WhatsApp', to: '/e/leads' },
+            { step: 'Step 04', title: 'Calls, Meetings & Follow-Ups', sub: 'Client Qualification & A2A Search', to: '/e/activities' },
+            { step: 'Step 05', title: 'Site Visits + Area Companion', sub: 'Live GPS, 15Y Outlook & Pitch', to: '/market' },
+            { step: 'Step 06', title: 'Closing: Form F / SPA / Ejari', sub: 'Cash / Mortgage, NOC & Transfer', to: '/e/jobs' },
+            { step: 'Step 07', title: 'Legal UAE Payment Modes', sub: 'Bank, Escrow, Exchange, USDT', to: '/e/receipts' },
+            { step: 'Step 08', title: '50–50% Commission Split', sub: '50% SWK / 50% Advisor + A2A', to: '/e/agent_commissions' },
+            { step: 'Step 09', title: 'Withdrawals & Client Refunds', sub: 'Terms-Based Refund & Sign-Off', to: '/withdrawals' },
+            { step: 'Step 10', title: 'Attendance, Reports & Bin', sub: '10am–7pm, Daily Report & Audit', to: '/swk-one' },
+          ].map(st => (
+            <Link
+              key={st.step}
+              to={st.to}
+              className="p-3 rounded-xl border border-[#e7e1d4] bg-[#fbf9f5] hover:bg-[#f4efe3] hover:border-[#c9a96e] transition flex flex-col justify-between group"
+            >
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-[#0B1A33] text-[#e8d4a2]">{st.step}</span>
+                  <ArrowUpRight size={14} className="text-muted group-hover:text-ink" />
+                </div>
+                <div className="font-bold text-[13px] text-ink mt-2 leading-snug">{st.title}</div>
+                <div className="text-[11px] text-muted mt-0.5 leading-snug">{st.sub}</div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </Reveal>
+
       <Reveal className="card p-4 border border-[#efe9dc] bg-[#fbf9f5]">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="space-y-0.5">

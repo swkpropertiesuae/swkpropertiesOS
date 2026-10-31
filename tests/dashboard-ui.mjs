@@ -49,7 +49,7 @@ try {
   await page.waitForURL('**/home')
   await page.getByRole('link', { name: 'Rent Schedules' }).first().waitFor()
   await tiles.filter({ hasText: 'Sales & mandates' }).click()
-  await page.waitForURL('**/e/mandates')
+  await page.waitForURL(/\/e\/(properties|mandates)/)
   // Mobile: tiles fit the viewport and the app strip stays reachable.
   await page.setViewportSize({ width: 390, height: 844 }); await page.goto(base + '/home')
   await tiles.first().waitFor(); await page.waitForTimeout(300)

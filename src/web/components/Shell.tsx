@@ -65,6 +65,17 @@ function QuickCreate() {
   )
 }
 
+const STAGE_SHORT_NAMES: Record<string, string> = {
+  command: '1. Command & 3 Depts',
+  inventory: '2. Inventory & Promote',
+  clients: '3. Leads & Visits',
+  sales: '4. Form F & Closing',
+  leasing: '5. Leasing & Ejari',
+  finance: '6. 50/50 & Payments',
+  team: '7. Attendance & HR',
+  compliance: '8. Audit, Bin & DLD',
+}
+
 /** Dedicated left sidebar showing both the current section and the full logical UAE Real Estate workflow. */
 function AppSidebar({ pathname }: { pathname: string }) {
   const { can } = useMeta()
@@ -72,22 +83,24 @@ function AppSidebar({ pathname }: { pathname: string }) {
   const items = useMemo(() => (here?.section.items ?? []).filter(i => !i.module || can(i.module, 'view')), [here, can])
   if (!here || items.length < 1) return null
   const meta = APP_META[here.section.key]
+  const stageIdx = SWK_NAV.findIndex(s => s.key === here.section.key) + 1
+  const navAria = here.section.key === 'leasing' ? 'Leasing & management pages' : `${here.section.label} pages`
   return (
     <aside className="swk-app-sidebar no-print">
-      <nav className="swk-sidebar-nav" aria-label={`${here.section.label} pages`}>
+      <nav className="swk-sidebar-nav" aria-label={navAria}>
         <div className="swk-sidebar-head">
           <Link to="/home" className="swk-sidebar-back" title="Back to all apps">
             <ArrowLeft size={14} />
-            <span>All Workspaces</span>
+            <span>All Workspaces (Step-by-Step Hub)</span>
           </Link>
           <div className="swk-sidebar-app">
             <span className={`swk-sidebar-app-ic tone-${meta?.tone ?? 'navy'}`}>{meta && <meta.icon size={18} />}</span>
             <div className="min-w-0">
               <div className="swk-sidebar-app-name">{here.section.label}</div>
-              <div className="swk-sidebar-app-count">{items.length} {items.length === 1 ? 'page' : 'pages'}</div>
+              <div className="swk-sidebar-app-count">Stage 0{stageIdx} · {items.length} Dedicated {items.length === 1 ? 'Step' : 'Steps'}</div>
             </div>
           </div>
-          <div className="mt-2 pt-2 border-t border-line flex flex-wrap gap-1">
+          <div className="swk-sidebar-stages" aria-label="Switch Workflow Stage">
             {SWK_NAV.map(sec => {
               const first = sec.items.find(i => !i.module || can(i.module, 'view'))
               if (!first) return null
@@ -96,22 +109,23 @@ function AppSidebar({ pathname }: { pathname: string }) {
                 <Link
                   key={sec.key}
                   to={first.to}
-                  className={cls('text-[10.5px] font-bold px-2 py-0.5 rounded-full border transition', activeSec ? 'bg-[#0b1a33] text-[#e8d4a2] border-[#be984c]' : 'bg-white text-muted border-line hover:text-ink')}
+                  className={cls('swk-sidebar-stage-btn', activeSec && 'active')}
                 >
-                  {sec.label.split('.')[0]}
+                  {STAGE_SHORT_NAMES[sec.key] ?? sec.label}
                 </Link>
               )
             })}
           </div>
         </div>
         <div className="swk-sidebar-list">
-          {items.map(i => {
+          {items.map((i, idx) => {
             const isActive = here.item.to === i.to
             return (
               <NavLink key={i.to} to={i.to} className={cls('swk-sidebar-link', isActive && 'active')} aria-current={isActive ? 'page' : undefined}>
                 <span className="swk-sidebar-link-ic"><i.icon size={16} /></span>
                 <span className="swk-sidebar-link-tx">
                   <span className="swk-sidebar-link-row">
+                    <span className="swk-sidebar-step-tag">{stageIdx}.{idx + 1}</span>
                     <b>{i.label}</b>
                     {i.isNew && <em>NEW</em>}
                   </span>
