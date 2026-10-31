@@ -293,7 +293,7 @@ export function Launcher() {
       )}
 
       {/* 5. DETAILED STEP-BY-STEP BUTTONS FOR EVERY SINGLE PAGE IN EVERY STAGE */}
-      {visibleStageBlocks.map((stage) => {
+      {!needle && visibleStageBlocks.map((stage) => {
         const stageIdx = apps.findIndex(x => x.key === stage.key) + 1
         return (
           <section key={stage.key} className="swk-stage-detail-block" aria-label={`${stage.label} step-by-step buttons`}>
