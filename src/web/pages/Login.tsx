@@ -88,7 +88,7 @@ export function Login() {
           <div className="h-8 w-px bg-white/15 mx-0.5" />
           <div>
             <div className="font-display text-white text-[16px] font-semibold leading-none tracking-tight">Business Workspace</div>
-            <div className="text-[10px] tracking-[.22em] uppercase text-[#b79a58] mt-1.5 font-semibold">SWK Properties · OS</div>
+            <div className="text-[10px] tracking-[.22em] uppercase text-[#c9a96e] mt-1.5 font-semibold">SWK Properties · OS</div>
           </div>
         </motion.header>
 
@@ -228,13 +228,13 @@ export function Login() {
         </motion.div>
 
         <motion.div className="absolute top-10 right-10 swk-glass px-4 py-2.5 flex items-center gap-3 text-[13px] text-white" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6, duration: 0.5, ease }}>
-          <span className="w-2 h-2 rounded-full bg-[#176348] shadow-[0_0_0_4px_rgba(23,99,72,.35)]" />Dubai · <b className="font-semibold"><DubaiTime /></b>
+          <span className="w-2 h-2 rounded-full bg-[#4fd39a] shadow-[0_0_0_4px_rgba(79,211,154,.2)]" />Dubai · <b className="font-semibold"><DubaiTime /></b>
         </motion.div>
 
         <div className="absolute left-10 right-10 bottom-10 flex items-end justify-between gap-6">
           <motion.div className="flex-1" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45, duration: 0.6, ease }}>
-            <div className="text-[11px] tracking-[.26em] uppercase text-[#e5cfa0] mb-2.5 font-semibold">From arrival to address · Dubai</div>
-            <div className="font-display text-white text-[34px] xl:text-[40px] leading-[1.08] font-semibold max-w-[540px] mb-5">Every listing, viewing, lease and transfer — <span className="text-[#e5cfa0]">in one workspace.</span></div>
+            <div className="text-[11px] tracking-[.26em] uppercase text-[#dcc8a2] mb-2.5 font-semibold">From arrival to address · Dubai</div>
+            <div className="font-display text-white text-[34px] xl:text-[40px] leading-[1.08] font-semibold max-w-[540px] mb-5">Every listing, viewing, lease and transfer — <span className="text-[#dcc8a2]">in one workspace.</span></div>
             <MarketMoments />
           </motion.div>
           <motion.div className="hidden xl:block w-[180px] h-[180px] rounded-2xl overflow-hidden border border-white/20 shadow-2xl flex-none bg-white p-2" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.65, duration: 0.6, ease }}>
