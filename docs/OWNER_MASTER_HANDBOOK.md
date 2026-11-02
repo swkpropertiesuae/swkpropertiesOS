@@ -9,7 +9,7 @@
 
 Press **Play** below to watch the complete step-by-step visual tour of **SWK Properties OS**, from the sign-in screen through all 12 departments:
 
-![SWK Properties OS â€” Complete 20-Chapter Guided Video Tour](C:/Users/shamh/.gemini/antigravity/brain/b88d8f66-b16c-41a0-bfad-2b1ae807bc51/swk_os_complete_owner_tour.webm)
+![SWK Properties OS â€” Complete 20-Chapter Guided Video Tour](./handbook-assets/swk_os_complete_owner_tour.webm)
 
 ---
 
