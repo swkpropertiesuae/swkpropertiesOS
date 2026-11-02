@@ -251,6 +251,17 @@ function buildWhere(def: EntityDef, p: ListParams, ctx: Ctx): { where: string; a
     if(!sources.length)cl.push('1=0');else{cl.push(`source_entity IN (${sources.map(()=>'?').join(',')})`);args.push(...sources)}
   }
   if(!ctx.system&&def.key==='shift_handovers'&&!can(ctx.user,'admin','view')){cl.push('(from_user_id=? OR to_user_id=?)');args.push(ctx.user?.id??0,ctx.user?.id??0)}
+  if (!ctx.system && ctx.user && !ctx.user.party_id && ctx.user.permissions !== '*' && !can(ctx.user, 'admin', 'view') && !can(ctx.user, 'sales_director', 'view') && /broker|advisor|consultant/i.test(ctx.user.role_name || '')) {
+    const uid = ctx.user.id ?? 0
+    const uemail = (ctx.user.email || '').toLowerCase()
+    if (def.key === 'leads' || def.key === 'opportunities') {
+      cl.push(`(owner_id = ? OR created_by = ? OR agent_id IN (SELECT id FROM agents WHERE deleted_at IS NULL AND (lower(email) = ? OR employee_id IN (SELECT id FROM employees WHERE user_id = ? AND deleted_at IS NULL))))`)
+      args.push(uid, uid, uemail, uid)
+    } else if (def.key === 'commission_entitlements') {
+      cl.push(`(employee_id IN (SELECT id FROM employees WHERE user_id = ? AND deleted_at IS NULL) OR agent_id IN (SELECT id FROM agents WHERE deleted_at IS NULL AND (lower(email) = ? OR employee_id IN (SELECT id FROM employees WHERE user_id = ? AND deleted_at IS NULL))))`)
+      args.push(uid, uemail, uid)
+    }
+  }
   if (p.q && p.q.trim()) {
     const cols = [...new Set([...def.fields.filter(f => f.search && f.type !== 'ref').map(f => f.name), ...titleCols(def).filter(c => def.fields.find(x => x.name === c)?.type !== 'ref')])]
     const term = `%${likeEsc(p.q.trim())}%`
@@ -334,6 +345,18 @@ export function getRecord(def: EntityDef, id: number, ctx: Ctx, opts: { children
   if (ctx.user?.party_id && !ctx.system && (!scope || row[scope] !== ctx.user.party_id)) throw notFound()
   if(!ctx.system&&def.key==='work_items'&&!can(ctx.user,getDef(row.source_entity).module,'view'))throw notFound()
   if(!ctx.system&&def.key==='shift_handovers'&&!can(ctx.user,'admin','view')&&row.from_user_id!==ctx.user?.id&&row.to_user_id!==ctx.user?.id)throw notFound()
+  if (!ctx.system && ctx.user && !ctx.user.party_id && ctx.user.permissions !== '*' && !can(ctx.user, 'admin', 'view') && !can(ctx.user, 'sales_director', 'view') && /broker|advisor|consultant/i.test(ctx.user.role_name || '')) {
+    const uid = ctx.user.id ?? 0
+    const uemail = (ctx.user.email || '').toLowerCase()
+    if (def.key === 'leads' || def.key === 'opportunities') {
+      const myAgent = row.agent_id ? q.val<number>(`SELECT 1 FROM agents WHERE id = ? AND deleted_at IS NULL AND (lower(email) = ? OR employee_id IN (SELECT id FROM employees WHERE user_id = ? AND deleted_at IS NULL))`, row.agent_id, uemail, uid) : null
+      if (row.owner_id !== uid && row.created_by !== uid && !myAgent) throw notFound()
+    } else if (def.key === 'commission_entitlements') {
+      const myEmp = row.employee_id ? q.val<number>(`SELECT 1 FROM employees WHERE id = ? AND user_id = ? AND deleted_at IS NULL`, row.employee_id, uid) : null
+      const myAgent = row.agent_id ? q.val<number>(`SELECT 1 FROM agents WHERE id = ? AND deleted_at IS NULL AND (lower(email) = ? OR employee_id IN (SELECT id FROM employees WHERE user_id = ? AND deleted_at IS NULL))`, row.agent_id, uemail, uid) : null
+      if (!myEmp && !myAgent) throw notFound()
+    }
+  }
   if(!ctx.system&&def.key==='document_extractions'){
     const file=q.get('SELECT link_entity,link_id FROM attachments WHERE id=? AND deleted_at IS NULL',row.attachment_id)
     if(!file)throw notFound()

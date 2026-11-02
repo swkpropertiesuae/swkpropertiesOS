@@ -1,27 +1,27 @@
 {
   "id": "/",
-  "name": "SWK Properties — UAE Real Estate Operating System",
-  "short_name": "SWK Properties",
-  "description": "UAE Real Estate Operating System for SWK Properties — Off-Plan Projects, Secondary Projects, Leasing, DLD Market Pulse, Attendance & ERP.",
+  "name": "SWK Properties Business OS",
+  "short_name": "SWK OS",
+  "description": "CRM, sales, accounting, tax, procurement, inventory, HR, payroll, projects and documents for SWK Properties.",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone"],
   "orientation": "any",
-  "background_color": "#17191C",
-  "theme_color": "#17191C",
+  "background_color": "#202421",
+  "theme_color": "#202421",
   "lang": "en",
   "categories": ["business", "productivity"],
   "icons": [
-    {"src": "/brand/app-icons/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
-    {"src": "/brand/app-icons/android-chrome-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
-    {"src": "/brand/app-icons/maskable-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable"},
-    {"src": "/brand/app-icons/maskable-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+    {"src": "/app-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "/app-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable"},
+    {"src": "/app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
   ],
   "shortcuts": [
-    {"name": "Dashboard", "short_name": "Dashboard", "url": "/?source=shortcut", "icons": [{"src": "/brand/app-icons/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png"}]},
-    {"name": "3-Dept Pipeline", "short_name": "Pipeline", "url": "/pipeline", "icons": [{"src": "/brand/app-icons/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png"}]},
-    {"name": "Market Pulse & DLD", "short_name": "Market", "url": "/market", "icons": [{"src": "/brand/app-icons/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png"}]},
-    {"name": "SWK ONE Mobile", "short_name": "SWK ONE", "url": "/swk-one", "icons": [{"src": "/brand/app-icons/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png"}]}
+    {"name": "Dashboard", "short_name": "Dashboard", "url": "/?source=shortcut", "icons": [{"src": "/app-icon-192.png", "sizes": "192x192", "type": "image/png"}]},
+    {"name": "Calendar", "short_name": "Calendar", "url": "/calendar", "icons": [{"src": "/app-icon-192.png", "sizes": "192x192", "type": "image/png"}]},
+    {"name": "Leads", "short_name": "Leads", "url": "/e/leads", "icons": [{"src": "/app-icon-192.png", "sizes": "192x192", "type": "image/png"}]},
+    {"name": "Leases", "short_name": "Leases", "url": "/e/leases", "icons": [{"src": "/app-icon-192.png", "sizes": "192x192", "type": "image/png"}]}
   ]
 }

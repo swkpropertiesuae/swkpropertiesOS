@@ -11,15 +11,18 @@ import { COMMUNITIES, DEVELOPERS, RERA_FORMS } from '../swk/uae'
  * - Dune Signal:   #c4492f
  */
 export const SWK_BRAND = {
-  logoWhite: '/brand/logos/dark/swk-properties-640.png',
-  logoInk: '/brand/logos/light/swk-properties-640.png',
-  logoDark: '/brand/logos/dark/swk-properties-640.png',
-  logoGold: '/brand/masters/swk-primary.png',
+  logoWhite: '/brand/swk-logo-white.png',
+  logoInk: '/brand/swk-logo-ink.png',
+  logoDark: '/brand/swk-logo-dark.png',
+  logoGold: '/brand/swk-logo.png',
+  mark: '/brand/swk-mark.png',
+  signageLogo: '/brand/swk-signage-logo.png',
+  signageIcon: '/brand/swk-signage-icon.png',
   skylineFront: '/brand/skyline-front.svg',
   skylineBack: '/brand/skyline-back.svg',
-  heroDubai: '/media/hero/dubai-skyline-hero.webp',
-  appIcon512: '/brand/app-icons/android-chrome-512x512.png',
-  appIcon192: '/brand/app-icons/android-chrome-192x192.png',
+  heroDubai: '/brand/swk-signage-logo.png',
+  appIcon512: '/app-icon-512.png',
+  appIcon192: '/app-icon-192.png',
 } as const
 
 export const SWK_PROPERTY_PHOTOS = [

@@ -8,9 +8,8 @@ import { useMeta } from '../lib/meta'
 import { COMMUNITIES } from '../swk/uae'
 
 /**
- * SWK OS sign-in — split-screen layout adapted from the 21st.dev "Sign In Page" (easemize) pattern:
- * staggered blur-in form on the left, full-bleed rounded hero on the right with glass overlays.
- * Re-skinned in SWK Midnight & Champagne, with live Dubai market moments instead of testimonials.
+ * SWK OS sign-in — split-screen layout with official SWK Properties Studio Logos
+ * (Architectural Tower Monogram + Connected SWK Wordmark + UAE Colours & Brushed Metallic Gold).
  */
 const ease = [0.16, 1, 0.3, 1] as const
 const item = { hidden: { opacity: 0, y: 12, filter: 'blur(6px)' }, show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.7, ease } } }
@@ -83,10 +82,14 @@ export function Login() {
         <div className="swk-login-grid" aria-hidden />
         <img src="/brand/skyline-front.svg" alt="" aria-hidden className="absolute left-0 right-0 bottom-0 w-full h-[120px] opacity-[.07] pointer-events-none" />
 
-        <motion.header className="relative flex items-center gap-3" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease }}>
-          <img src="/brand/logos/dark/swk-properties-640.png" alt="SWK Properties" className="h-[62px] w-auto" />
-          <div className="h-8 w-px bg-white/15" />
-          <div><div className="font-display text-white text-[18px] font-semibold leading-none">SWK OS</div><div className="text-[10px] tracking-[.26em] uppercase text-[#c9a96e] mt-1.5">UAE Real Estate Operating System</div></div>
+        <motion.header className="relative flex items-center gap-3.5" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease }}>
+          <img src="/brand/swk-mark.png" alt="SWK Tower Monogram" className="h-[46px] w-[46px] object-contain" />
+          <img src="/brand/swk-logo-white.png" alt="SWK Properties" className="h-[44px] w-auto" />
+          <div className="h-8 w-px bg-white/15 mx-0.5" />
+          <div>
+            <div className="font-display text-white text-[16px] font-semibold leading-none tracking-tight">Business Workspace</div>
+            <div className="text-[10px] tracking-[.22em] uppercase text-[#b79a58] mt-1.5 font-semibold">SWK Properties · OS</div>
+          </div>
         </motion.header>
 
         <motion.div className="relative w-full max-w-[430px] mx-auto lg:mx-0 py-10" variants={{ show: { transition: { staggerChildren: 0.08, delayChildren: 0.15 } } }} initial="hidden" animate="show">
@@ -143,12 +146,9 @@ export function Login() {
             </motion.div>
 
             {demo?.enabled && (
-              <motion.div variants={item} className="p-3.5 rounded-2xl border border-white/12 bg-white/[.03] text-xs text-[#c3cde0] space-y-1">
-                <div className="font-semibold text-[#dcc8a2] uppercase tracking-wider text-[10.5px]">SWK Properties Role Hierarchy</div>
-                <div>• <strong>Shabib Siraj</strong> — Owner (Full Control & Final Approver)</div>
-                <div>• <strong>Mohammad Haseeb</strong> — Manager (Operations · Admin Decisions → Owner)</div>
-                <div>• <strong>Talha Shabbir</strong> — BDM & IT Admin (CRM, ERP, Bayut & Dubizzle)</div>
-                <div>• <strong>Sales Advisors</strong> — Company Visa · 0 Basic · 50–50% Commission Split</div>
+              <motion.div variants={item}>
+                <button type="button" className="w-full h-[50px] rounded-2xl border border-white/12 bg-white/[.03] text-[#dfe5f0] font-semibold text-[14px] cursor-pointer hover:border-[#c9a96e]/60 hover:bg-white/[.06] transition-colors" disabled={busy} onClick={() => void signIn(demo.email, demo.password)}>Explore the demo workspace</button>
+                <p className="text-[12px] text-[#7f90ad] mt-2 mb-0 text-center">Fictional company and sample records — never touches live data.</p>
               </motion.div>
             )}
 
@@ -161,7 +161,7 @@ export function Login() {
                 </span>
                 <button
                   type="button"
-                  onClick={() => setShowServerCfg(s => !s)}
+                  onClick={() => setShowServerCfg((s: boolean) => !s)}
                   className="text-[12px] text-[#c9a96e] hover:text-[#e6d3a9] bg-transparent border-0 cursor-pointer p-0 inline-flex items-center gap-1"
                 >
                   <Server size={12} /> {showServerCfg ? 'Hide Server URL' : 'Configure Server URL'}
@@ -215,27 +215,30 @@ export function Login() {
         </motion.footer>
       </section>
 
-      {/* ---------------------------------------------------------------- hero side */}
+      {/* ---------------------------------------------------------------- hero side: studio brand showcase */}
       <section className="swk-login-hero" aria-hidden>
-        <motion.div className="swk-login-hero-img" style={{ backgroundImage: 'url(/media/hero/dubai-skyline-hero.webp)' }}
-          initial={{ opacity: 0, scale: 1.08, x: -20, filter: 'blur(8px)' }} animate={{ opacity: 1, scale: 1, x: 0, filter: 'blur(0px)' }} transition={{ duration: 1.4, ease }}>
-          {!reduce && <motion.div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: 'url(/media/hero/dubai-skyline-hero.webp)', backgroundPosition: 'center 35%' }} animate={{ scale: [1, 1.07, 1] }} transition={{ duration: 32, repeat: Infinity, ease: 'easeInOut' }} />}
+        <motion.div className="swk-login-hero-img" style={{ backgroundImage: 'url(/brand/swk-signage-logo.png)', backgroundPosition: 'center center', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundColor: '#FFFFFF' }}
+          initial={{ opacity: 0, scale: 1.03 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.9, ease }}>
         </motion.div>
         <div className="swk-login-hero-shade" />
-        {/* drifting champagne light */}
-        {!reduce && <motion.div className="absolute rounded-full pointer-events-none" style={{ width: 520, height: 520, right: '8%', top: '12%', background: 'radial-gradient(circle, rgba(201,169,110,.22), transparent 65%)' }} animate={{ x: [0, -40, 0], y: [0, 30, 0] }} transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut' }} />}
 
-        <motion.div className="absolute top-10 right-10 swk-glass px-4 py-2.5 flex items-center gap-3 text-[13px] text-white" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8, duration: 0.6, ease }}>
-          <span className="w-2 h-2 rounded-full bg-[#4fd39a] shadow-[0_0_0_4px_rgba(79,211,154,.2)]" />Dubai · <b className="font-semibold"><DubaiTime /></b>
+        <motion.div className="absolute top-10 left-10 swk-glass px-3.5 py-2.5 flex items-center gap-3 text-[12.5px] text-white" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.5, ease }}>
+          <img src="/brand/swk-mark.png" alt="" className="w-7 h-7 object-contain" />
+          <span>SWK Properties L.L.C · <b>RERA ORN 51517</b></span>
         </motion.div>
 
-        <div className="absolute left-10 right-10 bottom-10 flex flex-col gap-6">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6, duration: 0.8, ease }}>
-            <div className="text-[11px] tracking-[.3em] uppercase text-[#dcc8a2] mb-3">Luxury real estate in Dubai</div>
-            <div className="font-display text-white text-[40px] xl:text-[48px] leading-[1.04] font-medium max-w-[620px]">Every listing, viewing, lease and transfer — <span className="text-[#dcc8a2]">in one place.</span></div>
-          </motion.div>
-          <motion.div initial={{ opacity: 0, y: 24, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ delay: 1.0, duration: 0.7, ease }}>
+        <motion.div className="absolute top-10 right-10 swk-glass px-4 py-2.5 flex items-center gap-3 text-[13px] text-white" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6, duration: 0.5, ease }}>
+          <span className="w-2 h-2 rounded-full bg-[#176348] shadow-[0_0_0_4px_rgba(23,99,72,.35)]" />Dubai · <b className="font-semibold"><DubaiTime /></b>
+        </motion.div>
+
+        <div className="absolute left-10 right-10 bottom-10 flex items-end justify-between gap-6">
+          <motion.div className="flex-1" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45, duration: 0.6, ease }}>
+            <div className="text-[11px] tracking-[.26em] uppercase text-[#e5cfa0] mb-2.5 font-semibold">From arrival to address · Dubai</div>
+            <div className="font-display text-white text-[34px] xl:text-[40px] leading-[1.08] font-semibold max-w-[540px] mb-5">Every listing, viewing, lease and transfer — <span className="text-[#e5cfa0]">in one workspace.</span></div>
             <MarketMoments />
+          </motion.div>
+          <motion.div className="hidden xl:block w-[180px] h-[180px] rounded-2xl overflow-hidden border border-white/20 shadow-2xl flex-none bg-white p-2" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.65, duration: 0.6, ease }}>
+            <img src="/brand/swk-signage-icon.png" alt="" className="w-full h-full object-contain" />
           </motion.div>
         </div>
       </section>
