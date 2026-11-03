@@ -39,8 +39,10 @@ The entire web OS (`/home` Launcher, `AppSidebar`, `/dashboard`, and `/swk/pipel
   - **Saturday**: `10:00 AM – 4:00 PM` (`16:00` GST)
   - **Sunday**: Official Holiday (client-based variable working hours are automatically logged when an advisor attends scheduled Sunday client meetings/viewings)
   - **Grace Period**: Until **10:05 AM**. Check-ins up to `10:05 AM` are recorded as **On-Time**; `10:06 AM+` is marked **Late** with exact late minutes.
-- **Dual Check-In Modes**:
-  1. **Office Reception QR Scan**: Advisors in the office scan the rotating Reception QR terminal (`/swk/reception-qr` → `POST /api/swk-one/attendance/qr-check-in`).
+- **Dual Check-In Modes & Standalone Reception QR (Works Without Login & When Office PCs Are Off)**:
+  1. **Standalone Office Reception QR Terminal (`/reception-qr`, `/swk/reception-qr`, `/qr-reception`, `public/reception-qr.html`)**:
+     - Operates **100% independently without any OS login** and outside the ERP shell so it functions purely as the QR Reception Terminal connected to the SWK OS backend (`/api/public/reception-qr/current`, `/api/public/reception-qr/check-in`, `/api/public/reception-qr/check-out`, `/api/public/reception-qr/daily-report`).
+     - Supports both **Live Rotating Terminal QR (60s)** + 6-digit verification code and a **Permanent "Systems-Off" Printable Reception Stand QR (`SWK-RECEPTION-STAND-DXB-1`)** so when the **first person arrives in the morning and all office computers/monitors are turned OFF**, they can scan the reception stand QR with their phone or SWK ONE Android app and check in directly into SWK OS.
   2. **Out-of-Office Site Visit (Live GPS Check-In)**: Advisors outside the office for a scheduled site visit check in via live GPS (`POST /api/swk-one/viewings/:id/arrive` or `POST /api/swk-one/field-duty/start`), which automatically registers their daily attendance (`Field Site Visit Live GPS`) tied to the scheduled visit.
 - **Mandatory Checkout Gate (`getCheckoutGateStatus`)**:
   - Advisors **cannot check out** (from office or field) until:

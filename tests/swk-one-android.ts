@@ -85,6 +85,25 @@ try {
   const qr = qrRes.json()
   check('Office reception terminal generates short-lived rotating QR token', qrRes.statusCode === 200 && qr.short_code.length === 6)
 
+  // Standalone Reception QR works without any login session (for when first person arrives and office systems are off)
+  const pubQrRes = await androidReq('/api/public/reception-qr/current', 'GET')
+  const pubQr = pubQrRes.json()
+  check('Standalone Reception QR endpoint works without login and returns permanent stand code + staff roster',
+    pubQrRes.statusCode === 200 && pubQr.standalone === true && pubQr.requires_login === false && pubQr.stand_code === 'SWK-RECEPTION-STAND-DXB-1' && Array.isArray(pubQr.staff_roster)
+  )
+
+  const standaloneCheckInRes = await androidReq('/api/public/reception-qr/check-in', 'POST', {
+    email: config.accounts.managerEmail,
+    qr_code_or_token: 'https://os.swkpropertiesuae.com/reception-qr?checkin=1&stand=SWK-RECEPTION-STAND-DXB-1',
+    device_id: 'SWK-STAND-FIRST-ARRIVAL',
+    lat: 25.1867,
+    lng: 55.2744,
+  })
+  check('First-person arrival check-in via Standalone Reception QR (without OS login) records attendance in SWK OS',
+    standaloneCheckInRes.statusCode === 200 && standaloneCheckInRes.json().verification === 'Verified' && standaloneCheckInRes.json().employee?.email === config.accounts.managerEmail,
+    standaloneCheckInRes.json()
+  )
+
   const checkInRes = await androidReq('/api/swk-one/attendance/qr-check-in', 'POST', {
     qr_token: qr.token,
     short_code: qr.short_code,

@@ -327,14 +327,37 @@ export function resolveStaffContext(ctx: Ctx, createIfMissing = false): {
   return { userId: u.id, employee: emp ?? null, agent: agent ?? null, authorisation: authorisation ?? null }
 }
 
+export function ensurePermanentStandToken(branchId = 1) {
+  const standCode = `SWK-RECEPTION-STAND-DXB-${branchId}`
+  let row = q.get(`SELECT * FROM reception_qr_tokens WHERE token_code = ? ORDER BY id DESC LIMIT 1`, standCode)
+  if (!row) {
+    const nowStr = new Date().toISOString()
+    q.run(
+      `INSERT INTO reception_qr_tokens(token_code, short_code, branch_id, office_network_hint, issued_at, expires_at, scans_count, created_by)
+       VALUES (?,?,?,?,?,?,0,NULL)`,
+      standCode,
+      `STAND${branchId}`,
+      branchId,
+      'SWK-CORP-WIFI-DXB (10.24.0.0/16)',
+      nowStr,
+      '2099-12-31T23:59:59.000Z',
+    )
+    row = q.get(`SELECT * FROM reception_qr_tokens WHERE token_code = ? ORDER BY id DESC LIMIT 1`, standCode)
+  }
+  return { standCode, row }
+}
+
 /**
- * Generates or returns the current short-lived Reception Kiosk QR token (rotates every 45 seconds).
+ * Generates or returns the current short-lived Reception Kiosk QR token (rotates every 45-60 seconds),
+ * plus the permanent Standalone Reception Stand QR token (which works even when all office PCs/screens are OFF).
  */
 export function getCurrentReceptionQr(branchId = 1, ctx: Ctx = SYSTEM_CTX) {
   const now = new Date()
   const nowStr = now.toISOString()
+  const { standCode } = ensurePermanentStandToken(branchId)
+
   let active = q.get(
-    `SELECT * FROM reception_qr_tokens WHERE branch_id = ? AND expires_at > ? ORDER BY id DESC LIMIT 1`,
+    `SELECT * FROM reception_qr_tokens WHERE branch_id = ? AND expires_at > ? AND token_code LIKE 'SWK-QR-%' ORDER BY id DESC LIMIT 1`,
     branchId,
     nowStr,
   )
@@ -367,33 +390,97 @@ export function getCurrentReceptionQr(branchId = 1, ctx: Ctx = SYSTEM_CTX) {
     city: 'Dubai',
   }
 
+  const today = todayStr()
   const todayCheckins = q.all(
-    `SELECT a.*, e.name AS employee_name, e.emp_no, e.designation
+    `SELECT a.*, e.name AS employee_name, e.emp_no, e.designation, e.email AS employee_email
      FROM attendance_events a
      LEFT JOIN employees e ON e.id = a.employee_id
      WHERE a.work_date = ? AND a.deleted_at IS NULL
-     ORDER BY a.id DESC LIMIT 20`,
-    todayStr(),
+     ORDER BY a.id DESC LIMIT 50`,
+    today,
   )
 
+  const staffRows = q.all<any>(
+    `SELECT e.id, e.emp_no, e.name, e.email, e.designation, e.department_id, e.user_id, d.name AS department_name
+     FROM employees e
+     LEFT JOIN departments d ON d.id = e.department_id
+     WHERE e.deleted_at IS NULL AND COALESCE(e.status, 'Active') = 'Active'
+     ORDER BY e.id ASC`,
+  )
+
+  const staffRoster = staffRows.map((emp: any) => {
+    const todayEv = todayCheckins.find((c: any) => Number(c.employee_id) === Number(emp.id))
+    return {
+      id: emp.id,
+      emp_no: emp.emp_no,
+      name: emp.name,
+      email: emp.email,
+      designation: emp.designation,
+      department_name: emp.department_name || 'SWK Operations',
+      checked_in: Boolean(todayEv?.check_in_at),
+      checked_out: Boolean(todayEv?.check_out_at),
+      check_in_at: todayEv?.check_in_at || null,
+      check_out_at: todayEv?.check_out_at || null,
+      duty_status: todayEv?.duty_status || 'Not Checked In',
+      late_minutes: Number(todayEv?.late_minutes || 0),
+      terminal_type: todayEv?.terminal_type || null,
+      event_no: todayEv?.event_no || null,
+    }
+  })
+
+  const shiftInfo = computeDubaiShiftInfo(now)
+  const dubaiTimeFormatted = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Dubai',
+    weekday: 'short',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(now)
+
   return {
+    standalone: true,
+    requires_login: false,
     branch,
     token_code: active.token_code,
     short_code: active.short_code,
+    stand_code: standCode,
     office_network_hint: active.office_network_hint,
     issued_at: active.issued_at,
     expires_at: active.expires_at,
     ttl_seconds: Math.max(1, Math.round((new Date(active.expires_at).getTime() - Date.now()) / 1000)),
+    shift_info: {
+      ...shiftInfo,
+      dubai_time: dubaiTimeFormatted,
+      grace_cutoff_gst: '10:05',
+      working_hours_summary: 'Mon–Fri 10:00–19:00 · Sat 10:00–16:00 · Sun Holiday (Variable Hours)',
+    },
     qr_payload: JSON.stringify({
       type: 'SWK_OFFICE_ATTENDANCE_QR',
       v: 2,
+      standalone: true,
       branch_id: branch.id,
       branch_code: branch.code,
       token: active.token_code,
       short_code: active.short_code,
+      stand_code: standCode,
       expires_at: active.expires_at,
     }),
+    stand_qr_payload: JSON.stringify({
+      type: 'SWK_OFFICE_ATTENDANCE_QR',
+      v: 2,
+      standalone: true,
+      mode: 'permanent_stand_systems_off',
+      branch_id: branch.id,
+      branch_code: branch.code,
+      token: standCode,
+      stand_code: standCode,
+    }),
     today_checkins: todayCheckins,
+    staff_roster: staffRoster,
   }
 }
 
@@ -456,32 +543,148 @@ export function registerMobileDevice(
 }
 
 /**
+ * Resolves an employee (and optional user/agent) for standalone reception check-in/out when office systems are off or no OS session is logged in.
+ */
+export function resolveStandaloneEmployee(
+  identifier: { employee_id?: number | string; email?: string; emp_no?: string },
+  ctx: Ctx = SYSTEM_CTX,
+) {
+  let emp: Rec | null = null
+  const empId = identifier.employee_id ? Number(identifier.employee_id) : 0
+  const email = String(identifier.email || '').trim().toLowerCase()
+  const empNo = String(identifier.emp_no || '').trim().toUpperCase()
+
+  if (empId > 0) {
+    emp = q.get(`SELECT * FROM employees WHERE id = ? AND deleted_at IS NULL`, empId) || null
+  }
+  if (!emp && email) {
+    emp = q.get(`SELECT * FROM employees WHERE lower(email) = ? AND deleted_at IS NULL ORDER BY id ASC LIMIT 1`, email) || null
+    if (!emp) {
+      const uByEmail = q.get(`SELECT * FROM users WHERE lower(email) = ? AND deleted_at IS NULL AND active = 1 AND party_id IS NULL ORDER BY id ASC LIMIT 1`, email)
+      if (uByEmail) {
+        const resolved = resolveStaffContext({
+          ...ctx,
+          system: true,
+          user: {
+            id: uByEmail.id,
+            name: uByEmail.name,
+            email: uByEmail.email,
+            role_id: uByEmail.role_id,
+            role_name: 'Staff',
+            permissions: '*',
+            branch_id: uByEmail.branch_id ?? 1,
+            party_id: null,
+          },
+        }, true)
+        emp = resolved.employee
+      }
+    }
+  }
+  if (!emp && empNo) {
+    emp = q.get(`SELECT * FROM employees WHERE upper(emp_no) = ? AND deleted_at IS NULL ORDER BY id ASC LIMIT 1`, empNo) || null
+  }
+  if (!emp && ctx.user) {
+    const resolved = resolveStaffContext(ctx, true)
+    emp = resolved.employee
+  }
+  if (!emp) {
+    throw bad('Select your employee profile or enter your registered @swkpropertiesuae.com email address')
+  }
+
+  let userRow = emp.user_id
+    ? q.get(`SELECT * FROM users WHERE id = ? AND deleted_at IS NULL`, emp.user_id)
+    : null
+  if (!userRow && emp.email) {
+    userRow = q.get(`SELECT * FROM users WHERE lower(email) = lower(?) AND deleted_at IS NULL`, emp.email)
+  }
+  const fallbackUserId = Number(userRow?.id || emp.user_id || 1)
+  const agent =
+    q.get(`SELECT * FROM agents WHERE employee_id = ? AND deleted_at IS NULL ORDER BY id ASC LIMIT 1`, emp.id) ||
+    (emp.email ? q.get(`SELECT * FROM agents WHERE lower(email) = lower(?) AND deleted_at IS NULL ORDER BY id ASC LIMIT 1`, emp.email) : null) ||
+    null
+
+  const effectiveCtx: Ctx = {
+    ...ctx,
+    system: true,
+    user: userRow
+      ? {
+          id: userRow.id,
+          name: userRow.name,
+          email: userRow.email,
+          role_id: userRow.role_id,
+          role_name: 'Staff',
+          permissions: '*',
+          branch_id: userRow.branch_id ?? emp.branch_id ?? 1,
+          party_id: null,
+        }
+      : {
+          id: fallbackUserId,
+          name: emp.name,
+          email: emp.email || 'staff@swkpropertiesuae.com',
+          role_id: 1,
+          role_name: 'Staff',
+          permissions: '*',
+          branch_id: emp.branch_id ?? 1,
+          party_id: null,
+        },
+  }
+
+  return { employee: emp, agent, userId: fallbackUserId, hasDedicatedUser: Boolean(userRow || emp.user_id), effectiveCtx }
+}
+
+/**
+ * Parses a scanned reception QR string (JSON payload, URL with query params, rotating token, 6-digit code, or permanent stand code).
+ */
+function parseReceptionQrInput(rawInput: string) {
+  const trimmed = String(rawInput || '').trim()
+  if (!trimmed) return ''
+  try {
+    if (trimmed.startsWith('{')) {
+      const obj = JSON.parse(trimmed)
+      return String(obj.token || obj.short_code || obj.stand_code || trimmed)
+    }
+    if (/^https?:\/\//i.test(trimmed) || trimmed.includes('/reception-qr')) {
+      const u = new URL(trimmed, 'https://os.swkpropertiesuae.com')
+      return String(u.searchParams.get('token') || u.searchParams.get('stand') || u.searchParams.get('code') || trimmed)
+    }
+  } catch { /* plain string */ }
+  return trimmed
+}
+
+/**
  * Office Check-In via Reception QR code scan + Registered Device + Office Network Verification.
  */
 export function officeQrCheckIn(
   payload: {
     qr_code_or_token: string
     device_id?: string
+    device_name?: string
     network_ssid?: string
     gps_lat?: string
     gps_lng?: string
     gps_accuracy_m?: number
     shift_name?: string
+    employee_id?: number
+    email?: string
   },
   ctx: Ctx,
 ) {
-  const { userId, employee } = resolveStaffContext(ctx, true)
+  const resolved = (payload.employee_id || payload.email || !ctx.user)
+    ? resolveStandaloneEmployee({ employee_id: payload.employee_id, email: payload.email }, ctx)
+    : (() => {
+        const s = resolveStaffContext(ctx, true)
+        return { employee: s.employee, agent: s.agent, userId: s.userId, hasDedicatedUser: true, effectiveCtx: ctx }
+      })()
+  const { userId, employee, hasDedicatedUser, effectiveCtx } = resolved
   if (!employee) throw bad('Employee profile is required for attendance check-in')
 
   const rawInput = String(payload.qr_code_or_token || '').trim()
   if (!rawInput) throw bad('Scan the reception QR code or enter the 6-digit code shown on the reception screen')
-  let parsedToken = rawInput
-  try {
-    if (rawInput.startsWith('{')) {
-      const obj = JSON.parse(rawInput)
-      parsedToken = String(obj.token || obj.short_code || rawInput)
-    }
-  } catch { /* plain string */ }
+  const parsedToken = parseReceptionQrInput(rawInput)
+
+  if (/^SWK-RECEPTION-STAND-[A-Z0-9-]+$/i.test(parsedToken)) {
+    ensurePermanentStandToken(Number(employee.branch_id || 1))
+  }
 
   const qrRow = q.get(
     `SELECT * FROM reception_qr_tokens WHERE (token_code = ? OR short_code = ?) ORDER BY id DESC LIMIT 1`,
@@ -490,12 +693,18 @@ export function officeQrCheckIn(
   )
 
   const now = nowIso()
-  // The rotating code is only valid for a few seconds after it leaves the reception screen.
+  // The rotating code is only valid for a few seconds after it leaves the reception screen; permanent stand codes expire in 2099.
   const isExpired = qrRow ? new Date(qrRow.expires_at).getTime() < Date.now() - 15_000 : false
-  const device = registerMobileDevice({ device_id: payload.device_id || `AND-SWK-${userId}` }, ctx)
+  const device = registerMobileDevice(
+    {
+      device_id: payload.device_id || `AND-SWK-EMP-${employee.id}`,
+      device_name: payload.device_name,
+    },
+    effectiveCtx,
+  )
   if (!device) throw bad('Device registration failed. Please retry.')
   // The Wi-Fi name is typed/claimed by the client and cannot be proven from the app: it can only contradict, never confirm.
-  const networkClaimOk = !payload.network_ssid || /swk|office|dxb|corp|wifi/i.test(payload.network_ssid)
+  const networkClaimOk = !payload.network_ssid || /swk|office|dxb|corp|wifi|reception|stand/i.test(payload.network_ssid)
   const lat = toNum(payload.gps_lat), lng = toNum(payload.gps_lng), accuracy = toNum(payload.gps_accuracy_m)
   const geofence = officeGeofence(lat, lng, accuracy)
   const insideOffice = geofence === 'unconfigured' || geofence === 'inside'
@@ -536,12 +745,12 @@ export function officeQrCheckIn(
       variable_hours_reason: varReason || existingToday.variable_hours_reason,
       ...(validCoord(lat, lng) ? { gps_lat: String(lat), gps_lng: String(lng), gps_accuracy_m: accuracy ?? undefined } : {}),
       manager_verified: verified,
-      notes: `${verified ? 'Verified' : `Doubtful (${doubtfulReasons.join('; ')})`} via SWK ONE Android (${device.device_name}) · Network claimed: ${payload.network_ssid || 'not provided'}`,
-    }, { ...ctx, system: true })
+      notes: `${verified ? 'Verified' : `Doubtful (${doubtfulReasons.join('; ')})`} via SWK Reception QR (${device.device_name}) · Network claimed: ${payload.network_ssid || 'not provided'}`,
+    }, { ...effectiveCtx, system: true })
   } else {
     eventRecord = createRecord(getDef('attendance_events'), {
       employee_id: employee.id,
-      user_id: userId,
+      user_id: hasDedicatedUser ? userId : null,
       work_date: todayStr(),
       shift_name: payload.shift_name || (clientVarHours ? 'Client-Based Variable Hours' : shiftInfo.shiftName),
       grace_minutes: 5,
@@ -555,7 +764,7 @@ export function officeQrCheckIn(
       ...(validCoord(lat, lng) ? { gps_lat: String(lat), gps_lng: String(lng), gps_accuracy_m: accuracy ?? undefined } : {}),
       manager_verified: verified,
       notes: `${verified ? 'Verified Reception QR + Trusted Android Device' : `Doubtful check-in flagged for manager review: ${doubtfulReasons.join('; ')}`} (${device.device_name})`,
-    }, { ...ctx, system: true })
+    }, { ...effectiveCtx, system: true })
   }
 
   // Also sync standard HR attendance table
@@ -570,18 +779,22 @@ export function officeQrCheckIn(
       variable_hours_reason: varReason || null,
       status: shiftInfo.isLate ? 'Late' : 'Present',
       note: `SWK ONE QR Check-in (${eventRecord.event_no})`,
-    }, { ...ctx, system: true })
+    }, { ...effectiveCtx, system: true })
   }
 
   // Check rolling 7-day continuous late ("contemptor") rule (>10:05 AM >= 3 times in 7 days)
   const contemptorCheck = shiftInfo.isLate
-    ? checkAndAlertContinuousContemptor(employee.id, userId, employee.name)
+    ? checkAndAlertContinuousContemptor(employee.id, hasDedicatedUser ? userId : null, employee.name)
     : { triggered: false, late_count_7d: 0, dates: [] }
 
   // Update workday state
-  setWorkdayMode({ presence_mode: 'Office Work' }, ctx)
+  if (hasDedicatedUser) {
+    setWorkdayMode({ presence_mode: 'Office Work' }, effectiveCtx)
+  }
 
-  recordEnterpriseAudit(ctx, '3.05', '4.01', 'attendance.qr_check_in', 'attendance_events', eventRecord.id, `Office QR check-in ${eventRecord.event_no} (${verified ? 'Verified' : 'Flagged for Review'})`, {
+  recordEnterpriseAudit(effectiveCtx, '3.05', '4.01', 'attendance.qr_check_in', 'attendance_events', eventRecord.id, `Office QR check-in ${eventRecord.event_no} (${verified ? 'Verified' : 'Flagged for Review'})`, {
+    employee_id: employee.id,
+    employee_name: employee.name,
     device_id: device.device_id,
     qr_token: eventRecord.qr_token_ref,
     verified,
@@ -591,6 +804,7 @@ export function officeQrCheckIn(
 
   return {
     verified,
+    employee: { id: employee.id, name: employee.name, emp_no: employee.emp_no, designation: employee.designation, email: employee.email },
     doubtful_reasons: doubtfulReasons,
     verification_summary: {
       qr_token_valid: !!qrRow && !isExpired,
@@ -609,8 +823,24 @@ export function officeQrCheckIn(
   }
 }
 
-export function officeCheckOut(ctx: Ctx, opts: { lat?: string; lng?: string; client_variable_hours?: boolean; variable_hours_reason?: string } = {}) {
-  const { employee, agent } = resolveStaffContext(ctx, true)
+export function officeCheckOut(
+  ctx: Ctx,
+  opts: {
+    lat?: string
+    lng?: string
+    client_variable_hours?: boolean
+    variable_hours_reason?: string
+    employee_id?: number
+    email?: string
+  } = {},
+) {
+  const resolved = (opts.employee_id || opts.email || !ctx.user)
+    ? resolveStandaloneEmployee({ employee_id: opts.employee_id, email: opts.email }, ctx)
+    : (() => {
+        const s = resolveStaffContext(ctx, true)
+        return { employee: s.employee, agent: s.agent, userId: s.userId, hasDedicatedUser: true, effectiveCtx: ctx }
+      })()
+  const { employee, agent, hasDedicatedUser, effectiveCtx } = resolved
   if (!employee) throw bad('Employee profile not found')
   const today = todayStr()
   const existing = q.get(
@@ -639,7 +869,7 @@ export function officeCheckOut(ctx: Ctx, opts: { lat?: string; lng?: string; cli
     daily_report_submitted: true,
     ...(opts.client_variable_hours !== undefined ? { client_variable_hours: opts.client_variable_hours } : {}),
     ...(opts.variable_hours_reason ? { variable_hours_reason: opts.variable_hours_reason } : {}),
-  }, { ...ctx, system: true })
+  }, { ...effectiveCtx, system: true })
 
   const hrAtt = q.get(`SELECT * FROM attendance WHERE employee_id = ? AND att_date = ? AND deleted_at IS NULL`, employee.id, today)
   if (hrAtt) {
@@ -649,7 +879,7 @@ export function officeCheckOut(ctx: Ctx, opts: { lat?: string; lng?: string; cli
       daily_report_verified: true,
       ...(opts.client_variable_hours !== undefined ? { client_variable_hours: opts.client_variable_hours } : {}),
       ...(opts.variable_hours_reason ? { variable_hours_reason: opts.variable_hours_reason } : {}),
-    }, { ...ctx, system: true })
+    }, { ...effectiveCtx, system: true })
   }
 
   // Also close any active field session if checking out from a field site visit
@@ -662,11 +892,65 @@ export function officeCheckOut(ctx: Ctx, opts: { lat?: string; lng?: string; cli
       ended_at: now,
       site_departure_at: now,
       status: 'Completed (Off Duty)',
-    }, { ...ctx, system: true })
+    }, { ...effectiveCtx, system: true })
   }
 
-  setWorkdayMode({ presence_mode: 'Off Duty' }, ctx)
-  return { ok: true, ...updated }
+  if (hasDedicatedUser) {
+    setWorkdayMode({ presence_mode: 'Off Duty' }, effectiveCtx)
+  }
+  return { ok: true, employee: { id: employee.id, name: employee.name }, ...updated }
+}
+
+/**
+ * Standalone Reception Daily Report submission (for unlocking Checkout Gate when office PCs are off).
+ */
+export function submitStandaloneReceptionDailyReport(
+  payload: {
+    employee_id?: number
+    email?: string
+    self_summary: string
+    blockers?: string
+    next_day_priorities?: string
+  },
+  ctx: Ctx = SYSTEM_CTX,
+) {
+  const { employee, userId, hasDedicatedUser, effectiveCtx } = resolveStandaloneEmployee(
+    { employee_id: payload.employee_id, email: payload.email },
+    ctx,
+  )
+  const summary = String(payload.self_summary || '').trim()
+  if (summary.length < 5) throw bad('Please enter a brief summary of today’s completed work before checking out')
+
+  const date = todayStr()
+  let existing = q.get(
+    `SELECT * FROM daily_reports WHERE employee_id = ? AND report_date = ? AND deleted_at IS NULL ORDER BY id DESC LIMIT 1`,
+    employee.id,
+    date,
+  )
+  if (!existing) {
+    existing = createRecord(getDef('daily_reports'), {
+      employee_id: employee.id,
+      user_id: hasDedicatedUser ? userId : null,
+      department_id: employee.department_id,
+      report_date: date,
+      day_type: 'Assigned Workday',
+      outcomes_narrative: summary,
+      blockers_narrative: String(payload.blockers || 'None').trim(),
+      next_day_priorities: String(payload.next_day_priorities || 'Follow up active leads and scheduled viewings').trim(),
+      confidential_escalation: false,
+    }, { ...effectiveCtx, system: true })
+  } else if (existing.status === 'Draft' || existing.status === 'Returned for Clarification') {
+    existing = patchRecord(getDef('daily_reports'), existing.id, {
+      outcomes_narrative: summary,
+      blockers_narrative: String(payload.blockers || existing.blockers_narrative || 'None').trim(),
+      next_day_priorities: String(payload.next_day_priorities || existing.next_day_priorities || 'Follow up active leads and scheduled viewings').trim(),
+    }, { ...effectiveCtx, system: true })
+  } else {
+    return { ok: true, employee: { id: employee.id, name: employee.name }, report: existing }
+  }
+
+  const report = submitDailyReport(existing.id, effectiveCtx)
+  return { ok: true, employee: { id: employee.id, name: employee.name }, report }
 }
 
 export function requestAttendanceCorrection(

@@ -6,6 +6,7 @@ import { q, db } from '../src/server/db'
 import { config } from '../src/server/config'
 import { hashPassword } from '../src/server/auth'
 import { resetBusinessData } from '../src/server/domain/business-data'
+import { todayStr } from '../src/server/util'
 
 syncSchema()
 seedReference()
@@ -100,7 +101,7 @@ try {
   )
 
   // Ensure all today's viewings are Scheduled and no daily report exists yet for today to test Checkout Gate blocking
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayStr()
   q.run(`DELETE FROM daily_reports WHERE report_date = ?`, today)
   const viewingId = boot.viewings[0].id
   q.run(`UPDATE viewings SET status = 'Scheduled', scheduled_at = ? WHERE id = ?`, `${today} 11:30`, viewingId)

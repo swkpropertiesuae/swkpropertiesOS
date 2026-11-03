@@ -56,6 +56,20 @@ export default function App() {
   const loc = useLocation()
   const defaultLanding = isNativeAndroid() ? '/swk-one' : '/home'
   if (loc.pathname.startsWith('/t/')) return <Routes><Route path="/t/:token" element={<PublicTrack />} /></Routes>
+  const isStandaloneReceptionQr =
+    loc.pathname === '/reception-qr' ||
+    loc.pathname.startsWith('/reception-qr/') ||
+    loc.pathname === '/swk/reception-qr' ||
+    loc.pathname.startsWith('/swk/reception-qr/') ||
+    loc.pathname === '/qr-reception' ||
+    loc.pathname.startsWith('/qr-reception/')
+  if (isStandaloneReceptionQr) {
+    return (
+      <Suspense fallback={<div className="h-full grid place-items-center bg-[#08142a] text-white"><Loading label="Starting Standalone Reception QR Terminal…" /></div>}>
+        <ReceptionQrPage />
+      </Suspense>
+    )
+  }
   if (loading) return <div className="h-full grid place-items-center"><Loading label="Starting SWK OS…" /></div>
   if (!me) return <Routes><Route path="/login" element={<Login />} /><Route path="*" element={<Navigate to="/login" replace state={{ from: loc.pathname }} />} /></Routes>
   if (me.mustChangePassword && !loc.pathname.startsWith('/profile') && !loc.pathname.startsWith('/print')) return <Navigate to="/profile" replace />

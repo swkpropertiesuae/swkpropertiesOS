@@ -30,6 +30,8 @@ import {
   submitMobileLeaveRequest,
   submitMobileOffer,
   submitOneTapDailyReport,
+  submitStandaloneReceptionDailyReport,
+  resolveStandaloneEmployee,
   submitViewingOutcomeAndFeedback,
   syncOfflineQueue,
   toggleChecklistItem,
@@ -45,22 +47,23 @@ export default async function (app: FastifyInstance) {
   app.get('/api/swk-one/bootstrap', async req => getSwkOneBootstrap(req.ctx))
   app.post('/api/swk-one/initialize', async req => ({ ok: true, data: initializeSwkOneWorkspaceData(req.ctx) }))
 
-  // 2. Reception QR Terminal & Office Attendance
-  // Only reception / HR staff may read the live code: a phone that can fetch it by itself would not prove presence in the office.
-  app.get('/api/swk-one/reception-qr/current', async req => {
-    need(req, 'hr', 'edit')
+  // 2. Standalone Reception QR Terminal & Office Attendance (Works Without Login + When Office PCs Are Off)
+  const handleGetReceptionQr = async (req: any) => {
     const branchId = Number((req.query as any)?.branch_id || 1)
     const qr = tx(() => getCurrentReceptionQr(branchId, req.ctx))
     return { ...qr, token: qr.token_code }
-  })
+  }
+  app.get('/api/swk-one/reception-qr/current', handleGetReceptionQr)
+  app.get('/api/public/reception-qr/current', handleGetReceptionQr)
 
   const handleOfficeCheckIn = async (req: any) => {
     const b = body<any>(req)
     const res = tx(() =>
       officeQrCheckIn(
         {
-          qr_code_or_token: b.qr_code_or_token || b.qr_token || b.short_code,
+          qr_code_or_token: b.qr_code_or_token || b.qr_token || b.short_code || b.stand_code,
           device_id: b.device_id,
+          device_name: b.device_name,
           network_ssid: b.network_ssid || b.wifi_ssid || b.network_type,
           gps_lat: b.gps_lat ? String(b.gps_lat) : b.lat ? String(b.lat) : undefined,
           gps_lng: b.gps_lng ? String(b.gps_lng) : b.lng ? String(b.lng) : undefined,
@@ -68,6 +71,8 @@ export default async function (app: FastifyInstance) {
           shift_name: b.shift_name,
           client_variable_hours: b.client_variable_hours,
           variable_hours_reason: b.variable_hours_reason,
+          employee_id: b.employee_id ? Number(b.employee_id) : undefined,
+          email: b.email,
         } as any,
         req.ctx
       )
@@ -80,6 +85,7 @@ export default async function (app: FastifyInstance) {
   }
   app.post('/api/swk-one/attendance/office-check-in', handleOfficeCheckIn)
   app.post('/api/swk-one/attendance/qr-check-in', handleOfficeCheckIn)
+  app.post('/api/public/reception-qr/check-in', handleOfficeCheckIn)
 
   const handleOfficeCheckOut = async (req: any) => {
     const b = (req.body ?? {}) as any
@@ -88,11 +94,35 @@ export default async function (app: FastifyInstance) {
       lng: b.lng !== undefined ? String(b.lng) : undefined,
       client_variable_hours: b.client_variable_hours,
       variable_hours_reason: b.variable_hours_reason,
+      employee_id: b.employee_id ? Number(b.employee_id) : undefined,
+      email: b.email,
     }))
   }
   app.post('/api/swk-one/attendance/office-check-out', handleOfficeCheckOut)
   app.post('/api/swk-one/attendance/check-out', handleOfficeCheckOut)
+  app.post('/api/public/reception-qr/check-out', handleOfficeCheckOut)
+
   app.get('/api/swk-one/attendance/checkout-gate', async req => getCheckoutGateStatus(req.ctx))
+  app.get('/api/public/reception-qr/checkout-gate', async req => {
+    const qy = (req.query ?? {}) as any
+    const { employee, agent } = resolveStandaloneEmployee({ employee_id: qy.employee_id, email: qy.email }, req.ctx)
+    return getCheckoutGateStatus(employee.id, agent?.id ?? null)
+  })
+  app.post('/api/public/reception-qr/daily-report', async req => {
+    const b = (req.body ?? {}) as any
+    return tx(() =>
+      submitStandaloneReceptionDailyReport(
+        {
+          employee_id: b.employee_id ? Number(b.employee_id) : undefined,
+          email: b.email,
+          self_summary: b.self_summary || b.outcomes_narrative || '',
+          blockers: b.blockers || b.blockers_narrative || 'None',
+          next_day_priorities: b.next_day_priorities || 'Follow up active leads and scheduled viewings',
+        },
+        req.ctx
+      )
+    )
+  })
   app.get('/api/swk-one/area-companion', async req => {
     const code = String((req.query as any)?.code || 'PALM').toUpperCase()
     const area = DUBAI_AREAS_24.find(a => a.code === code || a.name.toUpperCase().includes(code)) || DUBAI_AREAS_24[0]
