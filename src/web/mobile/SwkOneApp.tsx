@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { get, post } from '../lib/api'
 import { AnimatedNumber } from '../swk/ui'
+import { OllamaStudio } from '../components/OllamaStudio'
 import {
   SWK_BRAND,
   COMMUNITIES,
@@ -101,6 +102,7 @@ export default function SwkOneApp() {
   const [qrModalOpen, setQrModalOpen] = useState(false)
   const [compareModalOpen, setCompareModalOpen] = useState(false)
   const [apkModalOpen, setApkModalOpen] = useState(false)
+  const [aiStudioModalOpen, setAiStudioModalOpen] = useState(false)
 
   // Daily report local inputs
   const [eodSummary, setEodSummary] = useState('')
@@ -807,6 +809,15 @@ export default function SwkOneApp() {
             </div>
 
             <div className="flex items-center gap-1.5 shrink-0">
+              <motion.button
+                whileHover={{ y: -1 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setAiStudioModalOpen(true)}
+                className="px-2.5 py-1.5 rounded-full bg-white/15 hover:bg-white/25 text-[#f3ead8] border border-[#c9a96e]/50 font-bold text-xs cursor-pointer flex items-center gap-1 shadow-md"
+                title="Open Internal SWK Ollama AI (Qwen 3.5)"
+              >
+                <Sparkles size={13} className="text-[#c9a96e]" /> SWK AI
+              </motion.button>
               <motion.button
                 whileHover={{ y: -1 }}
                 whileTap={{ scale: 0.95 }}
@@ -1920,6 +1931,27 @@ export default function SwkOneApp() {
             )
           }}
         />
+
+        {aiStudioModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-end sm:items-center justify-center p-2 sm:p-4">
+            <div className="w-full max-w-[540px] max-h-[90vh] overflow-y-auto rounded-3xl bg-[#f6f2ea] border-2 border-[#c9a96e]/50 shadow-2xl p-3 sm:p-4">
+              <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-line">
+                <div className="font-display font-bold text-[#0b1a33] text-sm flex items-center gap-1.5">
+                  <Sparkles size={16} className="text-[#c9a96e]" />
+                  SWK ONE · Internal Ollama AI (Qwen 3.5)
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAiStudioModalOpen(false)}
+                  className="btn outline sm"
+                >
+                  Close
+                </button>
+              </div>
+              <OllamaStudio compact />
+            </div>
+          </div>
+        )}
       </motion.div>
     </div>
   )

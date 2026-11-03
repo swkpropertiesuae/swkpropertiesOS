@@ -7,6 +7,7 @@ import { useToast } from '../lib/toast'
 import { PageHeader, Loading, ErrorBox, Tabs, Badge, Empty, Modal } from '../ui/kit'
 import { useMeta } from '../lib/meta'
 import { cls, fmtIsoStamp } from '../lib/format'
+import { OllamaStudio } from '../components/OllamaStudio'
 
 interface Agent { id: number; name: string; title: string; avatar: string; active: boolean; schedule: string; run_hour: number; autonomy: string; deliver_to: string; last_run_at: string | null; last_status: string | null; role_key: string | null; instructions: string; tools: string }
 interface Status { configured: boolean; pending: number; agents: Agent[]; templates: { key: string; name: string; title: string; avatar: string; blurb: string }[]; tools: { name: string; risk: string; description: string }[] }
@@ -14,18 +15,19 @@ interface Status { configured: boolean; pending: number; agents: Agent[]; templa
 const SUGGESTIONS = ['Give me today’s briefing', 'Who owes us money and for how long?', 'Which jobs are at risk of delay?', 'Any revenue we have not invoiced yet?', 'Summarise our open leads', 'What needs my approval or attention today?']
 
 export function AiPage() {
-  const [sp, setSp] = useSearchParams(); const tab = sp.get('tab') ?? 'chat'
+  const [sp, setSp] = useSearchParams(); const tab = sp.get('tab') ?? 'ollama'
   const q = useQuery({ queryKey: ['ai-status'], queryFn: () => get<Status>('/api/ai/status'), refetchInterval: 20000 })
   if (q.error) return <ErrorBox error={q.error} onRetry={() => void q.refetch()} />
   if (!q.data) return <Loading />
   const d = q.data
   return (
     <div className="fade-in">
-      <PageHeader icon={<Bot size={20} />} title="AI Team" subtitle="Jarvis and your digital employees – they read live brokerage and portfolio data, handle routine follow-ups and report to you. External messages always wait for your approval, including in autopilot. Financial posting, DLD title deed transfers and escrow releases always require human approval." actions={<Link className="btn outline" to="/admin/integrations"><Settings2 /> AI provider</Link>} />
-      {!d.configured && <div className="mb-4 p-4 rounded-xl border border-[#ecd9a0] bg-[#fbf3d6] text-[14px]"><b>AI is not connected yet.</b> Choose a provider in <Link to="/admin/integrations" className="underline">Integrations → AI employees</Link>. Free options: Groq, OpenRouter “:free” models, Google Gemini, Cloudflare Workers AI, or your own Ollama server.</div>}
+      <PageHeader icon={<Bot size={20} />} title="AI Team & Internal Ollama Studio" subtitle="Private on-premise Qwen 3.5 (4B Fast & 9B Pro + Vision) workspace for @swkpropertiesuae.com staff, plus Jarvis and your digital employees." actions={<Link className="btn outline" to="/admin/integrations"><Settings2 /> AI provider</Link>} />
+      {!d.configured && tab !== 'ollama' && <div className="mb-4 p-4 rounded-xl border border-[#ecd9a0] bg-[#fbf3d6] text-[14px]"><b>AI is not connected yet.</b> Choose a provider in <Link to="/admin/integrations" className="underline">Integrations → AI employees</Link>, or click <b>Connect to Jarvis &amp; OS</b> inside the <b>Ollama Studio (Qwen 3.5)</b> tab.</div>}
       <div className="card overflow-hidden">
-        <Tabs tabs={[{ key: 'chat', label: 'Chat with Jarvis' }, { key: 'team', label: 'Employees', count: d.agents.length }, { key: 'approvals', label: 'Approvals', count: d.pending || undefined }, { key: 'voice', label: 'Voice' }, { key: 'activity', label: 'Activity' }]} value={tab} onChange={k => setSp({ tab: k })} />
+        <Tabs tabs={[{ key: 'ollama', label: 'Ollama Studio (Qwen 3.5)' }, { key: 'chat', label: 'Chat with Jarvis' }, { key: 'team', label: 'Employees', count: d.agents.length }, { key: 'approvals', label: 'Approvals', count: d.pending || undefined }, { key: 'voice', label: 'Voice' }, { key: 'activity', label: 'Activity' }]} value={tab} onChange={k => setSp({ tab: k })} />
         <div className="p-4 md:p-5">
+          {tab === 'ollama' && <OllamaStudio />}
           {tab === 'chat' && <Chat status={d} />}
           {tab === 'team' && <Team status={d} reload={() => void q.refetch()} />}
           {tab === 'approvals' && <Approvals reload={() => void q.refetch()} />}

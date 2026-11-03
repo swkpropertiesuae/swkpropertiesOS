@@ -17,3 +17,5 @@ android/local.properties
 android/.gradle/
 *.jks
 *.keystore
+
+cloudflared.exe
