@@ -282,6 +282,7 @@ export function OllamaStudio({ compact = false }: { compact?: boolean }) {
       <div className="rounded-2xl border border-line bg-soft p-3 flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#0b1a33] text-white text-xs font-semibold">
+            <img src="/brand/swk-mark.png" alt="SWK" className="w-4 h-4 object-contain" />
             <span className={cls('w-2 h-2 rounded-full', st?.online ? 'bg-[#4fd39a]' : 'bg-[#f59e0b]')} />
             <span>{st?.online ? 'Ollama Live' : 'Ollama Standby'}</span>
           </div>
@@ -409,7 +410,7 @@ export function OllamaStudio({ compact = false }: { compact?: boolean }) {
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div>
                     <div className="text-[16px] font-display font-bold text-ink flex items-center gap-2">
-                      <Bot size={19} className="text-fold" />
+                      <img src="/brand/swk-mark.png" alt="SWK OS" className="w-6 h-6 object-contain" />
                       SWK Internal Ollama Workspace ({selectedModel})
                     </div>
                     <div className="text-[13px] text-muted mt-0.5">

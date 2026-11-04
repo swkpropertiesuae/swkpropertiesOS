@@ -1942,8 +1942,9 @@ export default function SwkOneApp() {
           <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-end sm:items-center justify-center p-2 sm:p-4">
             <div className="w-full max-w-[540px] max-h-[90vh] overflow-y-auto rounded-3xl bg-[#f6f2ea] border-2 border-[#c9a96e]/50 shadow-2xl p-3 sm:p-4">
               <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-line">
-                <div className="font-display font-bold text-[#0b1a33] text-sm flex items-center gap-1.5">
-                  <Sparkles size={16} className="text-[#c9a96e]" />
+                <div className="font-display font-bold text-[#0b1a33] text-sm flex items-center gap-2">
+                  <img src={SWK_BRAND.mark} alt="SWK" className="w-5 h-5 object-contain" />
+                  <Sparkles size={15} className="text-[#c9a96e]" />
                   SWK ONE · Internal Ollama AI (Qwen 3.5)
                 </div>
                 <button
