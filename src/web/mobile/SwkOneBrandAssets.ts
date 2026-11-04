@@ -2,13 +2,7 @@ import { COMMUNITIES, DEVELOPERS, RERA_FORMS } from '../swk/uae'
 
 /**
  * Official SWK Properties OS Brand Assets & High-Resolution Media Registry
- * 100% consistent with the SWK OS "Midnight & Champagne" design language:
- * - Midnight Navy: #08142a / #0b1a33
- * - Royal Navy:    #14305c / #1b3a6b
- * - Champagne Gold:#c9a96e / #dcc8a2 / #f1e3c2
- * - Warm Sand:     #f6f2ea / #fbf8f2
- * - Oasis Emerald: #1f7a7a / #1f9d6b
- * - Dune Signal:   #c4492f
+ * Powered by the official SWK_OS brand package (Emblem, Wordmark, Horizontal, Stacked, Master & Favicons).
  */
 export const SWK_BRAND = {
   logoWhite: '/brand/swk-logo-white.png',
@@ -22,6 +16,11 @@ export const SWK_BRAND = {
   markBlack: '/brand/swk-mark-black.png',
   signageLogo: '/brand/swk-signage-logo.png',
   signageIcon: '/brand/swk-signage-icon.png',
+  emblemSvg: '/brand/swk-os-emblem.svg',
+  wordmarkSvg: '/brand/swk-os-wordmark.svg',
+  horizontalLogoSvg: '/brand/swk-os-horizontal.svg',
+  stackedLogoSvg: '/brand/swk-os-stacked.svg',
+  masterSvg: '/brand/swk-os-master.svg',
   skylineFront: '/brand/skyline-front.svg',
   skylineBack: '/brand/skyline-back.svg',
   heroDubai: '/brand/swk-signage-logo.png',

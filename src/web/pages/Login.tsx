@@ -83,8 +83,8 @@ export function Login() {
         <img src="/brand/skyline-front.svg" alt="" aria-hidden className="absolute left-0 right-0 bottom-0 w-full h-[120px] opacity-[.07] pointer-events-none" />
 
         <motion.header className="relative flex items-center gap-3.5" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease }}>
-          <img src="/brand/swk-mark.png" alt="SWK Tower Monogram" className="h-[46px] w-[46px] object-contain" />
-          <img src="/brand/swk-logo-white.png" alt="SWK Properties" className="h-[44px] w-auto" />
+          <img src="/brand/swk-os-emblem.svg" alt="SWK Tower Monogram" className="h-[46px] w-[46px] object-contain" />
+          <img src="/brand/swk-os-wordmark.svg" alt="SWK OS" className="h-[44px] w-auto" />
           <div className="h-8 w-px bg-white/15 mx-0.5" />
           <div>
             <div className="font-display text-white text-[16px] font-semibold leading-none tracking-tight">Business Workspace</div>

@@ -162,8 +162,8 @@ export default function ReceptionQrPage() {
         {/* Header */}
         <div className="flex flex-col items-center text-center mb-6">
           <div className="flex items-center gap-2.5 mb-3">
-            <img src="/brand/swk-mark.png" alt="SWK" className="h-9 w-9 object-contain" />
-            <img src="/brand/swk-logo-white.png" alt="SWK Properties" className="h-7 w-auto object-contain" />
+            <img src="/brand/swk-os-emblem.svg" alt="SWK" className="h-10 w-10 object-contain" />
+            <img src="/brand/swk-os-wordmark.svg" alt="SWK OS" className="h-8 w-auto object-contain" />
           </div>
           <h1 className="font-display font-bold text-xl text-white m-0">
             {checkInResult ? 'Attendance Confirmed' : 'Office Attendance Sign-In'}

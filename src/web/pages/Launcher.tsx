@@ -38,7 +38,7 @@ export function Launcher() {
     <div className="swk-launch">
       <motion.header className="swk-launch-hero" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease }}>
         <div className="swk-launch-identity">
-          <img src="/brand/swk-mark.png" alt="SWK Properties" width={36} height={36} />
+          <img src="/brand/swk-os-emblem.svg" alt="SWK Properties" width={38} height={38} />
           <span className="swk-eyebrow" style={{ margin: 0 }}>SWK Properties · Business Workspace · {today()}</span>
         </div>
         <h1>{greeting()}{firstName ? `, ${firstName}` : ''}.</h1>

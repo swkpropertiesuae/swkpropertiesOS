@@ -89,7 +89,7 @@ function AppSidebar({ pathname, collapsed, onToggle }: { pathname: string; colla
         <div className="swk-sidebar-head">
           <div className="swk-sidebar-toprow">
             <Link to="/home" className="swk-sidebar-monogram" title="All apps · SWK Properties OS">
-              <img src="/brand/swk-mark.png" alt="SWK" width={28} height={28} />
+              <img src="/brand/swk-os-emblem.svg" alt="SWK" width={28} height={28} />
               {!collapsed && (
                 <span className="swk-sidebar-back-lbl">
                   <ArrowLeft size={12} />
@@ -177,8 +177,8 @@ export function Shell() {
       <div className="swk-main-col">
         <header className="swk-top no-print">
           <Link to="/home" className="swk-brand" aria-label="SWK Properties Business Workspace home">
-            <img src="/brand/swk-mark.png" alt="SWK Properties Monogram" className="swk-brand-monogram" />
-            <img src="/brand/swk-logo-ink.png" alt="SWK Properties" className="swk-brand-wordmark" />
+            <img src="/brand/swk-os-emblem.svg" alt="SWK Properties Monogram" className="swk-brand-monogram" />
+            <img src="/brand/swk-os-wordmark.svg" alt="SWK OS" className="swk-brand-wordmark" />
             <span className="swk-os-tag">
               <b>OS</b>
               <small className="swk-hide-md">Business Workspace</small>
@@ -195,9 +195,6 @@ export function Shell() {
             <Smartphone size={14} className="text-[#157a52]" />
             <b>Mobile OS</b>
           </Link>
-          <Link to="/reception-qr?scan=1" className="swk-tbtn" title="Scan Office Reception QR / Screensaver" aria-label="Scan Office Reception QR">
-            <QrCode size={17} />
-          </Link>
           <button className="swk-tbtn" onClick={() => setPalette(true)} aria-label="Search (Ctrl K)"><Search size={17} /></button>
           <NotificationBell />
           <QuickCreate />
@@ -208,8 +205,7 @@ export function Shell() {
                 <div className="px-3 py-2"><div className="font-semibold text-ink text-[14px] truncate">{me?.name}</div><div className="text-xs text-muted truncate">{me?.email}</div></div>
                 <div className="sep" />
                 <Link to="/swk-one" onClick={() => setUserMenu(false)}><span className="ic"><Smartphone size={16} /></span>SWK ONE Mobile App</Link>
-                <Link to="/reception-qr?scan=1" onClick={() => setUserMenu(false)}><span className="ic"><Camera size={16} /></span>Scan Reception QR (Attendance)</Link>
-                <Link to="/reception-qr" onClick={() => setUserMenu(false)}><span className="ic"><QrCode size={16} /></span>Reception QR Screensaver & Print</Link>
+                <Link to="/reception-qr?print=1" onClick={() => setUserMenu(false)}><span className="ic"><QrCode size={16} /></span>Print Office Attendance QR</Link>
                 <Link to="/profile" onClick={() => setUserMenu(false)}><span className="ic"><UserRound size={16} /></span>My profile & password</Link>
                 <Link to="/workspace-tools" onClick={() => setUserMenu(false)}><span className="ic"><Languages size={16} /></span>Language & preferences</Link>
                 <Link to="/home" onClick={() => setUserMenu(false)}><span className="ic"><LayoutGrid size={16} /></span>All apps</Link>
@@ -243,12 +239,6 @@ export function Shell() {
           <NavLink to="/swk-one" className={({ isActive }) => cls('swk-mnav-item', isActive && 'active')}>
             <Smartphone size={18} />
             <span>Mobile OS</span>
-          </NavLink>
-          <NavLink to="/reception-qr?scan=1" className="swk-mnav-scan">
-            <span className="swk-mnav-scan-ring">
-              <Camera size={19} />
-            </span>
-            <span>Scan QR</span>
           </NavLink>
           <NavLink to="/ai" className={({ isActive }) => cls('swk-mnav-item', isActive && 'active')}>
             <Sparkles size={18} />
