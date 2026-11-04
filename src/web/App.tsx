@@ -28,7 +28,6 @@ import { PrintPage } from './print/PrintPage'
 import { StudioHome, StudioEditor } from './pages/StudioPage'
 import { NewInvoicePage } from './pages/NewInvoicePage'
 import { Loading, ErrorBox } from './ui/kit'
-import { isNativeAndroid } from './mobile/native-bridge'
 
 // SWK real-estate modules (code-split)
 const MarketPage = lazy(() => import('./pages/swk/MarketPage'))
@@ -41,7 +40,6 @@ const AgentsPage = lazy(() => import('./pages/swk/AgentsPage'))
 const ReraCentre = lazy(() => import('./pages/swk/ReraCentre'))
 const Owner360 = lazy(() => import('./pages/swk/Owner360'))
 const EnterpriseMasterOsPage = lazy(() => import('./pages/swk/EnterpriseMasterOsPage'))
-const SwkOneApp = lazy(() => import('./mobile/SwkOneApp'))
 const ReceptionQrPage = lazy(() => import('./pages/swk/ReceptionQrPage'))
 const RecycleBinPage = lazy(() => import('./pages/swk/RecycleBinPage'))
 const WithdrawalsPage = lazy(() => import('./pages/swk/WithdrawalsPage'))
@@ -55,7 +53,7 @@ const Statements = () => <ReportsPage fixed={['trial_balance', 'profit_loss', 'b
 export default function App() {
   const { me, loading } = useMeta()
   const loc = useLocation()
-  const defaultLanding = isNativeAndroid() ? '/swk-one' : '/home'
+  const defaultLanding = '/home'
   if (loc.pathname.startsWith('/t/')) return <Routes><Route path="/t/:token" element={<PublicTrack />} /></Routes>
   const isStandaloneReceptionQr =
     loc.pathname === '/qr-checkin' ||
@@ -86,7 +84,7 @@ export default function App() {
               element={
                 <div className="max-w-2xl mx-auto my-12 p-8 rounded-2xl border border-[#c9a96e]/40 bg-[#0d1f3c] text-white shadow-xl">
                   <div className="text-xs font-extrabold uppercase tracking-widest text-[#e6c98f] mb-2">
-                    Hardcoded Staff Access Policy · SWK Properties OS
+                    Staff Access Policy · SWK Properties OS
                   </div>
                   <h2 className="text-xl font-bold mb-2">Restricted Module — Attendance, Manual, Market Pulse &amp; General Only</h2>
                   <p className="text-sm text-slate-300 leading-relaxed mb-6">
@@ -102,8 +100,8 @@ export default function App() {
                     <Link to="/market" className="px-4 py-2.5 rounded-xl bg-white/10 text-white font-bold text-xs no-underline border border-white/15">
                       Market Pulse
                     </Link>
-                    <Link to="/swk-one" className="px-4 py-2.5 rounded-xl bg-white/10 text-white font-bold text-xs no-underline border border-white/15">
-                      Open SWK ONE Mobile
+                    <Link to="/home" className="px-4 py-2.5 rounded-xl bg-white/10 text-white font-bold text-xs no-underline border border-white/15">
+                      All Apps
                     </Link>
                   </div>
                 </div>
@@ -118,7 +116,6 @@ export default function App() {
     <Suspense fallback={<Loading />}>
       <Routes>
         <Route path="/login" element={<Navigate to={defaultLanding} replace />} />
-        <Route path="/swk-one" element={<SwkOneApp />} />
         <Route element={<Shell />}>
           <Route index element={<Navigate to={defaultLanding} replace />} />
           <Route path="/home" element={<Launcher />} />

@@ -25,7 +25,6 @@ export const SWK_NAV: NavSection[] = [
     { label: 'Calendar', to: '/calendar', icon: CalendarDays, desc: 'Viewings & meetings' },
     { label: 'Daily Operations', to: '/enterprise/master-os', icon: ShieldCheck, desc: 'Company workflow control' },
     { label: 'Market Pulse', to: '/market', icon: LineChart, desc: 'Dubai prices & yields' },
-    { label: 'SWK ONE Mobile', to: '/swk-one', icon: Smartphone, desc: 'Staff & agent mobile app' },
     { label: 'Reception QR', to: '/reception-qr', icon: QrCode, desc: 'Office reception check-in' },
     { label: 'AI Assistant', to: '/ai', icon: Sparkles, module: 'ai', desc: 'Smart daily helper' },
   ] },
@@ -110,11 +109,10 @@ export const SWK_NAV: NavSection[] = [
     { label: 'Leaderboard', to: '/agents', icon: Trophy, module: 'hr', desc: 'Top performing brokers' },
   ] },
   { key: 'field', label: 'Field Service', items: [
-    { label: 'SWK ONE App', to: '/swk-one', icon: Smartphone, desc: 'Step 1 · Open mobile workspace' },
-    { label: 'Reception QR', to: '/reception-qr', icon: QrCode, desc: 'Step 2 · Office QR check-in' },
-    { label: 'Gate Logs', to: '/e/attendance_events', icon: Clock, module: 'hr', desc: 'Step 3 · Arrival & exit scans' },
-    { label: 'Field Visits', to: '/e/field_sessions', icon: MapPinned, module: 'hr', desc: 'Step 4 · GPS site visits' },
-    { label: 'Daily Reports', to: '/e/daily_reports', icon: ClipboardCheck, module: 'hr', desc: 'Step 5 · End-of-day summary' },
+    { label: 'Reception QR', to: '/reception-qr', icon: QrCode, desc: 'Step 1 · Office QR check-in' },
+    { label: 'Gate Logs', to: '/e/attendance_events', icon: Clock, module: 'hr', desc: 'Step 2 · Arrival & exit scans' },
+    { label: 'Field Visits', to: '/e/field_sessions', icon: MapPinned, module: 'hr', desc: 'Step 3 · GPS site visits' },
+    { label: 'Daily Reports', to: '/e/daily_reports', icon: ClipboardCheck, module: 'hr', desc: 'Step 4 · End-of-day summary' },
   ] },
   { key: 'tools', label: 'Documents & Manual', items: [
     { label: 'Company Manual', to: '/competency', icon: BookOpen, desc: 'Official SOPs, rules & knowledge base' },
@@ -137,7 +135,6 @@ export const SWK_NAV: NavSection[] = [
 ]
 
 export const QUICK_CREATE: { label: string; desc: string; to: string; icon: LucideIcon; module: string }[] = [
-  { label: 'Open SWK ONE Mobile', desc: 'Staff & agent mobile workspace', to: '/swk-one', icon: Smartphone, module: 'dashboard' },
   { label: 'New Lead', desc: 'Add a buyer or tenant enquiry', to: '/e/leads?new=1', icon: UserPlus, module: 'crm' },
   { label: 'Submit Property', desc: 'Add a new property for review', to: '/e/inventory_submissions?new=1', icon: Building2, module: 'properties' },
   { label: 'Book Viewing', desc: 'Schedule a property visit', to: '/e/viewings?new=1', icon: CalendarCheck, module: 'mandates' },
@@ -168,7 +165,7 @@ export const APP_META: Record<string, { blurb: string; icon: LucideIcon; tone: A
   finance: { blurb: 'Invoices, receipts, commissions, bills & VAT', icon: Percent, tone: 'oasis' },
   compliance: { blurb: 'KYC checks, RERA permits, broker cards & AML', icon: Gavel, tone: 'dune' },
   team: { blurb: 'Staff, brokers, visas, attendance, leave & payroll', icon: Users, tone: 'ocean' },
-  field: { blurb: 'SWK ONE mobile app, QR check-in & field visits', icon: MapPinned, tone: 'champ' },
+  field: { blurb: 'Reception QR check-in, gate logs & field visits', icon: MapPinned, tone: 'champ' },
   tools: { blurb: 'Deal calculators, contract studio & reports', icon: FileStack, tone: 'plum' },
   admin: { blurb: 'Company info, branches, roles, backups & logs', icon: Settings, tone: 'navy' },
 }
@@ -221,12 +218,11 @@ export const RESTRICTED_STAFF_LAUNCHER_APPS: LauncherApp[] = [
   {
     key: 'general',
     label: 'General Workspace',
-    blurb: 'SWK ONE mobile app, company calendar, AI assistant & profile',
-    icon: Smartphone,
+    blurb: 'Company calendar, AI assistant & profile',
+    icon: CalendarDays,
     tone: 'ocean',
-    landing: '/swk-one',
+    landing: '/calendar',
     items: [
-      { label: 'SWK ONE Mobile App', to: '/swk-one', icon: Smartphone, desc: 'Mobile attendance, manual & market pulse' },
       { label: 'Calendar', to: '/calendar', icon: CalendarDays, desc: 'Company schedule & events' },
       { label: 'AI Assistant', to: '/ai', icon: Sparkles, module: 'ai', desc: 'Internal SWK AI assistant' },
     ],

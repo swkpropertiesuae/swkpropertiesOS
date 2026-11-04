@@ -81,7 +81,7 @@ async function loop(agent: any, messages: ChatMsg[], runId: number | null, chann
 export async function runAgent(agentId: number, task?: string, trigger = 'manual'): Promise<{ run_id: number; output: string; ok: boolean }> {
   const agent = q.get(`SELECT * FROM ai_agents WHERE id = ? AND deleted_at IS NULL`, agentId)
   if (!agent) throw bad('Agent not found')
-  if (!aiConfigured()) throw bad('AI is not configured yet. Open Integrations → AI and choose a provider (free options: Groq, OpenRouter :free models, Ollama).')
+  if (!aiConfigured()) throw bad('AI is not configured yet. Open Integrations → AI and choose a provider.')
   const prompt = task || `Run your standing routine now. Today is ${todayStr()}.`
   const runId = insertRow(getDef('ai_runs'), { agent_id: agentId, started_at: nowLocal(), trigger, status: 'running', input: prompt })
   try {

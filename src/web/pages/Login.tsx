@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { ArrowRight, Camera, Check, Eye, EyeOff, KeyRound, Loader2, Lock, Mail, Monitor, QrCode, Server, ShieldCheck, Smartphone } from 'lucide-react'
-import { get, post, getSwkApiBaseUrl, setSwkApiBaseUrl } from '../lib/api'
-import { isNativeAndroid, SWK_MOBILE_DOMAIN, SWK_OS_DOMAIN } from '../mobile/native-bridge'
+import { ArrowRight, Check, Eye, EyeOff, KeyRound, Loader2, Lock, Mail, ShieldCheck } from 'lucide-react'
+import { get, post } from '../lib/api'
 import { useMeta } from '../lib/meta'
 import { COMMUNITIES } from '../swk/uae'
 
@@ -47,19 +46,15 @@ function MarketMoments() {
 }
 
 export function Login() {
-  const { reload } = useMeta(); const nav = useNavigate(); const loc = useLocation()
+  const { reload } = useMeta(); const nav = useNavigate()
   const reduce = useReducedMotion()
-  const isAndroid = isNativeAndroid()
   const [email, setEmail] = useState(() => localStorage.getItem('swk.remember') || '')
   const [pw, setPw] = useState(''); const [totp, setTotp] = useState(''); const [needTotp, setNeedTotp] = useState(false)
   const [remember, setRemember] = useState(() => !!localStorage.getItem('swk.remember'))
   const [show, setShow] = useState(false); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false); const [done, setDone] = useState(false)
   const [help, setHelp] = useState(false); const [caps, setCaps] = useState(false)
-  const [showServerCfg, setShowServerCfg] = useState(() => isAndroid && !getSwkApiBaseUrl())
-  const [serverUrl, setServerUrl] = useState(() => getSwkApiBaseUrl())
-  const [serverSaved, setServerSaved] = useState(false)
   const [demo, setDemo] = useState<{ enabled: boolean; email: string; password: string } | null>(null)
-  useEffect(() => { void get<any>('/api/demo/status').then(setDemo).catch(() => {}) }, [serverUrl])
+  useEffect(() => { void get<any>('/api/demo/status').then(setDemo).catch(() => {}) }, [])
 
   const signIn = async (em: string, pass: string, targetPath?: string) => {
     setErr(''); setBusy(true)
@@ -69,9 +64,9 @@ export function Login() {
       if (remember && em === email) localStorage.setItem('swk.remember', em); else if (!remember) localStorage.removeItem('swk.remember')
       setDone(true)
       await new Promise(res => setTimeout(res, reduce ? 0 : 550))
-      const dest = targetPath || (isAndroid || (loc.state as any)?.from === '/swk-one' ? '/swk-one' : '/home')
+      const dest = targetPath || '/home'
       await reload(); nav(dest, { replace: true })
-    } catch (e: any) { setErr(e.message || 'Sign-in failed. Check your details or SWK OS server URL and try again.') } finally { setBusy(false) }
+    } catch (e: any) { setErr(e.message || 'Sign-in failed. Check your details and try again.') } finally { setBusy(false) }
   }
   const submit = (e: React.FormEvent) => { e.preventDefault(); void signIn(email, pw) }
 
@@ -151,77 +146,6 @@ export function Login() {
                 <p className="text-[12px] text-[#7f90ad] mt-2 mb-0 text-center">Fictional company and sample records — never touches live data.</p>
               </motion.div>
             )}
-
-            {/* SWK ONE Native Android & Mobile Domain Server URL Connection Box */}
-            <motion.div variants={item} className="pt-2 border-t border-white/10">
-              <div className="flex items-center justify-between gap-2 flex-wrap text-[12px] text-[#a9b6cd]">
-                <span className="inline-flex items-center gap-1.5 font-medium">
-                  <Smartphone size={14} className="text-[#4fd39a]" />
-                  Mobile App: <b className="text-[#f1e3c2]">ae.swkpropertiesuae.com</b>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setShowServerCfg((s: boolean) => !s)}
-                  className="text-[12px] text-[#c9a96e] hover:text-[#e6d3a9] bg-transparent border-0 cursor-pointer p-0 inline-flex items-center gap-1"
-                >
-                  <Server size={12} /> {showServerCfg ? 'Hide Domain Settings' : 'Domain & APK Settings'}
-                </button>
-              </div>
-              <AnimatePresence>
-                {showServerCfg && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="mt-3 p-3.5 rounded-2xl bg-white/[.04] border border-white/10 space-y-2.5">
-                      <label className="block text-[11.5px] font-medium text-[#c3cde0]">
-                        SWK Properties Mobile & OS Domain Endpoint
-                      </label>
-                      <div className="flex flex-wrap gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => { setServerUrl(SWK_MOBILE_DOMAIN); setSwkApiBaseUrl(SWK_MOBILE_DOMAIN); setServerSaved(true) }}
-                          className="px-2.5 py-1 rounded-lg bg-[#157a52]/35 border border-[#4fd39a]/40 text-[#4fd39a] text-[11px] font-bold cursor-pointer"
-                        >
-                          ae.swkpropertiesuae.com (Mobile)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setServerUrl(SWK_OS_DOMAIN); setSwkApiBaseUrl(SWK_OS_DOMAIN); setServerSaved(true) }}
-                          className="px-2.5 py-1 rounded-lg bg-[#c9a96e]/20 border border-[#c9a96e]/40 text-[#f1e3c2] text-[11px] font-bold cursor-pointer"
-                        >
-                          os.swkpropertiesuae.com (OS)
-                        </button>
-                      </div>
-                      <div className="flex gap-2">
-                        <input
-                          type="url"
-                          value={serverUrl}
-                          onChange={e => { setServerUrl(e.target.value); setServerSaved(false) }}
-                          placeholder={SWK_MOBILE_DOMAIN}
-                          className="flex-1 px-3 py-2 rounded-xl bg-black/30 border border-white/15 text-white text-[12.5px] outline-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSwkApiBaseUrl(serverUrl)
-                            setServerSaved(true)
-                          }}
-                          className="px-3.5 py-2 rounded-xl bg-[#007b52] text-white text-[12px] font-semibold border-0 cursor-pointer"
-                        >
-                          {serverSaved ? 'Saved ✓' : 'Save'}
-                        </button>
-                      </div>
-                      <p className="text-[11px] text-[#8a9ab5] m-0">
-                        Connected to <b className="text-white">{SWK_MOBILE_DOMAIN}</b> and <b className="text-white">{SWK_OS_DOMAIN}</b> for all staff mobile browsers and Android APK handsets.
-                      </p>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
           </form>
         </motion.div>
 

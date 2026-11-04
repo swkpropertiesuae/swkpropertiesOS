@@ -64,7 +64,6 @@ function SectionCard({ s, open, onToggle, ready, presets, pdf, onSaved }: { s: S
           <div className="grid gap-3 md:grid-cols-2">
             {s.fields.map(f => <FieldInput key={f.key} f={f} v={v[f.key]} onChange={val => set(f.key, val)} />)}
           </div>
-          {s.key === 'storage' && <p className="text-xs text-muted m-0">PDF engine on this server: <b>{pdf ? 'available' : 'not installed (set CHROME_PATH, or use the Docker image)'}</b>.</p>}
           <div className="flex gap-2 flex-wrap items-center">
             <button className="btn green" disabled={!dirty.length || busy === 'save'} onClick={() => void save().catch(() => {})}><Save /> {busy === 'save' ? 'Saving…' : dirty.length ? `Save ${dirty.length} change${dirty.length > 1 ? 's' : ''}` : 'Saved'}</button>
             {s.test && <button className="btn outline" disabled={!!busy} onClick={() => void test()}><RefreshCw className={busy === 'test' ? 'animate-spin' : ''} /> Save & test connection</button>}

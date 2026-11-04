@@ -3,9 +3,31 @@ import { useSearchParams } from 'react-router-dom'
 import QRCode from 'qrcode'
 import { CheckCircle2, Eye, EyeOff, Loader2, Lock, Mail, Printer, Wifi, WifiOff } from 'lucide-react'
 import { get, post } from '../../lib/api'
-import { getDeviceIdentity, type DeviceIdentity } from '../../mobile/native-bridge'
 
 const PRINTED_QR_CODE = 'SWK-RECEPTION-STAND-DXB-1'
+
+interface BrowserDeviceIdentity {
+  device_id: string
+  device_name: string
+}
+
+function getBrowserDeviceIdentity(): BrowserDeviceIdentity {
+  const storageKey = 'swk.browser.device_id'
+  let id = ''
+  try {
+    id = localStorage.getItem(storageKey) || ''
+    if (!id) {
+      id = `WEB-${Math.random().toString(36).slice(2, 10).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
+      localStorage.setItem(storageKey, id)
+    }
+  } catch {
+    id = 'WEB-BROWSER'
+  }
+  return {
+    device_id: id,
+    device_name: typeof navigator !== 'undefined' ? navigator.platform || 'Web Browser' : 'Web Browser',
+  }
+}
 
 export default function ReceptionQrPage() {
   const [searchParams] = useSearchParams()
@@ -18,7 +40,7 @@ export default function ReceptionQrPage() {
   const [error, setError] = useState<string | null>(null)
   const [checkInResult, setCheckInResult] = useState<any | null>(null)
 
-  const [device, setDevice] = useState<DeviceIdentity | null>(null)
+  const [device, setDevice] = useState<BrowserDeviceIdentity | null>(null)
   const [connectionType, setConnectionType] = useState<string>('wifi')
   const [networkInfo, setNetworkInfo] = useState<{
     ssid: string
@@ -29,7 +51,7 @@ export default function ReceptionQrPage() {
   const [qrDataUrl, setQrDataUrl] = useState<string>('')
 
   useEffect(() => {
-    void getDeviceIdentity().then(setDevice).catch(() => {})
+    setDevice(getBrowserDeviceIdentity())
 
     const detectConn = () => {
       const navConn =
@@ -141,13 +163,6 @@ export default function ReceptionQrPage() {
           </div>
 
           <div className="pt-2 flex items-center justify-center gap-3 print:hidden">
-            <a
-              href="/SWK_Office_Attendance_QR_Poster.pdf"
-              download="SWK_Office_Attendance_QR_Poster.pdf"
-              className="px-5 py-2.5 rounded-xl bg-[#c9a96e] text-[#08142a] font-bold text-xs no-underline inline-flex items-center gap-2"
-            >
-              Download Print PDF (A4)
-            </a>
             <button
               type="button"
               onClick={() => window.print()}

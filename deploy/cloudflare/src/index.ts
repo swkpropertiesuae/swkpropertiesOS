@@ -81,6 +81,26 @@ export default {
       const headers = new Headers(request.headers)
       headers.set('x-forwarded-proto', url.protocol.replace(':', ''))
       headers.set('x-forwarded-host', url.host)
+      const bodyBuf = ['GET', 'HEAD'].includes(request.method) ? undefined : await request.clone().arrayBuffer()
+      for (let attempt = 1; attempt <= 6; attempt++) {
+        try {
+          const reqClone = new Request(request.url, { method: request.method, headers, body: bodyBuf })
+          const res = await c.fetch(reqClone)
+          if (res.status >= 500 && attempt < 6) {
+            const peek = await res.clone().text().catch(() => '')
+            if (peek.includes('Failed to start container') || peek.includes('not listening in the TCP address')) {
+              await new Promise(r => setTimeout(r, 3000))
+              await c.startAndWaitForPorts({ ports: 8080, cancellationOptions: { portReadyTimeoutMS: 240_000 } }).catch(() => {})
+              continue
+            }
+          }
+          return res
+        } catch (err) {
+          if (attempt >= 6) throw err
+          await new Promise(r => setTimeout(r, 3000))
+          await c.startAndWaitForPorts({ ports: 8080, cancellationOptions: { portReadyTimeoutMS: 240_000 } }).catch(() => {})
+        }
+      }
       return await c.fetch(new Request(request, { headers }))
     } catch (e) {
       return new Response('SWK OS is starting or temporarily unavailable. Please retry in a minute.\n' + (e instanceof Error ? e.message : ''), { status: 503, headers: { 'retry-after': '30' } })

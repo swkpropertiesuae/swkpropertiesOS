@@ -46,7 +46,6 @@ export const SETTING_DEFAULTS: Record<string, any> = {
   voice_enabled: false, voice_secret: '', voice_transfer_number: '', voice_greeting_en: '', voice_greeting_ar: '', voice_record_notice: true, voice_retention_days: 90,
   // --- AI
   ai_enabled: false, ai_provider: 'groq', ai_base_url: '', ai_api_key: '', ai_model: '', ai_fallback_provider: '', ai_fallback_base_url: '', ai_fallback_api_key: '', ai_fallback_model: '', ai_company_context: '',
-  ai_ollama_url: 'http://127.0.0.1:11434', ai_staff_domains: 'swkpropertiesuae.com', ai_cloudflare_access_enabled: true, ai_default_think: false,
   // --- Office Reception QR & Office Wi-Fi Anti-Loophole Security
   office_wifi_ssid: 'SWK-Properties-Office, SWK-CORP-WIFI-DXB, SWK-Office-5G',
   office_wifi_bssid: '',
@@ -56,7 +55,6 @@ export const SETTING_DEFAULTS: Record<string, any> = {
   office_gps_lat: '25.2532',
   office_gps_lng: '55.2972',
   office_gps_radius_m: 200,
-  mobile_app_domain: 'https://ae.swkpropertiesuae.com',
   // --- tracking
   tracking_provider: 'none', tracking_api_key: '', tracking_webhook_secret: '',
   // --- e-invoicing (UAE PINT AE / Peppol)

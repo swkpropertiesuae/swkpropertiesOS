@@ -4,15 +4,14 @@ import { inDemo } from '../db'
 
 export interface Preset { key: string; label: string; base: string; model: string; keyRequired: boolean; free: string; notes: string }
 export const PRESETS: Preset[] = [
-  { key: 'groq', label: 'Groq (free tier)', base: 'https://api.groq.com/openai/v1', model: 'openai/gpt-oss-20b', keyRequired: true, free: 'Free tier with rate limits', notes: 'Create a key at console.groq.com. Use openai/gpt-oss-20b; check your account for current free limits.' },
-  { key: 'openrouter', label: 'OpenRouter (free models)', base: 'https://openrouter.ai/api/v1', model: 'openrouter/free', keyRequired: true, free: 'Free router with usage limits', notes: 'Create a key at openrouter.ai/keys. Use openrouter/free to select an available free model with the capabilities requested. Free availability and limits can change.' },
-  { key: 'ollama', label: 'Ollama (SWK Internal Qwen 3.5 Server)', base: 'http://127.0.0.1:11434/v1', model: 'qwen3.5:4b', keyRequired: false, free: 'Free – runs on your internal hardware', notes: 'Local Ollama server with qwen3.5:4b (Fast) & qwen3.5:9b (Pro + Vision). Accessible to @swkpropertiesuae.com staff on web & mobile.' },
-  { key: 'opencode', label: 'OpenCode Zen', base: 'https://opencode.ai/zen/v1', model: '', keyRequired: true, free: 'Some models are free', notes: 'Enter the model id shown in your OpenCode Zen dashboard.' },
+  { key: 'groq', label: 'Groq (free tier)', base: 'https://api.groq.com/openai/v1', model: 'openai/gpt-oss-20b', keyRequired: true, free: 'Free tier with rate limits', notes: 'Create a key at console.groq.com.' },
+  { key: 'openrouter', label: 'OpenRouter (free)', base: 'https://openrouter.ai/api/v1', model: 'openrouter/free', keyRequired: true, free: 'Free router with usage limits', notes: 'Create a key at openrouter.ai/keys.' },
+  { key: 'opencode', label: 'OpenCode Zen', base: 'https://opencode.ai/zen/v1', model: '', keyRequired: true, free: 'Free tier', notes: 'OpenCode Zen dashboard.' },
   { key: 'xai', label: 'xAI Grok', base: 'https://api.x.ai/v1', model: 'grok-3-mini', keyRequired: true, free: 'Paid / promotional credits', notes: 'console.x.ai' },
   { key: 'gemini', label: 'Google Gemini (free tier)', base: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-2.0-flash', keyRequired: true, free: 'Free tier with limits', notes: 'aistudio.google.com/apikey' },
   { key: 'cloudflare', label: 'Cloudflare Workers AI', base: 'https://api.cloudflare.com/client/v4/accounts/ACCOUNT_ID/ai/v1', model: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', keyRequired: true, free: 'Daily free allowance', notes: 'Replace ACCOUNT_ID in the base URL; the key is a Workers AI API token.' },
   { key: 'openai', label: 'OpenAI', base: 'https://api.openai.com/v1', model: 'gpt-4o-mini', keyRequired: true, free: 'Paid', notes: '' },
-  { key: 'custom', label: 'Custom OpenAI-compatible', base: '', model: '', keyRequired: false, free: '', notes: 'Any server exposing /chat/completions (LM Studio, vLLM, LiteLLM…).' },
+  { key: 'custom', label: 'Custom OpenAI-compatible', base: '', model: '', keyRequired: false, free: '', notes: 'Any server exposing /chat/completions.' },
 ]
 export interface Endpoint { base: string; key: string; model: string; label: string }
 
@@ -117,117 +116,4 @@ export async function chat(messages: ChatMsg[], tools?: ToolDef[], modelOverride
 export async function testLlm(): Promise<{ ok: boolean; error?: string; model?: string; reply?: string }> {
   if (inDemo()) return { ok: false, error: 'The demo assistant is scripted. Sign into your real workspace to test an external AI connection.' }
   try { const r = await chat([{ role: 'user', content: 'Reply with the single word: ready' }]); return { ok: true, model: r.model, reply: r.content.slice(0, 40) } } catch (e: any) { return { ok: false, error: String(e?.message ?? e) } }
-}
-
-export function ollamaBaseUrl(): string {
-  const raw = String(getSetting('ai_ollama_url') || getSetting('ai_base_url') || 'http://127.0.0.1:11434').trim()
-  return (raw || 'http://127.0.0.1:11434').replace(/\/v1\/?$/, '').replace(/\/+$/, '')
-}
-
-export function isEmailInStaffDomains(email: string | undefined | null): boolean {
-  if (!email || !email.includes('@')) return false
-  const domain = email.slice(email.lastIndexOf('@') + 1).trim().toLowerCase()
-  if (!domain) return false
-  const raw = String(getSetting('ai_staff_domains') || 'swkpropertiesuae.com').trim()
-  if (raw === '*') return true
-  const allowed = raw.split(/[,;\s]+/).map(s => s.trim().replace(/^@/, '').toLowerCase()).filter(Boolean)
-  return allowed.includes('*') || allowed.includes(domain)
-}
-
-export interface OllamaModelInfo {
-  name: string
-  parameterSize: string
-  quantization: string
-  family: string
-  sizeMb: number
-}
-
-export async function fetchOllamaStatus(): Promise<{ online: boolean; ollamaUrl: string; models: OllamaModelInfo[]; defaultModel: string }> {
-  const base = ollamaBaseUrl()
-  const fallbackModels: OllamaModelInfo[] = [
-    { name: 'qwen3.5:4b', parameterSize: '4.2B', quantization: 'Q4_K_M', family: 'qwen35', sizeMb: 3170 },
-    { name: 'qwen3.5:9b', parameterSize: '9.0B', quantization: 'Q4_K_M', family: 'qwen35', sizeMb: 6247 },
-  ]
-  try {
-    const r = await http(`${base}/api/tags`, { method: 'GET', timeoutMs: 3500 })
-    if (!r.ok || !Array.isArray(r.data?.models)) {
-      return { online: false, ollamaUrl: base, models: fallbackModels, defaultModel: String(getSetting('ai_model') || 'qwen3.5:4b') }
-    }
-    const models: OllamaModelInfo[] = r.data.models.map((m: any) => ({
-      name: String(m.name || m.model || ''),
-      parameterSize: String(m.details?.parameter_size || ''),
-      quantization: String(m.details?.quantization_level || ''),
-      family: String(m.details?.family || ''),
-      sizeMb: Math.round(Number(m.size || 0) / (1024 * 1024)),
-    })).filter((m: OllamaModelInfo) => !!m.name)
-    const def = String(getSetting('ai_model') || '').trim()
-    const defaultModel = models.some(m => m.name === def) ? def : (models.find(m => m.name.includes('4b'))?.name || models[0]?.name || 'qwen3.5:4b')
-    return { online: true, ollamaUrl: base, models: models.length ? models : fallbackModels, defaultModel }
-  } catch {
-    return { online: false, ollamaUrl: base, models: fallbackModels, defaultModel: String(getSetting('ai_model') || 'qwen3.5:4b') }
-  }
-}
-
-export async function ollamaChatDirect(opts: {
-  model?: string
-  messages: { role: 'system' | 'user' | 'assistant'; content: string; images?: string[] }[]
-  think?: boolean
-}): Promise<{ ok: boolean; model: string; content: string; thinking: string; durationMs: number; evalCount: number }> {
-  const base = ollamaBaseUrl()
-  const model = (opts.model || String(getSetting('ai_model') || 'qwen3.5:4b')).trim() || 'qwen3.5:4b'
-  const companyName = String(getSetting('company_name') || 'SWK Properties L.L.C')
-  const companyCtx = String(getSetting('ai_company_context') || '')
-  const sysContent = [
-    `You are the internal AI assistant for ${companyName} staff (RERA-licensed Dubai real estate brokerage & property management, ORN 51517).`,
-    companyCtx ? `Company context: ${companyCtx}` : '',
-    `Provide accurate, well-structured, concise help for ${companyName} team members across property listings, RERA forms (Form A, Form F, Ejari), DLD fee calculations, client communications, and internal operations.`,
-  ].filter(Boolean).join('\n')
-
-  const finalMessages = opts.messages.some(m => m.role === 'system')
-    ? opts.messages
-    : [{ role: 'system' as const, content: sysContent }, ...opts.messages]
-
-  if (inDemo()) {
-    return {
-      ok: true,
-      model,
-      content: `[Demo Workspace · ${model}] Ready to assist ${companyName} staff. Connect to your production workspace to run live against ${base}.`,
-      thinking: opts.think ? 'Checked internal SWK Properties context and prepared response.' : '',
-      durationMs: 45,
-      evalCount: 24,
-    }
-  }
-
-  const t0 = Date.now()
-  const r = await http(`${base}/api/chat`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model,
-      messages: finalMessages,
-      think: !!opts.think,
-      stream: false,
-    }),
-    timeoutMs: 180000,
-  })
-  if (!r.ok) {
-    throw new Error(`Ollama (${model}) returned HTTP ${r.status}: ${r.data?.error ?? r.text?.slice(0, 200) ?? 'unavailable'}`)
-  }
-  const msg = r.data?.message ?? {}
-  let content = String(msg.content ?? '')
-  let thinking = String(msg.thinking ?? '')
-  const thinkMatch = content.match(/<think>([\s\S]*?)<\/think>/)
-  if (thinkMatch) {
-    if (!thinking) thinking = thinkMatch[1].trim()
-    content = content.replace(/<think>[\s\S]*?<\/think>/g, '').trim()
-  }
-  const durationMs = r.data?.total_duration ? Math.round(Number(r.data.total_duration) / 1e6) : (Date.now() - t0)
-  return {
-    ok: true,
-    model: String(r.data?.model || model),
-    content: content.trim(),
-    thinking: thinking.trim(),
-    durationMs,
-    evalCount: Number(r.data?.eval_count ?? 0),
-  }
 }

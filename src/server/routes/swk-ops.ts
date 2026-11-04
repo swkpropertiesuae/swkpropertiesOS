@@ -1,10 +1,38 @@
 import type { FastifyInstance } from 'fastify'
 import { q, tx } from '../db'
-import { can, createRecord, deleteRecord, getDef, insertRow, SYSTEM_CTX, updateRecord, type Ctx } from '../engine'
+import { can, createRecord, deleteRecord, getDef, insertRow, patchRecord, SYSTEM_CTX, updateRecord, type Ctx } from '../engine'
 import { HttpError, fromCents, nowIso, nowLocal, toCents, todayStr } from '../util'
 import { notify, notifyLeadership } from '../notify'
 import { sendWhatsApp, ownerNumbers } from '../integrations/whatsapp'
-import { computeDubaiShiftInfo } from '../domain/swk-one'
+import { getSetting, setSettings } from '../settings'
+import { attemptLogin, createSession } from '../auth'
+import { COOKIE } from '../app'
+import { config } from '../config'
+
+export function computeDubaiShiftInfo(now = new Date(), clientVariableHours = false) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Dubai',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(now)
+  const wk = parts.find(p => p.type === 'weekday')?.value || 'Mon'
+  const hour = Number(parts.find(p => p.type === 'hour')?.value || 10)
+  const min = Number(parts.find(p => p.type === 'minute')?.value || 0)
+  const totalMins = hour * 60 + min
+  const isSun = wk === 'Sun'
+  const isSat = wk === 'Sat'
+  const shiftName = isSun
+    ? 'Sunday (Holiday — Client Variable Hours)'
+    : isSat
+      ? 'Saturday 10:00–16:00'
+      : 'Mon–Fri 10:00–19:00'
+  const shiftDurationMins = isSun ? 0 : isSat ? 6 * 60 : 9 * 60
+  const isLate = !isSun && !clientVariableHours && totalMins > (10 * 60 + 5)
+  const lateMinutes = isLate ? Math.max(6, totalMins - 10 * 60) : 0
+  return { weekday: wk, isSun, isSat, shiftName, shiftDurationMins, isLate, lateMinutes, totalMins }
+}
 
 export interface AreaIntelligence {
   code: string
@@ -1309,6 +1337,175 @@ export default async function swkOpsRoutes(app: FastifyInstance) {
   })
 
   app.post('/api/swk-ops/briefings/attendance-1030', async () => {
-    return await sendOwner1030AttendanceReport()
+    const reportRes = await sendOwner1030AttendanceReport()
+    return reportRes
   })
+
+  // ------------------------------------------------------------------ 7. Standalone Reception QR Check-In Endpoints
+  const resolveClientIp = (req: any): string => {
+    const cf = req.headers?.['cf-connecting-ip']
+    if (typeof cf === 'string' && cf.trim()) return cf.trim()
+    const xff = req.headers?.['x-forwarded-for']
+    if (typeof xff === 'string' && xff.trim()) return xff.split(',')[0]!.trim()
+    return String(req.ip || '127.0.0.1')
+  }
+
+  const getWifiCfg = (clientIp?: string) => {
+    const ssidRaw = String(getSetting('office_wifi_ssid') || 'SWK-Properties-Office, SWK-CORP-WIFI-DXB, SWK-Office-5G').trim()
+    const allowedSsids = ssidRaw.split(',').map(s => s.trim()).filter(Boolean)
+    const publicIpsRaw = String(getSetting('office_wifi_public_ips') || '').trim()
+    const allowedPublicIps = publicIpsRaw.split(',').map(s => s.trim()).filter(Boolean)
+    const gatewayIp = String(getSetting('office_wifi_gateway_ip') || '192.168.1.1').trim()
+    const strictIp = Boolean(getSetting('office_wifi_strict_ip'))
+    const cleanClientIp = String(clientIp || '').replace(/^::ffff:/, '').trim()
+    const isLocalIp = !cleanClientIp || cleanClientIp === '127.0.0.1' || cleanClientIp === '::1' || cleanClientIp.startsWith('192.168.') || cleanClientIp.startsWith('10.') || cleanClientIp.startsWith('172.')
+    const ipMatchesConfigured = allowedPublicIps.length === 0 || isLocalIp || allowedPublicIps.some(ip => cleanClientIp === ip || cleanClientIp.startsWith(ip))
+    return {
+      ssid: allowedSsids[0] || 'SWK-Properties-Office',
+      allowed_ssids: allowedSsids,
+      public_ips: publicIpsRaw,
+      allowed_public_ips: allowedPublicIps,
+      gateway_ip: gatewayIp,
+      strict_ip: strictIp,
+      detected_client_ip: cleanClientIp || '127.0.0.1',
+      ip_matches_office: ipMatchesConfigured,
+    }
+  }
+
+  app.get('/api/public/reception-qr/current', async (req) => {
+    const branchId = Number((req.query as any)?.branch_id || 1)
+    const standCode = `SWK-RECEPTION-STAND-DXB-${branchId}`
+    const wifiConfig = getWifiCfg(resolveClientIp(req))
+    const shiftInfo = computeDubaiShiftInfo(new Date())
+    return {
+      standalone: true,
+      requires_login: false,
+      token: standCode,
+      token_code: standCode,
+      short_code: `STAND${branchId}`,
+      stand_code: standCode,
+      lifelong_stand_code: standCode,
+      office_wifi: wifiConfig,
+      shift_info: shiftInfo,
+    }
+  })
+
+  app.get('/api/public/reception-qr/wifi-config', async (req) => getWifiCfg(resolveClientIp(req)))
+
+  app.post('/api/public/reception-qr/wifi-config', async (req) => {
+    const b = (req.body ?? {}) as Record<string, any>
+    const clientIp = resolveClientIp(req)
+    if (b.lock_current_ip && clientIp) {
+      const existing = String(b.office_wifi_public_ips || '').split(',').map(s => s.trim()).filter(Boolean)
+      if (!existing.includes(clientIp)) existing.push(clientIp)
+      b.office_wifi_public_ips = existing.join(', ')
+    }
+    const cleanPatch: Record<string, any> = {}
+    for (const k of ['office_wifi_ssid', 'office_wifi_bssid', 'office_wifi_public_ips', 'office_wifi_gateway_ip', 'office_wifi_strict_ip']) {
+      if (b[k] !== undefined) cleanPatch[k] = b[k]
+    }
+    setSettings(cleanPatch)
+    return getWifiCfg(clientIp)
+  })
+
+  const handlePublicQrCheckIn = async (req: any, reply: any) => {
+    const b = (req.body ?? {}) as Record<string, any>
+    const clientIp = resolveClientIp(req)
+    const loginEmail = String(b.email || '').trim().toLowerCase()
+    const loginPassword = String(b.password || '')
+    if (!loginEmail || !loginPassword) {
+      throw new HttpError(400, 'Enter your company login email and password to verify your identity and register attendance.')
+    }
+    const loginRes = attemptLogin(loginEmail, loginPassword, b.totp, clientIp, String(req.headers?.['user-agent'] || ''))
+    if ('needsTotp' in loginRes && loginRes.needsTotp) {
+      return { needsTotp: true }
+    }
+    const authUser = (loginRes as any).user
+    const sess = createSession(authUser.id, clientIp, String(req.headers?.['user-agent'] || ''))
+    if (reply?.setCookie) {
+      const secure = config.cookieSecure ?? (config.isProd && (req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https'))
+      reply.setCookie(COOKIE, sess.token, { httpOnly: true, sameSite: 'lax', secure: !!secure, path: '/', expires: sess.expires })
+    }
+
+    const wifiConfig = getWifiCfg(clientIp)
+    if (wifiConfig.strict_ip && !wifiConfig.ip_matches_office) {
+      throw new HttpError(400, `Office Wi-Fi IP Mismatch: Your connection IP (${wifiConfig.detected_client_ip}) does not match the registered SWK Office Wi-Fi network.`)
+    }
+
+    return tx(() => {
+      let emp = q.get<any>(`SELECT * FROM employees WHERE (user_id = ? OR lower(email) = lower(?)) AND deleted_at IS NULL ORDER BY id ASC LIMIT 1`, authUser.id, authUser.email)
+      if (!emp) {
+        emp = createRecord(getDef('employees'), {
+          name: authUser.name || authUser.email.split('@')[0],
+          user_id: authUser.id,
+          email: authUser.email,
+          designation: 'Staff',
+          status: 'Active',
+          branch_id: authUser.branch_id ?? 1,
+        }, SYSTEM_CTX)
+      }
+      const now = nowIso()
+      const shiftInfo = computeDubaiShiftInfo(new Date())
+      const standCode = String(b.stand_code || b.qr_code_or_token || 'SWK-RECEPTION-STAND-DXB-1')
+      const existingToday = q.get<any>(`SELECT * FROM attendance_events WHERE employee_id = ? AND work_date = ? AND deleted_at IS NULL ORDER BY id DESC LIMIT 1`, emp.id, todayStr())
+      const eventRecord = existingToday && !existingToday.check_out_at
+        ? patchRecord(getDef('attendance_events'), existingToday.id, {
+            terminal_type: 'Dynamic QR',
+            qr_token_ref: standCode,
+            check_in_at: existingToday.check_in_at || now.slice(0, 16),
+            manager_verified: true,
+          }, SYSTEM_CTX)
+        : createRecord(getDef('attendance_events'), {
+            employee_id: emp.id,
+            user_id: authUser.id,
+            work_date: todayStr(),
+            shift_name: shiftInfo.shiftName,
+            grace_minutes: 5,
+            terminal_type: 'Dynamic QR',
+            qr_token_ref: standCode,
+            check_in_at: now.slice(0, 16),
+            duty_status: shiftInfo.isLate ? 'Late Arrival' : 'On Duty',
+            late_minutes: shiftInfo.lateMinutes,
+            manager_verified: true,
+            notes: `Verified via Office Reception QR · Wi-Fi: ${b.network_ssid || wifiConfig.ssid}`,
+          }, SYSTEM_CTX)
+
+      const hrAtt = q.get<any>(`SELECT * FROM attendance WHERE employee_id = ? AND att_date = ? AND deleted_at IS NULL`, emp.id, todayStr())
+      if (!hrAtt) {
+        createRecord(getDef('attendance'), {
+          employee_id: emp.id,
+          att_date: todayStr(),
+          check_in: now.slice(0, 16),
+          checkin_mode: 'Office QR Scan',
+          status: shiftInfo.isLate ? 'Late' : 'Present',
+          note: `Reception QR Check-in (${eventRecord.event_no})`,
+        }, SYSTEM_CTX)
+      }
+
+      return {
+        verified: true,
+        verification: 'Verified',
+        employee: { id: emp.id, name: emp.name, emp_no: emp.emp_no, designation: emp.designation, email: emp.email },
+        sessionToken: sess.token,
+        user: authUser,
+        verification_summary: {
+          qr_token_valid: true,
+          office_network_verified: true,
+          office_wifi_ssid: b.network_ssid || wifiConfig.ssid,
+          client_ip: wifiConfig.detected_client_ip,
+          timestamp_gst: now,
+          shift_name: eventRecord.shift_name,
+          grace_cutoff_gst: '10:05',
+          is_late: shiftInfo.isLate,
+          late_minutes: shiftInfo.lateMinutes,
+        },
+        attendance_event: eventRecord,
+        event: eventRecord,
+      }
+    })
+  }
+
+  app.post('/api/public/reception-qr/check-in', handlePublicQrCheckIn)
+  app.post('/api/public/reception-qr/scan-login-checkin', handlePublicQrCheckIn)
+  app.post('/api/public/qr-checkin', handlePublicQrCheckIn)
 }

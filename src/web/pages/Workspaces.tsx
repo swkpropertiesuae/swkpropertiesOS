@@ -49,7 +49,6 @@ export function WorkspaceUtilities() {
     <Link className="feature-card" to="/profile"><User /><strong>Profile &amp; security</strong><ArrowUpRight /></Link>
     <button className="feature-card" onClick={openGuide}><CircleHelp /><strong>Quick guide &amp; shortcuts</strong><ArrowUpRight /></button>
     <button className="feature-card" onClick={openSearch}><Search /><strong>{tr('Search')}</strong><ArrowUpRight /></button>
-    <Link className="feature-card" to="/toolkit"><Calculator /><strong>UAE Deal Toolkit</strong><ArrowUpRight /></Link>
     <Link className="feature-card" to="/e/announcements"><BookOpen /><strong>{tr('Blog')}</strong><ArrowUpRight /></Link>
     <a className="feature-card" href="https://www.swkpropertiesuae.com" target="_blank" rel="noopener noreferrer"><ExternalLink /><strong>SWK Properties website</strong><ArrowUpRight /></a>
     <button className="feature-card" onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}><Languages /><strong>{lang === 'ar' ? 'English' : 'العربية'}</strong><ArrowUpRight /></button>

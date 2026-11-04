@@ -5,7 +5,7 @@ export interface Section { key: string; title: string; icon: string; summary: st
 const opt = (...v: string[]) => v.map(x => { const [value, label] = x.split('|'); return { value, label: label ?? value } })
 
 export const CATALOG: Section[] = [
-  { key: 'mail', title: 'E-mail (Resend / SMTP)', icon: 'Mail', test: true, summary: 'All customer e-mails, quotations, invoices (with PDF attached) and agent messages.',
+  { key: 'mail', title: 'E-mail (Resend / SMTP)', icon: 'Mail', test: true, summary: 'All customer e-mails, quotations, invoices and agent messages.',
     setup: 'For Sales, Accounts, Info, Contact and Support, open Email → Sender settings and connect each address. This section sets the default automation sender. SMTP needs the mailbox host, port, username and password; Resend needs a sending API key and a verified From domain. Save and test, then send to your own address to confirm delivery.',
     fields: [
       { key: 'mail_provider', label: 'Provider', type: 'select', options: opt('auto|Automatic (Resend if a key is set, else SMTP)', 'resend|Resend only', 'smtp|SMTP only') },
@@ -37,16 +37,13 @@ export const CATALOG: Section[] = [
       { key: 'wa_owner_daily_report', label: 'Send the owner brief every morning (07:30)', type: 'bool' },
       { key: 'wa_template_lang', label: 'Template language code', type: 'text' }, { key: 'wa_tpl_notify', label: 'Template: notifications', type: 'text', help: 'Approved template with a single {{1}} body variable' }, { key: 'wa_tpl_reminder', label: 'Template: payment reminders', type: 'text' }, { key: 'wa_tpl_report', label: 'Template: owner reports', type: 'text' },
     ] },
-  { key: 'ai', title: 'AI employees (free-friendly)', icon: 'Bot', test: true, summary: 'Jarvis and the AI team call this model. Use a free tier (Groq, OpenRouter ":free" models, Gemini, Cloudflare Workers AI) or your own Ollama server for near-zero cost. A fallback provider is used automatically when the first is rate-limited.',
-    setup: 'Pick a provider, paste its API key (Ollama needs none), optionally change the model, Save, then Test. Then open "Jarvis & Employees" and switch on the employees you want.',
+  { key: 'ai', title: 'AI employees', icon: 'Bot', test: true, summary: 'Jarvis and the AI team use this connection. A fallback provider is used automatically when the first is rate-limited.',
+    setup: 'Pick a provider, paste its API key, Save, then Test. Then open "AI Assistant" and switch on the employees you want.',
     fields: [
       { key: 'ai_enabled', label: 'Enable AI', type: 'bool' }, { key: 'ai_provider', label: 'Provider', type: 'select', options: PRESETS.map(p => ({ value: p.key, label: p.label })) },
-      { key: 'ai_base_url', label: 'Base URL (blank = provider default)', type: 'text' }, { key: 'ai_api_key', label: 'API key', type: 'password' }, { key: 'ai_model', label: 'Model (blank = provider default)', type: 'text' },
+      { key: 'ai_base_url', label: 'Base URL (blank = provider default)', type: 'text' }, { key: 'ai_api_key', label: 'API key', type: 'password' }, { key: 'ai_model', label: 'Provider preset key (optional)', type: 'text' },
       { key: 'ai_fallback_provider', label: 'Fallback provider (optional)', type: 'select', options: [{ value: '', label: '— none —' }, ...PRESETS.map(p => ({ value: p.key, label: p.label }))] },
-      { key: 'ai_fallback_base_url', label: 'Fallback base URL', type: 'text' }, { key: 'ai_fallback_api_key', label: 'Fallback API key', type: 'password' }, { key: 'ai_fallback_model', label: 'Fallback model', type: 'text' },
-      { key: 'ai_ollama_url', label: 'Internal Ollama Server URL (Qwen 3.5)', type: 'text', placeholder: 'http://127.0.0.1:11434', help: 'Local or private Ollama server powering the SWK Staff Ollama Studio (qwen3.5:4b & qwen3.5:9b).' },
-      { key: 'ai_staff_domains', label: 'Allowed Staff Email Domains (comma-separated)', type: 'text', placeholder: 'swkpropertiesuae.com', help: 'Only staff accounts or Cloudflare Zero Trust headers matching these domains can access the Internal Ollama Workspace.' },
-      { key: 'ai_cloudflare_access_enabled', label: 'Trust Cloudflare Zero Trust Access header (Cf-Access-Authenticated-User-Email)', type: 'bool', help: 'When enabled behind your Cloudflare Tunnel domain (e.g. os.swkpropertiesuae.com), staff verified by Cloudflare Email OTP are automatically matched to their @swkpropertiesuae.com account.' },
+      { key: 'ai_fallback_base_url', label: 'Fallback base URL', type: 'text' }, { key: 'ai_fallback_api_key', label: 'Fallback API key', type: 'password' }, { key: 'ai_fallback_model', label: 'Fallback preset key', type: 'text' },
       { key: 'ai_company_context', label: 'About your business (shared with every AI employee)', type: 'textarea', help: 'Target communities and developments, service standards, credit policy, tone of voice, anything they should always know.' },
     ] },
   { key: 'voice', title: 'Voice – AI receptionist (phone line via du SIP)', icon: 'PhoneCall', summary: 'Lets the AI Receptionist answer your office line 24/7 in English and Arabic: qualifies buyers and tenants, logs maintenance problems, transfers urgent calls to staff and records every call under AI → Voice calls.',

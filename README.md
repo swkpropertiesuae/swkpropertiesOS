@@ -1,10 +1,10 @@
-# SWK Properties OS & SWK ONE Android v1.0
+# SWK Properties OS v1.0
 
 <p align="center">
   <img src="public/brand/logo-png/swk-logo-gold-512.png" alt="SWK Properties LLC" width="180" />
 </p>
 
-**Complete UAE Real Estate Operating System (ERP, CRM, Portal Syndication, DLD Market Pulse & Native Android Field App)** built for **SWK Properties LLC (Dubai, UAE)** — live at **[https://os.swkpropertiesuae.com](https://os.swkpropertiesuae.com)**.
+**Complete UAE Real Estate Operating System (ERP, CRM, Portal Syndication & DLD Market Pulse)** built for **SWK Properties LLC (Dubai, UAE)** — live at **[https://os.swkpropertiesuae.com](https://os.swkpropertiesuae.com)**.
 
 ---
 
@@ -32,26 +32,19 @@ The entire web OS (`/home` Launcher, `AppSidebar`, `/dashboard`, and `/swk/pipel
 
 ---
 
-## 📱 3. SWK ONE Android v1.0 (`ae.swkproperties.one`) — Attendance, Live GPS & Checkout Gate
+## 🕒 3. Office Reception QR Attendance & Working Hours
 
 - **Official UAE Working Hours**:
   - **Monday – Friday**: `10:00 AM – 7:00 PM` (`19:00` GST)
   - **Saturday**: `10:00 AM – 4:00 PM` (`16:00` GST)
-  - **Sunday**: Official Holiday (client-based variable working hours are automatically logged when an advisor attends scheduled Sunday client meetings/viewings)
+  - **Sunday**: Official Holiday
   - **Grace Period**: Until **10:05 AM**. Check-ins up to `10:05 AM` are recorded as **On-Time**; `10:06 AM+` is marked **Late** with exact late minutes.
-- **Dual Check-In Modes & Standalone Reception QR (Works Without Login & When Office PCs Are Off)**:
-  1. **Standalone Office Reception QR Terminal (`/reception-qr`, `/swk/reception-qr`, `/qr-reception`, `public/reception-qr.html`)**:
-     - Operates **100% independently without any OS login** and outside the ERP shell so it functions purely as the QR Reception Terminal connected to the SWK OS backend (`/api/public/reception-qr/current`, `/api/public/reception-qr/check-in`, `/api/public/reception-qr/check-out`, `/api/public/reception-qr/daily-report`).
-     - Supports both **Live Rotating Terminal QR (60s)** + 6-digit verification code and a **Permanent "Systems-Off" Printable Reception Stand QR (`SWK-RECEPTION-STAND-DXB-1`)** so when the **first person arrives in the morning and all office computers/monitors are turned OFF**, they can scan the reception stand QR with their phone or SWK ONE Android app and check in directly into SWK OS.
-  2. **Out-of-Office Site Visit (Live GPS Check-In)**: Advisors outside the office for a scheduled site visit check in via live GPS (`POST /api/swk-one/viewings/:id/arrive` or `POST /api/swk-one/field-duty/start`), which automatically registers their daily attendance (`Field Site Visit Live GPS`) tied to the scheduled visit.
-- **Mandatory Checkout Gate (`getCheckoutGateStatus`)**:
-  - Advisors **cannot check out** (from office or field) until:
-    1. All scheduled site visits (`viewings`) for today have their arrival and client outcome logged, **AND**
-    2. Today's **Daily Report (`daily_reports`)** has been submitted.
+- **Single Printed Office Reception QR (`/reception-qr`)**:
+  - Staff scan the permanent printed QR (`SWK-RECEPTION-STAND-DXB-1`) from their camera while connected to the approved office Wi-Fi network, sign in with their company credentials, and see their check-in confirmation.
 - **Owner WhatsApp Briefings & Continuous Contemptor Alerts**:
   - **09:30 AM Morning Briefing**: Automated WhatsApp summary sent to Owner **Shabib Siraj**.
-  - **10:30 AM Attendance Report**: Automated roll call of on-time (`≤10:05 AM`), field GPS, late (`>10:05 AM`), and absent staff sent to Owner **Shabib Siraj**.
-  - **Continuous Contemptor Alert**: Any staff member with **≥3 late arrivals (`>10:05 AM`) in a rolling 7-day window** triggers a `late_contemptor_alerts` record and alerts **Owner Shabib Siraj** and **Manager Mohammad Haseeb** to take a report and guide the employee.
+  - **10:30 AM Attendance Report**: Automated roll call of on-time (`≤10:05 AM`), late (`>10:05 AM`), and absent staff sent to Owner **Shabib Siraj**.
+  - **Continuous Contemptor Alert**: Any staff member with **≥3 late arrivals (`>10:05 AM`) in a rolling 7-day window** triggers a `late_contemptor_alerts` record and alerts **Owner Shabib Siraj** and **Manager Mohammad Haseeb**.
 
 ---
 
@@ -89,13 +82,13 @@ The entire web OS (`/home` Launcher, `AppSidebar`, `/dashboard`, and `/swk/pipel
 
 ---
 
-## 🎨 7. SWK Properties Brand Kit (`SWK_Properties_Logo_Kit`)
+## 🎨 7. SWK OS Brand Kit
 
-All web and Android surfaces use the official **SWK Properties** luxury gold & obsidian identity (`public/brand/`):
+All web surfaces use the official **SWK OS** brand identity (`public/brand/`):
 - **Primary Gold**: `#B89040` / `#D6B46C`
 - **Obsidian Surface**: `#17191C`
 - **Warm Ivory Canvas**: `#FBF8F1`
-- Complete favicons, PWA icons, OpenGraph banners, and adaptive Android launcher icons.
+- Complete favicons, PWA icons, and OpenGraph banners.
 
 ---
 
@@ -106,9 +99,7 @@ npm install
 npm run dev                  # API on :8080 + Web on :5173
 npm run typecheck            # TypeScript validation (0 errors)
 npm run build                # Build Web (dist/web) + API (dist/server/index.mjs)
-npx tsx tests/swk-overhaul.ts      # 36/36 SWK Properties UAE Overhaul checks
-npx tsx tests/swk-one-android.ts   # 29/29 SWK ONE Android checks
-npm run test:all             # Complete 23-suite acceptance runner
+npm run test:all             # Complete acceptance runner
 ```
 
-See [docs/ANDROID.md](docs/ANDROID.md) for building the **SWK ONE Android APK** and [docs/DEPLOY-CLOUDFLARE.md](docs/DEPLOY-CLOUDFLARE.md) for Cloudflare Containers deployment.
+See [docs/DEPLOY-CLOUDFLARE.md](docs/DEPLOY-CLOUDFLARE.md) for Cloudflare Containers deployment.

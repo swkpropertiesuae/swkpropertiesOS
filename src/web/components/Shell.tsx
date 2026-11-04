@@ -191,10 +191,6 @@ export function Shell() {
           </div>
           <div className="flex-1" />
           <DubaiClock />
-          <Link to="/swk-one" className="swk-chip swk-hide-md no-underline hover:border-[#c9a96e]" title="Open SWK ONE Mobile OS (ae.swkpropertiesuae.com)">
-            <Smartphone size={14} className="text-[#157a52]" />
-            <b>Mobile OS</b>
-          </Link>
           <button className="swk-tbtn" onClick={() => setPalette(true)} aria-label="Search (Ctrl K)"><Search size={17} /></button>
           <NotificationBell />
           <QuickCreate />
@@ -204,7 +200,6 @@ export function Shell() {
               <motion.div className="swk-menu" style={{ minWidth: 250 }} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: .16 }}>
                 <div className="px-3 py-2"><div className="font-semibold text-ink text-[14px] truncate">{me?.name}</div><div className="text-xs text-muted truncate">{me?.email}</div></div>
                 <div className="sep" />
-                <Link to="/swk-one" onClick={() => setUserMenu(false)}><span className="ic"><Smartphone size={16} /></span>SWK ONE Mobile App</Link>
                 <Link to="/reception-qr?print=1" onClick={() => setUserMenu(false)}><span className="ic"><QrCode size={16} /></span>Print Office Attendance QR</Link>
                 <Link to="/profile" onClick={() => setUserMenu(false)}><span className="ic"><UserRound size={16} /></span>My profile & password</Link>
                 <Link to="/workspace-tools" onClick={() => setUserMenu(false)}><span className="ic"><Languages size={16} /></span>Language & preferences</Link>
@@ -230,19 +225,15 @@ export function Shell() {
           </main>
         </div>
 
-        {/* Mobile Bottom Navigation Bar (visible on phone screens <= 768px) */}
-        <nav className="swk-mobile-bottom-nav no-print" aria-label="Mobile quick navigation">
+        {/* Responsive Bottom Navigation Bar (visible on small screens <= 768px) */}
+        <nav className="swk-mobile-bottom-nav no-print" aria-label="Quick navigation">
           <NavLink to="/home" className={({ isActive }) => cls('swk-mnav-item', isActive && 'active')}>
             <LayoutGrid size={18} />
             <span>Apps</span>
           </NavLink>
-          <NavLink to="/swk-one" className={({ isActive }) => cls('swk-mnav-item', isActive && 'active')}>
-            <Smartphone size={18} />
-            <span>Mobile OS</span>
-          </NavLink>
           <NavLink to="/ai" className={({ isActive }) => cls('swk-mnav-item', isActive && 'active')}>
             <Sparkles size={18} />
-            <span>SWK AI</span>
+            <span>AI Tools</span>
           </NavLink>
           <button type="button" onClick={() => setPalette(true)} className="swk-mnav-item border-0 bg-transparent cursor-pointer">
             <Search size={18} />

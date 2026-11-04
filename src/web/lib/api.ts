@@ -1,37 +1,20 @@
-import { getStoredServerUrl, getStoredSessionToken, isNativeAndroid, setStoredServerUrl, setStoredSessionToken } from '../mobile/native-bridge'
-
-export const getSwkApiBaseUrl = getStoredServerUrl
-export const setSwkApiBaseUrl = setStoredServerUrl
-
 export class ApiError extends Error {
   status: number; details?: any
   constructor(status: number, message: string, details?: any) { super(message); this.status = status; this.details = details }
 }
 
-function resolveApiUrl(path: string): { url: string; crossOrigin: boolean } {
-  const base = getStoredServerUrl()
-  if (base && path.startsWith('/')) {
-    return { url: `${base}${path}`, crossOrigin: true }
-  }
-  return { url: path, crossOrigin: false }
-}
-
 function buildClientHeaders(extra?: Record<string, string>): Record<string, string> {
-  const isAndroid = isNativeAndroid()
-  const sessionToken = getStoredSessionToken()
   return {
-    'x-swk-client': isAndroid ? 'android' : 'web',
-    ...(sessionToken ? { 'x-swk-session': sessionToken } : {}),
+    'x-swk-client': 'web',
     ...(extra || {}),
   }
 }
 
 async function rawApi<T = any>(method: string, path: string, body?: unknown, signal?: AbortSignal, extraHeaders?: Record<string, string>): Promise<T> {
-  const { url, crossOrigin } = resolveApiUrl(path)
-  const res = await fetch(url, {
+  const res = await fetch(path, {
     method,
     signal,
-    credentials: crossOrigin ? 'include' : 'same-origin',
+    credentials: 'same-origin',
     headers: buildClientHeaders({ 'content-type': 'application/json', ...(extraHeaders || {}) }),
     body: body === undefined ? undefined : JSON.stringify(body),
   })
@@ -41,11 +24,6 @@ async function rawApi<T = any>(method: string, path: string, body?: unknown, sig
   if (!res.ok) {
     if (res.status === 401 && !path.startsWith('/api/auth/login')) window.dispatchEvent(new Event('swk:unauthorized'))
     throw new ApiError(res.status, (data && data.error) || res.statusText || 'Request failed', data?.details)
-  }
-  if ((path === '/api/auth/login' || path.startsWith('/api/public/reception-qr/') || path.startsWith('/api/swk-one/attendance/')) && data?.sessionToken) {
-    setStoredSessionToken(data.sessionToken)
-  } else if (path === '/api/auth/logout') {
-    setStoredSessionToken(null)
   }
   return data as T
 }
@@ -67,12 +45,11 @@ export async function upload(files: File[], fields: Record<string, string | numb
   const fd = new FormData()
   for (const [k, v] of Object.entries(fields)) if (v !== undefined && v !== '') fd.append(k, String(v))
   for (const f of files) fd.append('file', f)
-  const { url, crossOrigin } = resolveApiUrl('/api/files')
-  const res = await fetch(url, {
+  const res = await fetch('/api/files', {
     method: 'POST',
     body: fd,
     headers: buildClientHeaders(),
-    credentials: crossOrigin ? 'include' : 'same-origin',
+    credentials: 'same-origin',
   })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new ApiError(res.status, data.error || 'Upload failed')

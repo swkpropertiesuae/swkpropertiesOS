@@ -15,8 +15,7 @@ import { verifySmtp, mailProvider, queueEmail } from '../mailer'
 import { r2Test, r2Put, r2Configured, useR2 } from '../integrations/storage'
 import { schemaSql, syncToSupabase, testSupabase, resetSupabaseCursors } from '../integrations/supabase'
 import { testWhatsApp, sendWhatsApp, waConfigured, verifySignature, handleWebhook, normalizePhone } from '../integrations/whatsapp'
-import os from 'node:os'
-import { testLlm, PRESETS, aiConfigured, fetchOllamaStatus, ollamaChatDirect, ollamaBaseUrl, isEmailInStaffDomains } from '../ai/llm'
+import { testLlm, PRESETS, aiConfigured } from '../ai/llm'
 import { runAgent, chatWithAgent, decideAction, ensureAgents, latestBrief } from '../ai/agents'
 import { AGENT_TEMPLATES } from '../ai/templates'
 import { TOOLS } from '../ai/tools'
@@ -221,90 +220,6 @@ export default async function (app: FastifyInstance) {
     const dec = String((req.params as any).decision)
     if (dec !== 'approve' && dec !== 'reject') throw bad('Invalid decision')
     return decideAction(id, dec === 'approve', req.user!.id)
-  })
-
-  // =================================================================== Internal Staff Ollama Workspace (Qwen 3.5)
-  const getLanUrls = () => {
-    const urls: string[] = []
-    try {
-      const nets = os.networkInterfaces()
-      for (const list of Object.values(nets)) {
-        for (const info of list ?? []) {
-          if (info.family === 'IPv4' && !info.internal) {
-            urls.push(`http://${info.address}:${config.port}`)
-          }
-        }
-      }
-    } catch { /* ignore */ }
-    return urls
-  }
-
-  app.get('/api/ai/ollama/status', async (req) => {
-    if (req.user?.party_id) throw forbidden('Internal company staff only')
-    need(req, 'ai', 'view')
-    const cfEmail = typeof req.headers['cf-access-authenticated-user-email'] === 'string'
-      ? req.headers['cf-access-authenticated-user-email'].trim().toLowerCase()
-      : null
-    const userEmail = String(req.user?.email ?? '').toLowerCase()
-    const domainVerified = isEmailInStaffDomains(cfEmail || userEmail)
-    const st = await fetchOllamaStatus()
-    return {
-      ...st,
-      allowedDomains: String(getSetting('ai_staff_domains') || 'swkpropertiesuae.com'),
-      cloudflareAccessEnabled: getSetting('ai_cloudflare_access_enabled') !== false,
-      cfEmail,
-      userEmail,
-      domainVerified,
-      aiEnabled: aiConfigured(),
-      publicUrl: config.baseUrl || `https://os.swkpropertiesuae.com`,
-      lanUrls: getLanUrls(),
-    }
-  })
-
-  app.post('/api/ai/ollama/chat', async (req) => {
-    if (req.user?.party_id) throw forbidden('Internal company staff only')
-    need(req, 'ai', 'view')
-    const cfEmail = typeof req.headers['cf-access-authenticated-user-email'] === 'string'
-      ? req.headers['cf-access-authenticated-user-email'].trim().toLowerCase()
-      : null
-    const userEmail = String(req.user?.email ?? '').toLowerCase()
-    if (!isEmailInStaffDomains(cfEmail || userEmail)) {
-      throw forbidden(`Access to the Internal Ollama Workspace is restricted to @${getSetting('ai_staff_domains') || 'swkpropertiesuae.com'} staff accounts.`)
-    }
-    const b = z.object({
-      model: z.string().max(120).optional(),
-      think: z.boolean().optional(),
-      messages: z.array(z.object({
-        role: z.enum(['system', 'user', 'assistant']),
-        content: z.string().max(24000),
-        images: z.array(z.string().max(8_000_000)).max(4).optional(),
-      })).min(1).max(40),
-    }).parse(req.body)
-    return ollamaChatDirect(b)
-  })
-
-  app.post('/api/ai/ollama/activate', async (req) => {
-    need(req, 'admin', 'edit')
-    const b = z.object({
-      model: z.string().max(120).optional(),
-      ollamaUrl: z.string().max(300).optional(),
-      allowedDomains: z.string().max(300).optional(),
-    }).parse(req.body ?? {})
-    const base = (b.ollamaUrl ? b.ollamaUrl.trim() : ollamaBaseUrl()).replace(/\/v1\/?$/, '').replace(/\/+$/, '')
-    const model = (b.model || 'qwen3.5:4b').trim()
-    const patch: Record<string, any> = {
-      ai_enabled: true,
-      ai_provider: 'ollama',
-      ai_ollama_url: base,
-      ai_base_url: `${base}/v1`,
-      ai_model: model,
-    }
-    if (b.allowedDomains !== undefined) {
-      patch.ai_staff_domains = b.allowedDomains.trim() || 'swkpropertiesuae.com'
-    }
-    setSettings(patch)
-    audit(req.ctx, getDef('branches'), 0, 'settings', { ai_provider: ['', 'ollama'], ai_model: ['', model] }, 'Activated Internal Ollama Qwen 3.5 Workspace')
-    return { ok: true, model, ollamaUrl: base, allowedDomains: getSetting('ai_staff_domains') }
   })
   void ENTITIES; void assertCan; void can
 }

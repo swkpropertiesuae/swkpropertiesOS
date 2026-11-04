@@ -204,7 +204,6 @@ export function isAllowedPathForRestrictedStaff(pathname: string): boolean {
     '/',
     '/home',
     '/login',
-    '/swk-one',
     '/qr-checkin',
     '/reception-qr',
     '/swk/reception-qr',

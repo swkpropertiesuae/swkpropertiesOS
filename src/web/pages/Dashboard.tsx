@@ -180,7 +180,7 @@ export function Dashboard() {
             { step: 'Step 07', title: 'Legal UAE Payment Modes', sub: 'Bank, Escrow, Exchange, USDT', to: '/e/receipts' },
             { step: 'Step 08', title: '50–50% Commission Split', sub: '50% SWK / 50% Advisor + A2A', to: '/e/agent_commissions' },
             { step: 'Step 09', title: 'Withdrawals & Client Refunds', sub: 'Terms-Based Refund & Sign-Off', to: '/withdrawals' },
-            { step: 'Step 10', title: 'Attendance, Reports & Bin', sub: '10am–7pm, Daily Report & Audit', to: '/swk-one' },
+            { step: 'Step 10', title: 'Attendance, Reports & Bin', sub: '10am–7pm, Daily Report & Audit', to: '/e/attendance' },
           ].map(st => (
             <Link
               key={st.step}
@@ -232,9 +232,6 @@ export function Dashboard() {
             </Link>
             <Link to="/withdrawals" className="btn green sm">
               <Scale size={13} /> Withdrawals ({(withQ.data?.items ?? []).length})
-            </Link>
-            <Link to="/swk-one" className="btn outline sm">
-              <Smartphone size={13} /> SWK ONE App
             </Link>
           </div>
         </div>

@@ -21,7 +21,7 @@ declare module 'fastify' {
 
 export const COOKIE = 'swk_sid'
 export const DEMO_PREFIX = 'demo.'
-const PUBLIC = [/^\/api\/demo\/status$/, /^\/api\/health$/, /^\/api\/auth\/login$/, /^\/api\/public\//, /^\/api\/auth\/branding$/, /^\/api\/swk-one\/reception-qr\//]
+const PUBLIC = [/^\/api\/demo\/status$/, /^\/api\/health$/, /^\/api\/auth\/login$/, /^\/api\/public\//, /^\/api\/auth\/branding$/]
 /**
  * Everything a customer-portal user may call. The record API (/api/e) is scoped to their company by the engine; the rest read their own data only.
  * Any other endpoint is company-wide (bank balances, rate cards, other customers' open items) and stays closed to portal accounts, whatever module permissions the portal role carries.
@@ -60,7 +60,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   // Demo sessions (cookie prefix "demo.") and demo tracking links run against the isolated demo database.
   app.addHook('onRequest', (req: FastifyRequest, reply, done) => {
     const origin = req.headers.origin
-    if (origin && (/^https?:\/\/localhost(:\d+)?$/i.test(origin) || /^capacitor:\/\/localhost$/i.test(origin) || /^https?:\/\/([a-z0-9-]+\.)?swkpropertiesuae\.com$/i.test(origin) || req.headers['x-swk-client'] === 'android' || req.url.startsWith('/api/public/reception-qr') || req.url.startsWith('/api/swk-one/reception-qr'))) {
+    if (origin && (/^https?:\/\/localhost(:\d+)?$/i.test(origin) || /^https?:\/\/([a-z0-9-]+\.)?swkpropertiesuae\.com$/i.test(origin) || req.url.startsWith('/api/public/reception-qr'))) {
       reply.header('Access-Control-Allow-Origin', origin)
       reply.header('Access-Control-Allow-Credentials', 'true')
       reply.header('Access-Control-Allow-Methods', 'GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS')
@@ -131,10 +131,10 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   // routes
   const mods = await Promise.all([
-    import('./routes/mobile'), import('./routes/studio'), import('./routes/writing'), import('./routes/email'), import('./routes/auth'), import('./routes/meta'), import('./routes/crud'), import('./routes/panel'), import('./routes/files'),
+    import('./routes/studio'), import('./routes/writing'), import('./routes/email'), import('./routes/auth'), import('./routes/meta'), import('./routes/crud'), import('./routes/panel'), import('./routes/files'),
     import('./routes/enterprise'), import('./routes/work'), import('./routes/jobs'), import('./routes/sales'), import('./routes/finance'), import('./routes/insights'), import('./routes/admin'), import('./routes/integrations'), import('./routes/compliance'), import('./routes/demo'),
     import('./routes/properties'), import('./routes/mandates'), import('./routes/transactions'), import('./routes/leases'), import('./routes/aml'), import('./routes/voice'),
-    import('./routes/swk-one'), import('./routes/swk-ops'),
+    import('./routes/swk-ops'),
   ])
   for (const m of mods) await app.register(m.default)
   app.get('/api/health', async () => ({ ok: true, time: new Date().toISOString() }))
