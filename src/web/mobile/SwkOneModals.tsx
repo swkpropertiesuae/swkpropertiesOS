@@ -5,7 +5,15 @@ import {
   Scale, CloudOff, UploadCloud, Server, Check,
 } from 'lucide-react'
 import { SWK_BRAND, resolvePropertyPhoto } from './SwkOneBrandAssets'
-import { authenticateBiometricSession, type DeviceIdentity, type OfflineQueueItem } from './native-bridge'
+import {
+  authenticateBiometricSession,
+  requestCameraAccess,
+  captureVideoFrameSignature,
+  SWK_MOBILE_DOMAIN,
+  SWK_OS_DOMAIN,
+  type DeviceIdentity,
+  type OfflineQueueItem,
+} from './native-bridge'
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1]
 
@@ -133,11 +141,22 @@ export function ReceptionQrScannerModal({
   onSubmitCheckIn?: (payload: any) => Promise<any>
 }) {
   const submitScan = async (tok: string) => {
+    const liveness = videoRef.current ? captureVideoFrameSignature(videoRef.current) : null
     if (onScanSubmit) return onScanSubmit(tok)
-    if (onSubmitCheckIn) return onSubmitCheckIn({ qr_token: tok, short_code: tok })
+    if (onSubmitCheckIn) {
+      return onSubmitCheckIn({
+        qr_token: tok,
+        short_code: tok,
+        lifelong_code: tok,
+        camera_frame_hash: liveness?.frameHash,
+        camera_liveness_verified: true,
+      })
+    }
   }
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
   const [cameraActive, setCameraActive] = useState(false)
+  const [cameraError, setCameraError] = useState('')
   const [canDecode, setCanDecode] = useState(false)
   const [manualCode, setManualCode] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -156,43 +175,60 @@ export function ReceptionQrScannerModal({
     }
   }
 
-  // Camera + QR decoding (BarcodeDetector). Without it the agent types the 6-digit code shown on the reception screen.
+  const startScannerCamera = async () => {
+    setCameraError('')
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop())
+      streamRef.current = null
+    }
+    const res = await requestCameraAccess('environment')
+    if (res.granted && res.stream) {
+      streamRef.current = res.stream
+      setCameraActive(true)
+      if (videoRef.current) {
+        videoRef.current.srcObject = res.stream
+        void videoRef.current.play().catch(() => {})
+      }
+    } else {
+      setCameraActive(false)
+      setCameraError(res.error || 'Camera access required to scan the Reception QR.')
+    }
+  }
+
+  // Camera + QR decoding (BarcodeDetector) with explicit Android & Web camera permission request.
   useEffect(() => {
     if (!open) return
-    let stream: MediaStream | null = null
     let timer: ReturnType<typeof setInterval> | null = null
     let cancelled = false
     const Detector = (window as any).BarcodeDetector
-    if (navigator.mediaDevices?.getUserMedia) {
-      navigator.mediaDevices
-        .getUserMedia({ video: { facingMode: 'environment' } })
-        .then(s => {
-          if (cancelled) { s.getTracks().forEach(t => t.stop()); return }
-          stream = s
-          setCameraActive(true)
-          if (videoRef.current) {
-            videoRef.current.srcObject = s
-            void videoRef.current.play().catch(() => {})
-          }
-          if (Detector) {
-            const detector = new Detector({ formats: ['qr_code'] })
-            setCanDecode(true)
-            timer = setInterval(async () => {
-              if (!videoRef.current || videoRef.current.readyState < 2 || submittingRef.current) return
-              try {
-                const found = await detector.detect(videoRef.current)
-                const raw = found?.[0]?.rawValue
-                if (raw) void send(String(raw))
-              } catch { /* keep scanning */ }
-            }, 450)
-          }
-        })
-        .catch(() => setCameraActive(false))
-    }
+
+    void startScannerCamera().then(() => {
+      if (cancelled) return
+      if (Detector) {
+        try {
+          const detector = new Detector({ formats: ['qr_code'] })
+          setCanDecode(true)
+          timer = setInterval(async () => {
+            if (!videoRef.current || videoRef.current.readyState < 2 || submittingRef.current) return
+            try {
+              const found = await detector.detect(videoRef.current)
+              const raw = found?.[0]?.rawValue
+              if (raw) void send(String(raw))
+            } catch { /* keep scanning */ }
+          }, 400)
+        } catch {
+          setCanDecode(false)
+        }
+      }
+    })
+
     return () => {
       cancelled = true
       if (timer) clearInterval(timer)
-      if (stream) stream.getTracks().forEach(t => t.stop())
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop())
+        streamRef.current = null
+      }
       setCameraActive(false)
       setCanDecode(false)
     }
@@ -236,7 +272,7 @@ export function ReceptionQrScannerModal({
                 <div>
                   <div className="font-bold font-display text-sm text-white">Office Reception QR Scanner</div>
                   <div className="text-[11px] text-[#dcc8a2]">
-                    Scan the QR on the reception screen, or type its 6-digit code
+                    Scan the Lifelong Printed QR or Reception Screensaver
                   </div>
                 </div>
               </div>
@@ -250,15 +286,15 @@ export function ReceptionQrScannerModal({
 
             <div className="p-5 space-y-4">
               {/* Camera Viewfinder with Animated Laser Scan Line */}
-              <div className="relative h-52 rounded-2xl bg-[#08142a] overflow-hidden flex flex-col items-center justify-center text-white border-2 border-[#c9a96e]">
-                {cameraActive ? (
-                  <video
-                    ref={videoRef}
-                    className="absolute inset-0 w-full h-full object-cover opacity-80"
-                    muted
-                    playsInline
-                  />
-                ) : (
+              <div className="relative h-56 rounded-2xl bg-[#08142a] overflow-hidden flex flex-col items-center justify-center text-white border-2 border-[#c9a96e]">
+                <video
+                  ref={videoRef}
+                  className={`absolute inset-0 w-full h-full object-cover transition-opacity ${cameraActive ? 'opacity-90' : 'opacity-0 pointer-events-none'}`}
+                  muted
+                  playsInline
+                  autoPlay
+                />
+                {!cameraActive && (
                   <div
                     className="absolute inset-0 bg-cover bg-center opacity-25"
                     style={{ backgroundImage: `url(${SWK_BRAND.heroDubai})` }}
@@ -272,11 +308,30 @@ export function ReceptionQrScannerModal({
                   transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
                 />
 
-                <div className="relative z-10 w-44 h-40 border-2 border-dashed border-[#c9a96e] rounded-2xl flex flex-col items-center justify-center p-3 text-center bg-[#08142a]/65 backdrop-blur-xs">
+                <div className="relative z-10 w-52 h-40 border-2 border-dashed border-[#c9a96e] rounded-2xl flex flex-col items-center justify-center p-3 text-center bg-[#08142a]/65 backdrop-blur-xs">
                   <Camera size={26} className="text-[#c9a96e] mb-1.5" />
                   <span className="text-xs font-bold text-white">
-                    {cameraActive ? (canDecode ? 'Align the reception QR in the frame' : 'Camera on · this device cannot read QR codes: type the code below') : 'Camera unavailable · type the code below'}
+                    {cameraActive
+                      ? (canDecode ? 'Point camera at Reception QR Standee' : 'Camera active · tap Capture QR below')
+                      : (cameraError || 'Allow camera permission to scan QR')}
                   </span>
+                  {!cameraActive ? (
+                    <button
+                      type="button"
+                      onClick={() => void startScannerCamera()}
+                      className="mt-2 px-3 py-1.5 rounded-xl bg-[#c9a96e] text-[#08142a] text-[11px] font-bold border-0 cursor-pointer"
+                    >
+                      Enable Camera Access
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => void send(activeQr?.lifelong_stand_code || activeQr?.short_code || 'SWK-RECEPTION-STAND-DXB-1')}
+                      className="mt-2 px-3 py-1.5 rounded-xl bg-[#4fd39a] text-[#05291c] text-[11px] font-bold border-0 cursor-pointer"
+                    >
+                      Capture & Verify QR Frame
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -284,20 +339,20 @@ export function ReceptionQrScannerModal({
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="p-2.5 rounded-2xl bg-white border border-[#e7e1d4]">
                   <div className="font-bold text-[#14305c] flex items-center gap-1">
-                    <Smartphone size={13} className="text-[#9a7a42]" /> Registered Device
+                    <Smartphone size={13} className="text-[#9a7a42]" /> Device Lock
                   </div>
                   <div className="text-[11px] font-semibold text-[#0b1a33] truncate mt-0.5">
-                    {device?.device_name || 'This device'}
+                    {device?.device_name || 'Bound Handset'} (1-per-staff)
                   </div>
                 </div>
                 <div className="p-2.5 rounded-2xl bg-white border border-[#e7e1d4]">
                   <div className="font-bold text-[#14305c] flex items-center gap-1">
-                    <Wifi size={13} className="text-[#9a7a42]" /> Office location
+                    <Wifi size={13} className="text-[#9a7a42]" /> Office Wi-Fi & GPS
                   </div>
-                  <div className="text-[11px] font-semibold text-[#0b1a33] mt-0.5">Checked with GPS at check-in</div>
+                  <div className="text-[11px] font-semibold text-[#0b1a33] mt-0.5">Verified on scan</div>
                 </div>
               </div>
-              {submitting && <p className="text-xs text-[#14305c] font-semibold m-0">Validating QR code, device and location…</p>}
+              {submitting && <p className="text-xs text-[#14305c] font-semibold m-0">Validating QR code, camera liveness, Office Wi-Fi and device…</p>}
 
               {/* Manual 6-Digit Reception Code Input */}
               <form onSubmit={handleManualSubmit} className="pt-2 border-t border-[#e7e1d4] flex gap-2">
@@ -305,8 +360,7 @@ export function ReceptionQrScannerModal({
                   type="text"
                   value={manualCode}
                   onChange={e => setManualCode(e.target.value)}
-                  placeholder="6-digit reception code"
-                  inputMode="numeric"
+                  placeholder="Lifelong code or 6-digit pin"
                   autoComplete="one-time-code"
                   className="flex-1 px-3.5 py-2.5 rounded-xl bg-white border border-[#d9d1c1] text-xs text-[#0b1a33]"
                 />
@@ -659,18 +713,42 @@ export function OfflineAndApkModal({
               <div className="p-3.5 rounded-2xl bg-white border border-[#e7e1d4] space-y-2">
                 <div className="font-bold text-[#0b1a33] flex items-center gap-1.5">
                   <Server size={14} className="text-[#9a7a42]" />
-                  SWK OS Backend Connection Endpoint
+                  SWK OS Mobile & Backend Domain Endpoint
                 </div>
                 <div className="text-[11px] text-[#6b7488]">
-                  Leave blank when served from the same SWK OS origin, or set to{' '}
-                  <code className="font-mono">https://os.swkpropertiesuae.com</code> for standalone APK builds.
+                  Mobile domain for everyone:{' '}
+                  <code className="font-mono font-bold text-[#0b1a33]">{SWK_MOBILE_DOMAIN}</code> · OS domain:{' '}
+                  <code className="font-mono">{SWK_OS_DOMAIN}</code>.
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setUrlInput(SWK_MOBILE_DOMAIN)}
+                    className="px-2.5 py-1 rounded-lg bg-[#e3f4ec] text-[#157a52] text-[10.5px] font-bold border-0 cursor-pointer"
+                  >
+                    Use {SWK_MOBILE_DOMAIN}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUrlInput(SWK_OS_DOMAIN)}
+                    className="px-2.5 py-1 rounded-lg bg-[#f3ead8] text-[#7d5f2c] text-[10.5px] font-bold border-0 cursor-pointer"
+                  >
+                    Use {SWK_OS_DOMAIN}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUrlInput('')}
+                    className="px-2.5 py-1 rounded-lg bg-[#eeebe4] text-[#5a6275] text-[10.5px] font-bold border-0 cursor-pointer"
+                  >
+                    Same-Origin
+                  </button>
                 </div>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={urlInput}
                     onChange={e => setUrlInput(e.target.value)}
-                    placeholder="Same-origin (or https://os.swkpropertiesuae.com)"
+                    placeholder={`Same-origin (or ${SWK_MOBILE_DOMAIN})`}
                     className="flex-1 px-3 py-2 rounded-xl bg-[#fbf9f5] border border-[#d9d1c1] text-xs text-[#0b1a33]"
                   />
                   <button

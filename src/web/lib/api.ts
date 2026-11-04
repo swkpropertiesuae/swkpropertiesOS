@@ -42,7 +42,7 @@ async function rawApi<T = any>(method: string, path: string, body?: unknown, sig
     if (res.status === 401 && !path.startsWith('/api/auth/login')) window.dispatchEvent(new Event('swk:unauthorized'))
     throw new ApiError(res.status, (data && data.error) || res.statusText || 'Request failed', data?.details)
   }
-  if (path === '/api/auth/login' && data?.sessionToken) {
+  if ((path === '/api/auth/login' || path.startsWith('/api/public/reception-qr/') || path.startsWith('/api/swk-one/attendance/')) && data?.sessionToken) {
     setStoredSessionToken(data.sessionToken)
   } else if (path === '/api/auth/logout') {
     setStoredSessionToken(null)

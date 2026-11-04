@@ -101,7 +101,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setGeolocationEnabled(true);
-        settings.setMediaPlaybackRequiresUserGesture(true);
+        settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(false);
         settings.setSupportZoom(false);
@@ -197,8 +197,18 @@ public class MainActivity extends AppCompatActivity {
         if (!needed.isEmpty()) permissionLauncher.launch(needed.toArray(new String[0]));
     }
 
+    /** Explicitly requests Android runtime CAMERA permission for Reception QR scanning & document capture. */
+    void requestCameraPermission() {
+        if (!hasPermission(Manifest.permission.CAMERA)) {
+            permissionLauncher.launch(new String[] {Manifest.permission.CAMERA});
+        } else {
+            dispatchToWeb("swk:camera-permission-granted");
+        }
+    }
+
     private void onPermissionsResult(java.util.Map<String, Boolean> result) {
         boolean location = hasPermission(Manifest.permission.ACCESS_FINE_LOCATION);
+        boolean camera = hasPermission(Manifest.permission.CAMERA);
         if (pendingGeoCallback != null) {
             pendingGeoCallback.invoke(pendingGeoOrigin, location, false);
             pendingGeoCallback = null;
@@ -209,6 +219,7 @@ public class MainActivity extends AppCompatActivity {
             pendingWebPermission = null;
         }
         dispatchToWeb(location ? "swk:location-permission-granted" : "swk:location-permission-denied");
+        dispatchToWeb(camera ? "swk:camera-permission-granted" : "swk:camera-permission-denied");
     }
 
     private void handleWebPermission(PermissionRequest request) {

@@ -123,6 +123,20 @@ public class SwkNativePlugin {
         return biometricAvailable();
     }
 
+    @JavascriptInterface
+    public boolean hasCameraPermission() {
+        return ContextCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    @JavascriptInterface
+    public String requestCameraPermission() {
+        if (hasCameraPermission()) {
+            return "{\"granted\":true}";
+        }
+        activity.runOnUiThread(activity::requestCameraPermission);
+        return "{\"granted\":false,\"requested\":true}";
+    }
+
     /** Result is delivered as a `swk:biometric-result` window event ({ verified, method }). */
     @JavascriptInterface
     public void promptBiometricUnlock(final String reason) {

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { ArrowRight, Check, Eye, EyeOff, KeyRound, Loader2, Lock, Mail, Server, ShieldCheck, Smartphone } from 'lucide-react'
+import { ArrowRight, Camera, Check, Eye, EyeOff, KeyRound, Loader2, Lock, Mail, Monitor, QrCode, Server, ShieldCheck, Smartphone } from 'lucide-react'
 import { get, post, getSwkApiBaseUrl, setSwkApiBaseUrl } from '../lib/api'
-import { isNativeAndroid } from '../mobile/native-bridge'
+import { isNativeAndroid, SWK_MOBILE_DOMAIN, SWK_OS_DOMAIN } from '../mobile/native-bridge'
 import { useMeta } from '../lib/meta'
 import { COMMUNITIES } from '../swk/uae'
 
@@ -145,6 +145,40 @@ export function Login() {
               </button>
             </motion.div>
 
+            {/* Morning Arrival: Scan Lifelong Reception QR + Sign-In */}
+            <motion.div variants={item} className="pt-1">
+              <div className="p-3.5 rounded-2xl border border-[#c9a96e]/35 bg-gradient-to-br from-[#0f2344]/90 to-[#08142a] space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-[12px] font-bold text-[#f1e3c2]">
+                    <QrCode size={15} className="text-[#c9a96e]" />
+                    Office Reception Attendance & Sign-In
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#157a52]/30 text-[#4fd39a] border border-[#4fd39a]/30">
+                    Works Without PC
+                  </span>
+                </div>
+                <p className="text-[11.5px] text-[#a9b6cd] m-0 leading-snug">
+                  Arriving at the office? Scan the printed Reception QR or Screensaver with your mobile camera to sign in and register daily attendance on Office Wi-Fi.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Link
+                    to="/reception-qr?scan=1"
+                    className="h-[42px] px-3 rounded-xl bg-gradient-to-r from-[#1f9d6b] to-[#136d49] text-white font-bold text-[12.5px] flex items-center justify-center gap-2 no-underline shadow-md"
+                  >
+                    <Camera size={15} />
+                    Scan Reception QR
+                  </Link>
+                  <Link
+                    to="/reception-qr"
+                    className="h-[42px] px-3 rounded-xl border border-[#c9a96e]/40 bg-white/[.05] text-[#f1e3c2] font-semibold text-[12px] flex items-center justify-center gap-1.5 no-underline hover:bg-white/10"
+                  >
+                    <Monitor size={14} className="text-[#c9a96e]" />
+                    Reception QR / Print
+                  </Link>
+                </div>
+              </div>
+            </motion.div>
+
             {demo?.enabled && (
               <motion.div variants={item}>
                 <button type="button" className="w-full h-[50px] rounded-2xl border border-white/12 bg-white/[.03] text-[#dfe5f0] font-semibold text-[14px] cursor-pointer hover:border-[#c9a96e]/60 hover:bg-white/[.06] transition-colors" disabled={busy} onClick={() => void signIn(demo.email, demo.password)}>Explore the demo workspace</button>
@@ -152,19 +186,19 @@ export function Login() {
               </motion.div>
             )}
 
-            {/* SWK ONE Native Android Server URL Connection Box */}
+            {/* SWK ONE Native Android & Mobile Domain Server URL Connection Box */}
             <motion.div variants={item} className="pt-2 border-t border-white/10">
-              <div className="flex items-center justify-between text-[12px] text-[#a9b6cd]">
+              <div className="flex items-center justify-between gap-2 flex-wrap text-[12px] text-[#a9b6cd]">
                 <span className="inline-flex items-center gap-1.5 font-medium">
                   <Smartphone size={14} className="text-[#4fd39a]" />
-                  SWK ONE Android App (ae.swkproperties.one)
+                  Mobile App: <b className="text-[#f1e3c2]">ae.swkpropertiesuae.com</b>
                 </span>
                 <button
                   type="button"
                   onClick={() => setShowServerCfg((s: boolean) => !s)}
                   className="text-[12px] text-[#c9a96e] hover:text-[#e6d3a9] bg-transparent border-0 cursor-pointer p-0 inline-flex items-center gap-1"
                 >
-                  <Server size={12} /> {showServerCfg ? 'Hide Server URL' : 'Configure Server URL'}
+                  <Server size={12} /> {showServerCfg ? 'Hide Domain Settings' : 'Domain & APK Settings'}
                 </button>
               </div>
               <AnimatePresence>
@@ -175,16 +209,32 @@ export function Login() {
                     exit={{ opacity: 0, height: 0 }}
                     className="overflow-hidden"
                   >
-                    <div className="mt-3 p-3.5 rounded-2xl bg-white/[.04] border border-white/10 space-y-2">
+                    <div className="mt-3 p-3.5 rounded-2xl bg-white/[.04] border border-white/10 space-y-2.5">
                       <label className="block text-[11.5px] font-medium text-[#c3cde0]">
-                        SWK Properties OS Backend URL (for Mobile APK)
+                        SWK Properties Mobile & OS Domain Endpoint
                       </label>
+                      <div className="flex flex-wrap gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => { setServerUrl(SWK_MOBILE_DOMAIN); setSwkApiBaseUrl(SWK_MOBILE_DOMAIN); setServerSaved(true) }}
+                          className="px-2.5 py-1 rounded-lg bg-[#157a52]/35 border border-[#4fd39a]/40 text-[#4fd39a] text-[11px] font-bold cursor-pointer"
+                        >
+                          ae.swkpropertiesuae.com (Mobile)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setServerUrl(SWK_OS_DOMAIN); setSwkApiBaseUrl(SWK_OS_DOMAIN); setServerSaved(true) }}
+                          className="px-2.5 py-1 rounded-lg bg-[#c9a96e]/20 border border-[#c9a96e]/40 text-[#f1e3c2] text-[11px] font-bold cursor-pointer"
+                        >
+                          os.swkpropertiesuae.com (OS)
+                        </button>
+                      </div>
                       <div className="flex gap-2">
                         <input
                           type="url"
                           value={serverUrl}
                           onChange={e => { setServerUrl(e.target.value); setServerSaved(false) }}
-                          placeholder="https://os.swkpropertiesuae.com"
+                          placeholder={SWK_MOBILE_DOMAIN}
                           className="flex-1 px-3 py-2 rounded-xl bg-black/30 border border-white/15 text-white text-[12.5px] outline-none"
                         />
                         <button
@@ -199,7 +249,7 @@ export function Login() {
                         </button>
                       </div>
                       <p className="text-[11px] text-[#8a9ab5] m-0">
-                        The Android app connects to https://os.swkpropertiesuae.com by default. Change it only if IT gave you another secure (https) server address.
+                        Connected to <b className="text-white">{SWK_MOBILE_DOMAIN}</b> and <b className="text-white">{SWK_OS_DOMAIN}</b> for all staff mobile browsers and Android APK handsets.
                       </p>
                     </div>
                   </motion.div>

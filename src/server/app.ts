@@ -21,7 +21,7 @@ declare module 'fastify' {
 
 export const COOKIE = 'swk_sid'
 export const DEMO_PREFIX = 'demo.'
-const PUBLIC = [/^\/api\/demo\/status$/, /^\/api\/health$/, /^\/api\/auth\/login$/, /^\/api\/public\//, /^\/api\/auth\/branding$/, /^\/api\/swk-one\/reception-qr\/current$/]
+const PUBLIC = [/^\/api\/demo\/status$/, /^\/api\/health$/, /^\/api\/auth\/login$/, /^\/api\/public\//, /^\/api\/auth\/branding$/, /^\/api\/swk-one\/reception-qr\//]
 /**
  * Everything a customer-portal user may call. The record API (/api/e) is scoped to their company by the engine; the rest read their own data only.
  * Any other endpoint is company-wide (bank balances, rate cards, other customers' open items) and stays closed to portal accounts, whatever module permissions the portal role carries.
@@ -60,7 +60,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   // Demo sessions (cookie prefix "demo.") and demo tracking links run against the isolated demo database.
   app.addHook('onRequest', (req: FastifyRequest, reply, done) => {
     const origin = req.headers.origin
-    if (origin && (/^https?:\/\/localhost(:\d+)?$/i.test(origin) || /^capacitor:\/\/localhost$/i.test(origin) || req.headers['x-swk-client'] === 'android' || req.url.startsWith('/api/public/reception-qr') || req.url.startsWith('/api/swk-one/reception-qr'))) {
+    if (origin && (/^https?:\/\/localhost(:\d+)?$/i.test(origin) || /^capacitor:\/\/localhost$/i.test(origin) || /^https?:\/\/([a-z0-9-]+\.)?swkpropertiesuae\.com$/i.test(origin) || req.headers['x-swk-client'] === 'android' || req.url.startsWith('/api/public/reception-qr') || req.url.startsWith('/api/swk-one/reception-qr'))) {
       reply.header('Access-Control-Allow-Origin', origin)
       reply.header('Access-Control-Allow-Credentials', 'true')
       reply.header('Access-Control-Allow-Methods', 'GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS')

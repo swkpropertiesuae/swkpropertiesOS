@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'motion/react'
-import { Bell, Search, Plus, Check, ChevronDown, ChevronRight, LogOut, UserRound, LifeBuoy, LayoutGrid, Languages, Download, RefreshCw, ArrowLeft, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { Bell, Search, Plus, Check, ChevronDown, ChevronRight, LogOut, UserRound, LifeBuoy, LayoutGrid, Languages, Download, RefreshCw, ArrowLeft, PanelLeftClose, PanelLeftOpen, Smartphone, QrCode, Sparkles, Camera } from 'lucide-react'
 import { useMeta } from '../lib/meta'
 import { get, post } from '../lib/api'
 import { cls, fmtIsoStamp } from '../lib/format'
@@ -185,7 +185,13 @@ export function Shell() {
           </div>
           <div className="flex-1" />
           <DubaiClock />
-          <span className="swk-chip swk-hide-md" title="Base currency">AED</span>
+          <Link to="/swk-one" className="swk-chip swk-hide-md no-underline hover:border-[#c9a96e]" title="Open SWK ONE Mobile OS (ae.swkpropertiesuae.com)">
+            <Smartphone size={14} className="text-[#157a52]" />
+            <b>Mobile OS</b>
+          </Link>
+          <Link to="/reception-qr?scan=1" className="swk-tbtn" title="Scan Office Reception QR / Screensaver" aria-label="Scan Office Reception QR">
+            <QrCode size={17} />
+          </Link>
           <button className="swk-tbtn" onClick={() => setPalette(true)} aria-label="Search (Ctrl K)"><Search size={17} /></button>
           <NotificationBell />
           <QuickCreate />
@@ -195,6 +201,9 @@ export function Shell() {
               <motion.div className="swk-menu" style={{ minWidth: 250 }} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: .16 }}>
                 <div className="px-3 py-2"><div className="font-semibold text-ink text-[14px] truncate">{me?.name}</div><div className="text-xs text-muted truncate">{me?.email}</div></div>
                 <div className="sep" />
+                <Link to="/swk-one" onClick={() => setUserMenu(false)}><span className="ic"><Smartphone size={16} /></span>SWK ONE Mobile App</Link>
+                <Link to="/reception-qr?scan=1" onClick={() => setUserMenu(false)}><span className="ic"><Camera size={16} /></span>Scan Reception QR (Attendance)</Link>
+                <Link to="/reception-qr" onClick={() => setUserMenu(false)}><span className="ic"><QrCode size={16} /></span>Reception QR Screensaver & Print</Link>
                 <Link to="/profile" onClick={() => setUserMenu(false)}><span className="ic"><UserRound size={16} /></span>My profile & password</Link>
                 <Link to="/workspace-tools" onClick={() => setUserMenu(false)}><span className="ic"><Languages size={16} /></span>Language & preferences</Link>
                 <Link to="/home" onClick={() => setUserMenu(false)}><span className="ic"><LayoutGrid size={16} /></span>All apps</Link>
@@ -218,6 +227,32 @@ export function Shell() {
             </AnimatePresence>
           </main>
         </div>
+
+        {/* Mobile Bottom Navigation Bar (visible on phone screens <= 768px) */}
+        <nav className="swk-mobile-bottom-nav no-print" aria-label="Mobile quick navigation">
+          <NavLink to="/home" className={({ isActive }) => cls('swk-mnav-item', isActive && 'active')}>
+            <LayoutGrid size={18} />
+            <span>Apps</span>
+          </NavLink>
+          <NavLink to="/swk-one" className={({ isActive }) => cls('swk-mnav-item', isActive && 'active')}>
+            <Smartphone size={18} />
+            <span>Mobile OS</span>
+          </NavLink>
+          <NavLink to="/reception-qr?scan=1" className="swk-mnav-scan">
+            <span className="swk-mnav-scan-ring">
+              <Camera size={19} />
+            </span>
+            <span>Scan QR</span>
+          </NavLink>
+          <NavLink to="/ai" className={({ isActive }) => cls('swk-mnav-item', isActive && 'active')}>
+            <Sparkles size={18} />
+            <span>SWK AI</span>
+          </NavLink>
+          <button type="button" onClick={() => setPalette(true)} className="swk-mnav-item border-0 bg-transparent cursor-pointer">
+            <Search size={18} />
+            <span>Search</span>
+          </button>
+        </nav>
       </div>
       {palette && <CommandPalette onClose={() => setPalette(false)} />}
       <Modal open={guide} onClose={() => setGuide(false)} title="How to use SWK OS" width={660}>

@@ -4,9 +4,12 @@
   "main": "src/index.ts",
   // Set this to the date you deploy.
   "compatibility_date": "2026-10-07",
-  // Public address. Cloudflare creates the DNS record and HTTPS certificate on deploy (zone swkpropertiesuae.com must be on this account).
-  "routes": [{ "pattern": "os.swkpropertiesuae.com", "custom_domain": true }],
-  "vars": { "PUBLIC_URL": "https://os.swkpropertiesuae.com", "PG_SCHEMA": "swk" },
+  // Public addresses. Cloudflare creates the DNS records and HTTPS certificates on deploy (zone swkpropertiesuae.com must be on this account).
+  "routes": [
+    { "pattern": "os.swkpropertiesuae.com", "custom_domain": true },
+    { "pattern": "ae.swkpropertiesuae.com", "custom_domain": true }
+  ],
+  "vars": { "PUBLIC_URL": "https://ae.swkpropertiesuae.com", "PG_SCHEMA": "swk" },
   "observability": { "enabled": true },
 
   // Wakes the app every 5 minutes so its own scheduler keeps running (reminders, e-mail outbox, nightly backup).

@@ -12,6 +12,8 @@ import {
   executeShiftHandover,
   generateMultilingualAiDraft,
   getCurrentReceptionQr,
+  getOfficeWifiAndSecurityConfig,
+  saveOfficeWifiAndSecurityConfig,
   getSwkOneBootstrap,
   ingestDutyLocationBatch,
   initializeSwkOneWorkspaceData,
@@ -40,9 +42,19 @@ import {
   recordViewingArrival,
   getCheckoutGateStatus,
 } from '../domain/swk-one'
+import { COOKIE } from '../app'
+import { config } from '../config'
 import { DUBAI_AREAS_24 } from './swk-ops'
 
 export default async function (app: FastifyInstance) {
+  const resolveClientIp = (req: any): string => {
+    const cf = req.headers?.['cf-connecting-ip']
+    if (typeof cf === 'string' && cf.trim()) return cf.trim()
+    const xff = req.headers?.['x-forwarded-for']
+    if (typeof xff === 'string' && xff.trim()) return xff.split(',')[0]!.trim()
+    return String(req.ip || '127.0.0.1')
+  }
+
   // 1. Bootstrap & Workspace Initialization
   app.get('/api/swk-one/bootstrap', async req => getSwkOneBootstrap(req.ctx))
   app.post('/api/swk-one/initialize', async req => ({ ok: true, data: initializeSwkOneWorkspaceData(req.ctx) }))
@@ -50,21 +62,43 @@ export default async function (app: FastifyInstance) {
   // 2. Standalone Reception QR Terminal & Office Attendance (Works Without Login + When Office PCs Are Off)
   const handleGetReceptionQr = async (req: any) => {
     const branchId = Number((req.query as any)?.branch_id || 1)
-    const qr = tx(() => getCurrentReceptionQr(branchId, req.ctx))
+    const clientIp = resolveClientIp(req)
+    const qr = tx(() => getCurrentReceptionQr(branchId, req.ctx, clientIp))
     return { ...qr, token: qr.token_code }
   }
   app.get('/api/swk-one/reception-qr/current', handleGetReceptionQr)
   app.get('/api/public/reception-qr/current', handleGetReceptionQr)
 
-  const handleOfficeCheckIn = async (req: any) => {
+  const handleGetWifiConfig = async (req: any) => getOfficeWifiAndSecurityConfig(resolveClientIp(req))
+  app.get('/api/swk-one/reception-qr/wifi-config', handleGetWifiConfig)
+  app.get('/api/public/reception-qr/wifi-config', handleGetWifiConfig)
+
+  const handleSaveWifiConfig = async (req: any) => {
+    const b = (req.body ?? {}) as Record<string, any>
+    const clientIp = resolveClientIp(req)
+    if (b.lock_current_ip && clientIp) {
+      const existing = String(b.office_wifi_public_ips || '').split(',').map(s => s.trim()).filter(Boolean)
+      if (!existing.includes(clientIp)) existing.push(clientIp)
+      b.office_wifi_public_ips = existing.join(', ')
+    }
+    b._client_ip = clientIp
+    return tx(() => saveOfficeWifiAndSecurityConfig(b))
+  }
+  app.post('/api/swk-one/reception-qr/wifi-config', handleSaveWifiConfig)
+  app.post('/api/public/reception-qr/wifi-config', handleSaveWifiConfig)
+
+  const handleOfficeCheckIn = async (req: any, reply: any) => {
     const b = body<any>(req)
+    const clientIp = resolveClientIp(req)
+    const isScanLoginEndpoint = String(req.url || '').includes('scan-login-checkin')
     const res = tx(() =>
       officeQrCheckIn(
         {
-          qr_code_or_token: b.qr_code_or_token || b.qr_token || b.short_code || b.stand_code,
+          qr_code_or_token: b.qr_code_or_token || b.qr_token || b.short_code || b.stand_code || b.lifelong_code,
           device_id: b.device_id,
           device_name: b.device_name,
           network_ssid: b.network_ssid || b.wifi_ssid || b.network_type,
+          connection_type: b.connection_type || b.network_type,
           gps_lat: b.gps_lat ? String(b.gps_lat) : b.lat ? String(b.lat) : undefined,
           gps_lng: b.gps_lng ? String(b.gps_lng) : b.lng ? String(b.lng) : undefined,
           gps_accuracy_m: b.gps_accuracy_m ?? b.accuracy_m,
@@ -73,10 +107,26 @@ export default async function (app: FastifyInstance) {
           variable_hours_reason: b.variable_hours_reason,
           employee_id: b.employee_id ? Number(b.employee_id) : undefined,
           email: b.email,
+          password: b.password,
+          totp: b.totp,
+          require_login: b.require_login ?? isScanLoginEndpoint,
+          strict_anti_loophole: b.strict_anti_loophole ?? isScanLoginEndpoint,
+          camera_verified: b.camera_verified ?? b.camera_liveness_verified,
+          scan_frame_hash: b.scan_frame_hash || b.camera_frame_hash,
+          challenge_nonce: b.challenge_nonce,
+          user_agent: String(req.headers?.['user-agent'] || ''),
+          client_ip: clientIp,
         } as any,
         req.ctx
       )
     )
+    if (res?.needsTotp) {
+      return { needsTotp: true }
+    }
+    if (res?.session?.token && reply?.setCookie) {
+      const secure = config.cookieSecure ?? (config.isProd && (req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https'))
+      reply.setCookie(COOKIE, res.session.token, { httpOnly: true, sameSite: 'lax', secure: !!secure, path: '/', expires: res.session.expires })
+    }
     return {
       ...res,
       verification: res.verified ? 'Verified' : 'Doubtful (Flagged for Review)',
@@ -86,6 +136,7 @@ export default async function (app: FastifyInstance) {
   app.post('/api/swk-one/attendance/office-check-in', handleOfficeCheckIn)
   app.post('/api/swk-one/attendance/qr-check-in', handleOfficeCheckIn)
   app.post('/api/public/reception-qr/check-in', handleOfficeCheckIn)
+  app.post('/api/public/reception-qr/scan-login-checkin', handleOfficeCheckIn)
 
   const handleOfficeCheckOut = async (req: any) => {
     const b = (req.body ?? {}) as any

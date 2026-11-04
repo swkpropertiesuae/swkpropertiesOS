@@ -14,7 +14,7 @@ android {
         versionCode 201
         versionName "2.0.1"
         // Server the bundled workspace talks to until staff set another one in Settings.
-        buildConfigField "String", "SWK_SERVER_URL", "\"https://os.swkpropertiesuae.com\""
+        buildConfigField "String", "SWK_SERVER_URL", "\"https://ae.swkpropertiesuae.com\""
     }
 
     buildFeatures {

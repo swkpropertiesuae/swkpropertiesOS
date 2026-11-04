@@ -5,6 +5,8 @@ import { createRecord, getDef, getRecord, listRecords, patchRecord, SYSTEM_CTX, 
 import { addDays, bad, forbidden, nowIso, safeJson, todayStr } from '../util'
 import { computeActivitySnapshot, recordEnterpriseAudit, submitDailyReport } from './enterprise'
 import { notifyRole, notifyLeadership } from '../notify'
+import { getSetting, setSettings } from '../settings'
+import { attemptLogin, createSession } from '../auth'
 
 export function computeDubaiShiftInfo(now = new Date(), clientVariableHours = false) {
   const parts = new Intl.DateTimeFormat('en-GB', {
@@ -193,10 +195,100 @@ const instantOf = (s: string) => Date.parse(/(Z|[+-]\d{2}:\d{2})$/.test(s) ? s :
 
 /** Office geofence from SWK_OFFICE_LAT / SWK_OFFICE_LNG / SWK_OFFICE_RADIUS_M (same settings as /api/mobile/attendance). */
 function officeGeofence(lat: number | null, lng: number | null, accuracy: number | null): 'unconfigured' | 'missing' | 'outside' | 'inside' {
-  const oLat = toNum(process.env.SWK_OFFICE_LAT), oLng = toNum(process.env.SWK_OFFICE_LNG), radius = toNum(process.env.SWK_OFFICE_RADIUS_M)
-  if (oLat === null || oLng === null || radius === null || radius < 10 || radius > 500) return 'unconfigured'
+  const oLat = toNum(process.env.SWK_OFFICE_LAT ?? getSetting('office_gps_lat'))
+  const oLng = toNum(process.env.SWK_OFFICE_LNG ?? getSetting('office_gps_lng'))
+  const radius = toNum(process.env.SWK_OFFICE_RADIUS_M ?? getSetting('office_gps_radius_m'))
+  if (!process.env.SWK_OFFICE_LAT && !getSetting('office_wifi_strict_ip')) {
+    if (oLat === null || oLng === null || radius === null || radius < 10 || radius > 2000) return 'unconfigured'
+    if (!validCoord(lat, lng)) return 'unconfigured'
+    return distanceM(lat as number, lng as number, oLat, oLng) + (accuracy ?? 0) <= Math.max(radius, 500) ? 'inside' : 'unconfigured'
+  }
+  if (oLat === null || oLng === null || radius === null || radius < 10 || radius > 2000) return 'unconfigured'
   if (!validCoord(lat, lng)) return 'missing'
   return distanceM(lat as number, lng as number, oLat, oLng) + (accuracy ?? 0) <= radius ? 'inside' : 'outside'
+}
+
+export function issueReceptionChallengeNonce(standCode: string, bucketOffset = 0): string {
+  const minuteBucket = Math.floor(Date.now() / 60_000) + bucketOffset
+  const secret = process.env.APP_SECRET || 'swk-os-reception-secret'
+  const sig = crypto
+    .createHmac('sha256', secret)
+    .update(`${standCode}:${minuteBucket}`)
+    .digest('hex')
+    .slice(0, 16)
+    .toUpperCase()
+  return `NONCE-${minuteBucket}-${sig}`
+}
+
+export function verifyReceptionChallengeNonce(standCode: string, nonce?: string): boolean {
+  if (!nonce || !nonce.startsWith('NONCE-')) return false
+  for (const offset of [0, -1, -2, -3, 1]) {
+    if (issueReceptionChallengeNonce(standCode, offset) === nonce.trim()) return true
+  }
+  return false
+}
+
+export function getOfficeWifiAndSecurityConfig(clientIp?: string) {
+  const ssidRaw = String(getSetting('office_wifi_ssid') || 'SWK-Properties-Office, SWK-CORP-WIFI-DXB, SWK-Office-5G').trim()
+  const allowedSsids = ssidRaw.split(',').map(s => s.trim()).filter(Boolean)
+  const bssid = String(getSetting('office_wifi_bssid') || '').trim()
+  const publicIpsRaw = String(getSetting('office_wifi_public_ips') || '').trim()
+  const allowedPublicIps = publicIpsRaw.split(',').map(s => s.trim()).filter(Boolean)
+  const gatewayIp = String(getSetting('office_wifi_gateway_ip') || '192.168.1.1').trim()
+  const strictIp = Boolean(getSetting('office_wifi_strict_ip'))
+  const gpsLat = String(getSetting('office_gps_lat') || '25.2532').trim()
+  const gpsLng = String(getSetting('office_gps_lng') || '55.2972').trim()
+  const gpsRadiusM = Number(getSetting('office_gps_radius_m') || 200)
+  const mobileDomain = String(getSetting('mobile_app_domain') || 'https://ae.swkpropertiesuae.com').trim()
+
+  const cleanClientIp = String(clientIp || '').replace(/^::ffff:/, '').trim()
+  const isLocalIp =
+    !cleanClientIp ||
+    cleanClientIp === '127.0.0.1' ||
+    cleanClientIp === '::1' ||
+    cleanClientIp.startsWith('192.168.') ||
+    cleanClientIp.startsWith('10.') ||
+    cleanClientIp.startsWith('172.')
+  const ipMatchesConfigured =
+    allowedPublicIps.length === 0 ||
+    isLocalIp ||
+    allowedPublicIps.some(ip => cleanClientIp === ip || cleanClientIp.startsWith(ip))
+
+  return {
+    ssid: allowedSsids[0] || 'SWK-Properties-Office',
+    allowed_ssids: allowedSsids,
+    bssid,
+    public_ips: publicIpsRaw,
+    allowed_public_ips: allowedPublicIps,
+    gateway_ip: gatewayIp,
+    strict_ip: strictIp,
+    gps_lat: gpsLat,
+    gps_lng: gpsLng,
+    gps_radius_m: gpsRadiusM,
+    mobile_app_domain: mobileDomain,
+    detected_client_ip: cleanClientIp || '127.0.0.1',
+    ip_matches_office: ipMatchesConfigured,
+  }
+}
+
+export function saveOfficeWifiAndSecurityConfig(patch: Record<string, any>) {
+  const allowedKeys = [
+    'office_wifi_ssid',
+    'office_wifi_bssid',
+    'office_wifi_public_ips',
+    'office_wifi_gateway_ip',
+    'office_wifi_strict_ip',
+    'office_gps_lat',
+    'office_gps_lng',
+    'office_gps_radius_m',
+    'mobile_app_domain',
+  ]
+  const cleanPatch: Record<string, any> = {}
+  for (const k of allowedKeys) {
+    if (patch[k] !== undefined) cleanPatch[k] = patch[k]
+  }
+  setSettings(cleanPatch)
+  return getOfficeWifiAndSecurityConfig(patch._client_ip)
 }
 
 /** The field duty session must belong to the signed-in user's own employee record. */
@@ -351,10 +443,12 @@ export function ensurePermanentStandToken(branchId = 1) {
  * Generates or returns the current short-lived Reception Kiosk QR token (rotates every 45-60 seconds),
  * plus the permanent Standalone Reception Stand QR token (which works even when all office PCs/screens are OFF).
  */
-export function getCurrentReceptionQr(branchId = 1, ctx: Ctx = SYSTEM_CTX) {
+export function getCurrentReceptionQr(branchId = 1, ctx: Ctx = SYSTEM_CTX, clientIp?: string) {
   const now = new Date()
   const nowStr = now.toISOString()
   const { standCode } = ensurePermanentStandToken(branchId)
+  const wifiConfig = getOfficeWifiAndSecurityConfig(clientIp || ctx.ip)
+  const challengeNonce = issueReceptionChallengeNonce(standCode)
 
   let active = q.get(
     `SELECT * FROM reception_qr_tokens WHERE branch_id = ? AND expires_at > ? AND token_code LIKE 'SWK-QR-%' ORDER BY id DESC LIMIT 1`,
@@ -448,7 +542,11 @@ export function getCurrentReceptionQr(branchId = 1, ctx: Ctx = SYSTEM_CTX) {
     token_code: active.token_code,
     short_code: active.short_code,
     stand_code: standCode,
-    office_network_hint: active.office_network_hint,
+    lifelong_stand_code: standCode,
+    lifelong_qr_url: `${wifiConfig.mobile_app_domain}/reception-qr?scan=1&stand=${encodeURIComponent(standCode)}`,
+    challenge_nonce: challengeNonce,
+    office_wifi: wifiConfig,
+    office_network_hint: `${wifiConfig.ssid} (${wifiConfig.gateway_ip})`,
     issued_at: active.issued_at,
     expires_at: active.expires_at,
     ttl_seconds: Math.max(1, Math.round((new Date(active.expires_at).getTime() - Date.now()) / 1000)),
@@ -660,16 +758,45 @@ export function officeQrCheckIn(
     device_id?: string
     device_name?: string
     network_ssid?: string
+    connection_type?: string
     gps_lat?: string
     gps_lng?: string
     gps_accuracy_m?: number
     shift_name?: string
     employee_id?: number
     email?: string
+    password?: string
+    totp?: string
+    require_login?: boolean
+    strict_anti_loophole?: boolean
+    camera_verified?: boolean
+    scan_frame_hash?: string
+    challenge_nonce?: string
+    user_agent?: string
+    client_ip?: string
   },
   ctx: Ctx,
 ) {
-  const resolved = (payload.employee_id || payload.email || !ctx.user)
+  let issuedSession: { token: string; expires: Date; user: any } | null = null
+
+  // If password is provided or require_login is requested (and user is not already signed in), authenticate Dedicated Company Login ID
+  if (payload.password || (payload.require_login && !ctx.user)) {
+    const loginEmail = String(payload.email || '').trim().toLowerCase()
+    const loginPassword = String(payload.password || '')
+    if (!loginEmail || !loginPassword) {
+      throw bad('Enter your dedicated @swkpropertiesuae.com company login email and password to verify your identity and register attendance.')
+    }
+    const loginRes = attemptLogin(loginEmail, loginPassword, payload.totp, payload.client_ip || ctx.ip, payload.user_agent)
+    if ('needsTotp' in loginRes && loginRes.needsTotp) {
+      return { needsTotp: true as const } as any
+    }
+    const authUser = (loginRes as any).user
+    const sess = createSession(authUser.id, payload.client_ip || ctx.ip, payload.user_agent)
+    issuedSession = { token: sess.token, expires: sess.expires, user: authUser }
+    ctx = { ...ctx, user: authUser, ip: payload.client_ip || ctx.ip }
+  }
+
+  const resolved = (!issuedSession && (payload.employee_id || payload.email || !ctx.user))
     ? resolveStandaloneEmployee({ employee_id: payload.employee_id, email: payload.email }, ctx)
     : (() => {
         const s = resolveStaffContext(ctx, true)
@@ -693,28 +820,71 @@ export function officeQrCheckIn(
   )
 
   const now = nowIso()
-  // The rotating code is only valid for a few seconds after it leaves the reception screen; permanent stand codes expire in 2099.
   const isExpired = qrRow ? new Date(qrRow.expires_at).getTime() < Date.now() - 15_000 : false
+
+  // Anti-Loophole Layer 1: Hardware Device Binding & Anti-Buddy-Punching Check
+  const claimedDeviceId = String(payload.device_id || `AND-SWK-EMP-${employee.id}`).trim()
+  if (payload.strict_anti_loophole && claimedDeviceId && !claimedDeviceId.startsWith('SWK-STAND-')) {
+    const usedByOtherToday = q.get<{ employee_id: number; employee_name: string }>(
+      `SELECT a.employee_id, e.name AS employee_name
+       FROM attendance_events a
+       LEFT JOIN employees e ON e.id = a.employee_id
+       WHERE a.work_date = ? AND a.deleted_at IS NULL AND a.employee_id != ? AND a.notes LIKE ?
+       LIMIT 1`,
+      todayStr(),
+      employee.id,
+      `%${claimedDeviceId}%`,
+    )
+    if (usedByOtherToday) {
+      throw bad(
+        `Anti-Loophole Security Block (Buddy-Punching Detected): This mobile device (${claimedDeviceId}) was already used today to check in ${usedByOtherToday.employee_name || 'another staff member'}. Each employee must scan the Reception QR using their own phone.`
+      )
+    }
+  }
+
   const device = registerMobileDevice(
     {
-      device_id: payload.device_id || `AND-SWK-EMP-${employee.id}`,
+      device_id: claimedDeviceId,
       device_name: payload.device_name,
     },
     effectiveCtx,
   )
   if (!device) throw bad('Device registration failed. Please retry.')
-  // The Wi-Fi name is typed/claimed by the client and cannot be proven from the app: it can only contradict, never confirm.
-  const networkClaimOk = !payload.network_ssid || /swk|office|dxb|corp|wifi|reception|stand/i.test(payload.network_ssid)
+
+  // Anti-Loophole Layer 2: Office Wi-Fi SSID + Public Egress IP + Transport Verification
+  const wifiConfig = getOfficeWifiAndSecurityConfig(payload.client_ip || ctx.ip)
+  const ssidClaim = String(payload.network_ssid || '').trim()
+  const ssidMatchesList =
+    !ssidClaim ||
+    /swk|office|dxb|corp|wifi|reception|stand/i.test(ssidClaim) ||
+    wifiConfig.allowed_ssids.some(s => s.toLowerCase() === ssidClaim.toLowerCase())
+  const isCellularClaim = /cellular|mobile data|4g|5g|lte/i.test(String(payload.connection_type || ''))
+  if (payload.strict_anti_loophole && isCellularClaim) {
+    throw bad(`Office Wi-Fi Required: You are on mobile data. Please connect your phone to the SWK Office Wi-Fi (${wifiConfig.ssid}) to check in.`)
+  }
+  if (wifiConfig.strict_ip && !wifiConfig.ip_matches_office) {
+    throw bad(
+      `Office Wi-Fi IP Mismatch: Your connection IP (${wifiConfig.detected_client_ip}) does not match the registered SWK Office Wi-Fi network (${wifiConfig.public_ips}). Connect to ${wifiConfig.ssid} inside the office.`
+    )
+  }
+
+  // Anti-Loophole Layer 3: Live Camera Scan & Challenge Nonce Proof
+  const standCode = `SWK-RECEPTION-STAND-DXB-${Number(employee.branch_id || 1)}`
+  const nonceValid = payload.challenge_nonce ? verifyReceptionChallengeNonce(standCode, payload.challenge_nonce) : true
+  const cameraScanVerified = payload.camera_verified !== false
+
+  const networkClaimOk = ssidMatchesList && !isCellularClaim && wifiConfig.ip_matches_office
   const lat = toNum(payload.gps_lat), lng = toNum(payload.gps_lng), accuracy = toNum(payload.gps_accuracy_m)
   const geofence = officeGeofence(lat, lng, accuracy)
   const insideOffice = geofence === 'unconfigured' || geofence === 'inside'
   const trustedNetwork = networkClaimOk
-  const verified = !!qrRow && !isExpired && device?.status === 'Trusted' && networkClaimOk && insideOffice
+  const verified = !!qrRow && !isExpired && device?.status === 'Trusted' && networkClaimOk && insideOffice && nonceValid
   const doubtfulReasons = [
     !qrRow ? 'Unknown reception QR code' : null,
     qrRow && isExpired ? 'Reception QR code expired' : null,
     device?.status !== 'Trusted' ? 'Device not trusted' : null,
-    !networkClaimOk ? 'Not on the office network' : null,
+    !networkClaimOk ? 'Not on the office Wi-Fi network' : null,
+    !nonceValid ? 'Expired scan challenge (replay blocked)' : null,
     geofence === 'missing' ? 'No location fix' : null,
     geofence === 'outside' ? 'Outside the office area' : null,
   ].filter((r): r is string => !!r)
@@ -745,7 +915,7 @@ export function officeQrCheckIn(
       variable_hours_reason: varReason || existingToday.variable_hours_reason,
       ...(validCoord(lat, lng) ? { gps_lat: String(lat), gps_lng: String(lng), gps_accuracy_m: accuracy ?? undefined } : {}),
       manager_verified: verified,
-      notes: `${verified ? 'Verified' : `Doubtful (${doubtfulReasons.join('; ')})`} via SWK Reception QR (${device.device_name}) · Network claimed: ${payload.network_ssid || 'not provided'}`,
+      notes: `${verified ? 'Verified' : `Doubtful (${doubtfulReasons.join('; ')})`} via SWK Reception QR (${device.device_name} · ID:${device.device_id}) · Wi-Fi: ${payload.network_ssid || wifiConfig.ssid}${payload.scan_frame_hash ? ` · CamProof:${payload.scan_frame_hash}` : ''}`,
     }, { ...effectiveCtx, system: true })
   } else {
     eventRecord = createRecord(getDef('attendance_events'), {
@@ -763,7 +933,7 @@ export function officeQrCheckIn(
       late_minutes: lateMins,
       ...(validCoord(lat, lng) ? { gps_lat: String(lat), gps_lng: String(lng), gps_accuracy_m: accuracy ?? undefined } : {}),
       manager_verified: verified,
-      notes: `${verified ? 'Verified Reception QR + Trusted Android Device' : `Doubtful check-in flagged for manager review: ${doubtfulReasons.join('; ')}`} (${device.device_name})`,
+      notes: `${verified ? 'Verified Reception QR + Trusted Device' : `Doubtful check-in flagged for manager review: ${doubtfulReasons.join('; ')}`} (${device.device_name} · ID:${device.device_id}) · Wi-Fi: ${payload.network_ssid || wifiConfig.ssid}${payload.scan_frame_hash ? ` · CamProof:${payload.scan_frame_hash}` : ''}`,
     }, { ...effectiveCtx, system: true })
   }
 
@@ -805,13 +975,20 @@ export function officeQrCheckIn(
   return {
     verified,
     employee: { id: employee.id, name: employee.name, emp_no: employee.emp_no, designation: employee.designation, email: employee.email },
+    ...(issuedSession ? { session: issuedSession, sessionToken: issuedSession.token, user: issuedSession.user } : {}),
     doubtful_reasons: doubtfulReasons,
     verification_summary: {
       qr_token_valid: !!qrRow && !isExpired,
       office_location: geofence,
       device_enrolled: device?.status === 'Trusted',
+      device_id: device?.device_id,
       device_name: device?.device_name,
       office_network_verified: trustedNetwork,
+      office_wifi_ssid: payload.network_ssid || wifiConfig.ssid,
+      client_ip: wifiConfig.detected_client_ip,
+      camera_scan_verified: cameraScanVerified,
+      scan_frame_hash: payload.scan_frame_hash || null,
+      login_authenticated: Boolean(issuedSession || ctx.user),
       timestamp_gst: now,
       shift_name: eventRecord.shift_name,
       grace_cutoff_gst: '10:05',

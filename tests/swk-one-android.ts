@@ -11,11 +11,16 @@ syncSchema()
 seedReference()
 await resetBusinessData({ user: null, system: true }, { backup: false })
 
-// Ensure admin account is in fresh default state for test reproducibility
+// Ensure admin and manager accounts are in fresh default state for test reproducibility
 q.run(
   `UPDATE users SET active = 1, password_hash = ?, must_change_password = 1, totp_secret = NULL, failed_logins = 0, locked_until = NULL WHERE email = ?`,
   hashPassword(config.accounts.adminPassword),
   config.accounts.adminEmail
+)
+q.run(
+  `UPDATE users SET active = 1, password_hash = ?, must_change_password = 0, totp_secret = NULL, failed_logins = 0, locked_until = NULL WHERE email = ?`,
+  hashPassword(config.accounts.managerPassword),
+  config.accounts.managerEmail
 )
 
 const app = await buildApp()
@@ -102,6 +107,59 @@ try {
   check('First-person arrival check-in via Standalone Reception QR (without OS login) records attendance in SWK OS',
     standaloneCheckInRes.statusCode === 200 && standaloneCheckInRes.json().verification === 'Verified' && standaloneCheckInRes.json().employee?.email === config.accounts.managerEmail,
     standaloneCheckInRes.json()
+  )
+
+  // Lifelong Printed Reception QR + Dedicated Company Login ID + 5-Layer Anti-Loophole Verification
+  const lifelongScanLoginRes = await androidReq('/api/public/reception-qr/scan-login-checkin', 'POST', {
+    email: config.accounts.managerEmail,
+    password: config.accounts.managerPassword,
+    lifelong_code: 'https://ae.swkpropertiesuae.com/reception-qr?scan=1&stand=SWK-RECEPTION-STAND-DXB-1',
+    challenge_nonce: pubQr.challenge_nonce,
+    camera_liveness_verified: true,
+    camera_frame_hash: 'SWK-CAM-8F9A2B1C-128-44',
+    wifi_ssid: pubQr.office_wifi?.ssid || 'SWK-Office-5G-Verified',
+    network_type: 'Office Wi-Fi',
+    device_id: 'SWK-HANDSET-MANAGER-01',
+    lat: 25.1867,
+    lng: 55.2744,
+  })
+  check('Lifelong Printed QR scan + Company Login ID + Camera Liveness + Office Wi-Fi authenticates session and registers Verified attendance',
+    lifelongScanLoginRes.statusCode === 200 &&
+    lifelongScanLoginRes.json().verification === 'Verified' &&
+    Boolean(lifelongScanLoginRes.json().sessionToken) &&
+    lifelongScanLoginRes.json().verification_summary?.camera_scan_verified === true &&
+    lifelongScanLoginRes.json().verification_summary?.login_authenticated === true,
+    lifelongScanLoginRes.json()
+  )
+
+  const buddyPunchRes = await androidReq('/api/public/reception-qr/scan-login-checkin', 'POST', {
+    email: config.accounts.adminEmail,
+    password: 'SwkAndroid-2026!Secure',
+    lifelong_code: 'SWK-RECEPTION-STAND-DXB-1',
+    challenge_nonce: pubQr.challenge_nonce,
+    camera_liveness_verified: true,
+    camera_frame_hash: 'SWK-CAM-9A1B3C4D-120-39',
+    wifi_ssid: pubQr.office_wifi?.ssid || 'SWK-Office-5G-Verified',
+    network_type: 'Office Wi-Fi',
+    device_id: 'SWK-HANDSET-MANAGER-01', // Same handset used by manager!
+    lat: 25.1867,
+    lng: 55.2744,
+  })
+  check('Anti-Loophole (Anti-Buddy-Punching): Staff B attempting check-in on Staff A phone is caught and blocked',
+    buddyPunchRes.statusCode === 400 &&
+    String(buddyPunchRes.json().error || '').includes('Buddy-Punching Detected'),
+    buddyPunchRes.json()
+  )
+
+  const badLoginScanRes = await androidReq('/api/public/reception-qr/scan-login-checkin', 'POST', {
+    email: config.accounts.managerEmail,
+    password: 'WrongPassword999!',
+    lifelong_code: 'SWK-RECEPTION-STAND-DXB-1',
+    camera_liveness_verified: true,
+    camera_frame_hash: 'SWK-CAM-8F9A2B1C-128-44',
+  })
+  check('Anti-Loophole: QR scan with invalid company password is rejected with 401',
+    badLoginScanRes.statusCode === 401
   )
 
   const checkInRes = await androidReq('/api/swk-one/attendance/qr-check-in', 'POST', {

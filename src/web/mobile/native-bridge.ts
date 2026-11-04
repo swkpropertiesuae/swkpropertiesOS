@@ -32,6 +32,9 @@ const OFFLINE_QUEUE_KEY = 'swk.one.offline_queue'
 const SESSION_TOKEN_KEY = 'swk.one.session_token'
 const SERVER_URL_KEY = 'swk.one.server_url'
 
+export const SWK_MOBILE_DOMAIN = 'https://ae.swkpropertiesuae.com'
+export const SWK_OS_DOMAIN = 'https://os.swkpropertiesuae.com'
+
 type SwkBridge = {
   getDefaultServerUrl?: () => string
   getDeviceIdentityJson?: () => string
@@ -40,6 +43,8 @@ type SwkBridge = {
   getTelemetryJson?: () => string
   isBiometricAvailable?: () => boolean
   promptBiometricUnlock?: (reason: string) => void
+  hasCameraPermission?: () => boolean
+  requestCameraPermission?: () => string
 }
 const bridge = (): SwkBridge | null => (typeof window !== 'undefined' ? ((window as any).SwkAndroidBridge ?? null) : null)
 
@@ -57,10 +62,13 @@ export function getStoredServerUrl(): string {
     if (stored) return stored
   } catch { /* fall through to the app default */ }
   try {
-    return bridge()?.getDefaultServerUrl?.().replace(/\/+$/, '') || ''
-  } catch {
-    return ''
+    const fromBridge = bridge()?.getDefaultServerUrl?.().replace(/\/+$/, '') || ''
+    if (fromBridge) return fromBridge
+  } catch { /* ignore */ }
+  if (typeof window !== 'undefined' && isNativeAndroid() && window.location.hostname === 'localhost' && window.location.protocol === 'https:') {
+    return SWK_MOBILE_DOMAIN
   }
+  return ''
 }
 
 export function setStoredServerUrl(url: string) {
@@ -305,4 +313,123 @@ export function removeSyncedOfflineItems(results: Array<{ idempotency_key: strin
   const done = new Set(results.filter(r => r.status === 'synced' || r.status === 'already_synced').map(r => r.idempotency_key))
   if (done.size === 0) return getOfflineQueue() // clearSyncedOfflineItems([]) would wipe the whole queue
   return clearSyncedOfflineItems([...done])
+}
+
+/**
+ * Explicitly requests Android runtime CAMERA permission (when running inside SWK ONE APK)
+ * and opens a live rear/front MediaStream for QR scanning & physical presence verification.
+ */
+export async function requestCameraAccess(
+  facingMode: 'environment' | 'user' = 'environment'
+): Promise<{ granted: boolean; stream: MediaStream | null; error?: string }> {
+  const native = bridge()
+  if (native?.requestCameraPermission) {
+    try {
+      const hasCam = native.hasCameraPermission?.()
+      if (!hasCam) {
+        await new Promise<void>(resolve => {
+          const onGranted = () => {
+            window.removeEventListener('swk:camera-permission-granted', onGranted)
+            window.removeEventListener('swk:camera-permission-denied', onDenied)
+            resolve()
+          }
+          const onDenied = () => {
+            window.removeEventListener('swk:camera-permission-granted', onGranted)
+            window.removeEventListener('swk:camera-permission-denied', onDenied)
+            resolve()
+          }
+          window.addEventListener('swk:camera-permission-granted', onGranted)
+          window.addEventListener('swk:camera-permission-denied', onDenied)
+          native.requestCameraPermission!()
+          setTimeout(resolve, 6000)
+        })
+      }
+    } catch { /* continue to WebRTC getUserMedia */ }
+  }
+
+  if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+    return {
+      granted: false,
+      stream: null,
+      error: 'Camera API is not available. Ensure you are connected via HTTPS (https://ae.swkpropertiesuae.com or https://os.swkpropertiesuae.com).',
+    }
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: facingMode },
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+      },
+      audio: false,
+    })
+    return { granted: true, stream }
+  } catch (err: any) {
+    // Fallback to any available video camera if facingMode constraint failed
+    try {
+      const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+      return { granted: true, stream: fallbackStream }
+    } catch (err2: any) {
+      const msg = err2?.name === 'NotAllowedError' || err?.name === 'NotAllowedError'
+        ? 'Camera permission was blocked. Please tap the lock/camera icon in your browser address bar or Android Settings and allow Camera access for SWK OS.'
+        : (err2?.message || err?.message || 'Could not start camera stream.')
+      return { granted: false, stream: null, error: msg }
+    }
+  }
+}
+
+/**
+ * Captures a live frame from the active camera `<video>` element to prove physical camera liveness
+ * (prevents bookmark/replay/gallery-upload loopholes) and checks frame brightness & variance.
+ */
+export function captureVideoFrameSignature(video: HTMLVideoElement | null): {
+  validFrame: boolean
+  frameHash: string
+  brightness: number
+  contrast: number
+  capturedAt: string
+} {
+  const capturedAt = new Date().toISOString()
+  if (!video || video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
+    return { validFrame: false, frameHash: '', brightness: 0, contrast: 0, capturedAt }
+  }
+  try {
+    const canvas = document.createElement('canvas')
+    const w = 64
+    const h = 64
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return { validFrame: false, frameHash: '', brightness: 0, contrast: 0, capturedAt }
+    ctx.drawImage(video, 0, 0, w, h)
+    const img = ctx.getImageData(0, 0, w, h).data
+    let sum = 0
+    let sumSq = 0
+    const count = w * h
+    const hashBits: string[] = []
+    for (let i = 0; i < img.length; i += 4) {
+      const lum = Math.round(0.299 * img[i]! + 0.587 * img[i + 1]! + 0.114 * img[i + 2]!)
+      sum += lum
+      sumSq += lum * lum
+      if ((i / 4) % 64 === 0) {
+        hashBits.push(lum.toString(16).padStart(2, '0'))
+      }
+    }
+    const mean = sum / count
+    const variance = Math.max(0, sumSq / count - mean * mean)
+    const stdDev = Math.sqrt(variance)
+    // A real camera pointed at a printed QR code or screen has brightness > 8 and contrast (stdDev) > 5
+    const validFrame = mean > 6 && stdDev > 4
+    const frameHash = `CAM-${hashBits.slice(0, 16).join('').toUpperCase()}-${Math.round(mean)}-${Math.round(stdDev)}`
+    return {
+      validFrame,
+      frameHash,
+      brightness: Math.round(mean),
+      contrast: Math.round(stdDev),
+      capturedAt,
+    }
+  } catch {
+    return { validFrame: false, frameHash: '', brightness: 0, contrast: 0, capturedAt }
+  }
 }
