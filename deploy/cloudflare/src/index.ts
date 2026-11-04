@@ -15,7 +15,7 @@ interface Env {
   RELEASE_SHA?: string
 }
 
-const DEFAULT_RELEASE = '2026-11-04-os-v2'
+const DEFAULT_RELEASE = '2026-11-05-swkproperties-os-v3'
 
 export class SwkOs extends Container<Env> {
   defaultPort = 8080
@@ -44,10 +44,21 @@ export class SwkOs extends Container<Env> {
   }
 }
 
+let legacyMainCleaned = false
+
 /** Start the container for the current release if it is not up. */
 async function ensureRunning(env: Env) {
   const missing = ['DATABASE_URL', 'APP_SECRET', 'ADMIN_PASSWORD', 'MANAGER_PASSWORD'].filter(k => !(env as unknown as Record<string, string | undefined>)[k])
   if (missing.length) throw new Error(`Missing secret(s): ${missing.join(', ')}. Set them with "npx wrangler secret put <NAME>".`)
+  if (!legacyMainCleaned) {
+    legacyMainCleaned = true
+    try {
+      const legacy = getContainer(env.SWK_OS, 'main')
+      await legacy.destroy()
+    } catch {
+      // ignore if not running
+    }
+  }
   const releaseKey = (env.RELEASE_SHA || DEFAULT_RELEASE).slice(0, 12)
   const c = getContainer(env.SWK_OS, `swk-${releaseKey}`)
   const state = await c.getState()
