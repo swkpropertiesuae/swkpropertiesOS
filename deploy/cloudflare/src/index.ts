@@ -12,9 +12,11 @@ interface Env {
   PUBLIC_URL?: string
   PG_SCHEMA?: string
   DEMO_ENABLED?: string
+  RELEASE_SHA?: string
 }
 
 const INSTANCE = 'main' // one instance only – the app holds a single database connection and runs its own scheduler
+const DEFAULT_RELEASE = '2026-11-04-reception-qr-v1'
 
 export class SwkOs extends Container<Env> {
   defaultPort = 8080
@@ -41,15 +43,32 @@ export class SwkOs extends Container<Env> {
       ...(env.PUBLIC_URL ? { PUBLIC_URL: env.PUBLIC_URL } : {}),
     }
   }
+
+  async ensureReleaseRunning(releaseId: string): Promise<void> {
+    const runningRelease = await this.ctx.storage.get<string>('running_release_id')
+    const state = await this.getState()
+    if (state.status === 'healthy' && runningRelease !== releaseId) {
+      try {
+        await this.destroy()
+      } catch {
+        // ignore if already stopped
+      }
+      await new Promise(r => setTimeout(r, 2500))
+    }
+    const afterState = await this.getState()
+    if (afterState.status !== 'healthy') {
+      await this.startAndWaitForPorts({ ports: 8080, cancellationOptions: { portReadyTimeoutMS: 240_000 } })
+      await this.ctx.storage.put('running_release_id', releaseId)
+    }
+  }
 }
 
-/** Start the container if it is not up. The first start creates the database tables, so allow plenty of time. */
+/** Start the container if it is not up (or roll it over when a new release image is deployed). */
 async function ensureRunning(env: Env) {
   const missing = ['DATABASE_URL', 'APP_SECRET', 'ADMIN_PASSWORD', 'MANAGER_PASSWORD'].filter(k => !(env as unknown as Record<string, string | undefined>)[k])
   if (missing.length) throw new Error(`Missing secret(s): ${missing.join(', ')}. Set them with "npx wrangler secret put <NAME>".`)
   const c = getContainer(env.SWK_OS, INSTANCE)
-  const state = await c.getState()
-  if (state.status !== 'healthy') await c.startAndWaitForPorts({ ports: 8080, cancellationOptions: { portReadyTimeoutMS: 240_000 } })
+  await c.ensureReleaseRunning(env.RELEASE_SHA || DEFAULT_RELEASE)
   return c
 }
 

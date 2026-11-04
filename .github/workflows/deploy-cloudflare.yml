@@ -52,15 +52,15 @@ jobs:
         run: npm run typecheck
       - name: Deploy (builds the image from ../../Dockerfile)
         working-directory: deploy/cloudflare
-        run: npx wrangler deploy
-      - name: Wait for the app to answer
+        run: npx wrangler deploy --var RELEASE_SHA:${GITHUB_SHA}
+      - name: Wait for the app and Standalone Reception QR to answer
         # The container cold-starts after a new image; allow up to 15 minutes.
         run: |
           for i in $(seq 1 45); do
-            code=$(curl -s -o /dev/null -m 30 -w '%{http_code}' https://os.swkpropertiesuae.com/api/health || true)
+            code=$(curl -s -o /dev/null -m 30 -w '%{http_code}' https://os.swkpropertiesuae.com/api/public/reception-qr/current || true)
             echo "attempt $i: HTTP $code"
             [ "$code" = "200" ] && exit 0
             sleep 20
           done
-          echo "::error::App did not return 200 from /api/health within 15 minutes"
+          echo "::error::App did not return 200 from /api/public/reception-qr/current within 15 minutes"
           exit 1
