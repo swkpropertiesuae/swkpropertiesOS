@@ -113,20 +113,11 @@ export function AdminAttendanceRollCallCard({
 
       <div className="flex items-center justify-between gap-2 pt-0.5">
         <Link
-          to="/reception-qr"
+          to="/reception-qr?print=1"
           className="text-[11px] font-bold text-[#14305c] underline no-underline hover:underline"
         >
-          Open Reception QR Display →
+          Print Single Office QR Code →
         </Link>
-        {onOpenReceptionQr && (
-          <button
-            type="button"
-            onClick={onOpenReceptionQr}
-            className="px-3 py-1.5 rounded-xl bg-[#0b1a33] text-[#f3ead8] text-[11px] font-bold border-0 cursor-pointer"
-          >
-            Scan Reception QR
-          </button>
-        )}
       </div>
     </div>
   )
@@ -234,15 +225,9 @@ export function SwkOneRestrictedStaffView({
             </div>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onOpenQrScanner}
-          className="px-3.5 py-2 rounded-xl text-[#0b1a33] font-extrabold text-xs border-0 cursor-pointer flex items-center gap-1.5 shadow-xs shrink-0"
-          style={{ background: 'linear-gradient(135deg, #f1e3c2 0%, #c9a96e 100%)' }}
-        >
-          <QrCode size={14} />
-          {todayAtt ? 'Scan Reception QR Again' : 'Scan Reception QR & Check In'}
-        </button>
+        <span className="px-3 py-1.5 rounded-xl bg-[#c9a96e]/20 border border-[#c9a96e]/40 text-[#f1e3c2] font-bold text-xs">
+          {todayAtt ? 'Checked In ✓' : 'Scan Printed QR with Phone Camera'}
+        </span>
       </div>
 
       {/* 4 Allowed Sub-Navigation Pills */}
@@ -318,24 +303,11 @@ export function SwkOneRestrictedStaffView({
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <button
-                type="button"
-                onClick={onOpenQrScanner}
-                className="py-3 px-4 rounded-2xl text-[#0b1a33] font-extrabold text-xs border-0 cursor-pointer flex items-center justify-center gap-2 shadow-sm"
-                style={{ background: 'linear-gradient(135deg, #f1e3c2 0%, #c9a96e 100%)' }}
-              >
-                <QrCode size={16} />
-                Scan Reception QR &amp; Check In
-              </button>
-
-              <Link
-                to="/reception-qr?scan=1"
-                className="py-3 px-4 rounded-2xl bg-[#0b1a33] text-[#f3ead8] font-bold text-xs no-underline flex items-center justify-center gap-2"
-              >
-                <Wifi size={15} className="text-[#c9a96e]" />
-                Full Reception QR Check-In Page
-              </Link>
+            <div className="p-3 rounded-2xl bg-[#fbf8f2] border border-[#e7e1d4] text-xs text-[#0b1a33] flex items-center gap-2">
+              <Wifi size={15} className="text-[#9a7a42] shrink-0" />
+              <span>
+                To check in at the office, connect to <b>Office Wi-Fi</b> and scan the single printed Office QR code using your phone’s camera.
+              </span>
             </div>
 
             {todayAtt && !todayAtt.check_out_at && (

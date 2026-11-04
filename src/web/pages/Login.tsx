@@ -145,40 +145,6 @@ export function Login() {
               </button>
             </motion.div>
 
-            {/* Morning Arrival: Scan Lifelong Reception QR + Sign-In */}
-            <motion.div variants={item} className="pt-1">
-              <div className="p-3.5 rounded-2xl border border-[#c9a96e]/35 bg-gradient-to-br from-[#0f2344]/90 to-[#08142a] space-y-2.5">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-[12px] font-bold text-[#f1e3c2]">
-                    <QrCode size={15} className="text-[#c9a96e]" />
-                    Office Reception Attendance & Sign-In
-                  </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#157a52]/30 text-[#4fd39a] border border-[#4fd39a]/30">
-                    Works Without PC
-                  </span>
-                </div>
-                <p className="text-[11.5px] text-[#a9b6cd] m-0 leading-snug">
-                  Arriving at the office? Scan the printed Reception QR or Screensaver with your mobile camera to sign in and register daily attendance on Office Wi-Fi.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <Link
-                    to="/reception-qr?scan=1"
-                    className="h-[42px] px-3 rounded-xl bg-gradient-to-r from-[#1f9d6b] to-[#136d49] text-white font-bold text-[12.5px] flex items-center justify-center gap-2 no-underline shadow-md"
-                  >
-                    <Camera size={15} />
-                    Scan Reception QR
-                  </Link>
-                  <Link
-                    to="/reception-qr"
-                    className="h-[42px] px-3 rounded-xl border border-[#c9a96e]/40 bg-white/[.05] text-[#f1e3c2] font-semibold text-[12px] flex items-center justify-center gap-1.5 no-underline hover:bg-white/10"
-                  >
-                    <Monitor size={14} className="text-[#c9a96e]" />
-                    Reception QR / Print
-                  </Link>
-                </div>
-              </div>
-            </motion.div>
-
             {demo?.enabled && (
               <motion.div variants={item}>
                 <button type="button" className="w-full h-[50px] rounded-2xl border border-white/12 bg-white/[.03] text-[#dfe5f0] font-semibold text-[14px] cursor-pointer hover:border-[#c9a96e]/60 hover:bg-white/[.06] transition-colors" disabled={busy} onClick={() => void signIn(demo.email, demo.password)}>Explore the demo workspace</button>

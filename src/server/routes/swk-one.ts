@@ -90,11 +90,18 @@ export default async function (app: FastifyInstance) {
   const handleOfficeCheckIn = async (req: any, reply: any) => {
     const b = body<any>(req)
     const clientIp = resolveClientIp(req)
-    const isScanLoginEndpoint = String(req.url || '').includes('scan-login-checkin')
+    const urlStr = String(req.url || '')
+    const isScanLoginEndpoint = urlStr.includes('scan-login-checkin') || urlStr.includes('qr-checkin')
     const res = tx(() =>
       officeQrCheckIn(
         {
-          qr_code_or_token: b.qr_code_or_token || b.qr_token || b.short_code || b.stand_code || b.lifelong_code,
+          qr_code_or_token:
+            b.qr_code_or_token ||
+            b.qr_token ||
+            b.short_code ||
+            b.stand_code ||
+            b.lifelong_code ||
+            (isScanLoginEndpoint ? 'SWK-RECEPTION-STAND-DXB-1' : ''),
           device_id: b.device_id,
           device_name: b.device_name,
           network_ssid: b.network_ssid || b.wifi_ssid || b.network_type,
@@ -137,6 +144,7 @@ export default async function (app: FastifyInstance) {
   app.post('/api/swk-one/attendance/qr-check-in', handleOfficeCheckIn)
   app.post('/api/public/reception-qr/check-in', handleOfficeCheckIn)
   app.post('/api/public/reception-qr/scan-login-checkin', handleOfficeCheckIn)
+  app.post('/api/public/qr-checkin', handleOfficeCheckIn)
 
   const handleOfficeCheckOut = async (req: any) => {
     const b = (req.body ?? {}) as any

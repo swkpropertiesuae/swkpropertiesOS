@@ -58,6 +58,8 @@ export default function App() {
   const defaultLanding = isNativeAndroid() ? '/swk-one' : '/home'
   if (loc.pathname.startsWith('/t/')) return <Routes><Route path="/t/:token" element={<PublicTrack />} /></Routes>
   const isStandaloneReceptionQr =
+    loc.pathname === '/qr-checkin' ||
+    loc.pathname.startsWith('/qr-checkin/') ||
     loc.pathname === '/reception-qr' ||
     loc.pathname.startsWith('/reception-qr/') ||
     loc.pathname === '/swk/reception-qr' ||

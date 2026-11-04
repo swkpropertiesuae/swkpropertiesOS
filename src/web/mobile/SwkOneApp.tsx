@@ -33,7 +33,6 @@ import {
 } from './native-bridge'
 import {
   BiometricLockModal,
-  ReceptionQrScannerModal,
   PropertyComparisonModal,
   OfflineAndApkModal,
 } from './SwkOneModals'
@@ -827,15 +826,6 @@ export default function SwkOneApp() {
                 <Sparkles size={13} className="text-[#c9a96e]" /> SWK AI
               </motion.button>
               <motion.button
-                whileHover={{ y: -1 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setQrModalOpen(true)}
-                className="px-3 py-1.5 rounded-full text-[#0b1a33] font-bold text-xs border-0 cursor-pointer flex items-center gap-1.5 shadow-md"
-                style={{ background: 'linear-gradient(135deg, #f1e3c2 0%, #c9a96e 100%)' }}
-              >
-                <QrCode size={13} /> Check-In
-              </motion.button>
-              <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={() => void loadBootstrap()}
                 className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-[#f3ead8] border border-white/15 cursor-pointer"
@@ -1356,14 +1346,6 @@ export default function SwkOneApp() {
                       </p>
                     </div>
                     <div className="flex gap-1.5 shrink-0">
-                      <motion.button
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => setQrModalOpen(true)}
-                        className="px-3 py-1.5 rounded-full text-white text-xs font-bold border-0 cursor-pointer shadow-xs"
-                        style={{ background: 'linear-gradient(135deg, #1b3a6b, #0b1a33)' }}
-                      >
-                        Scan Office QR
-                      </motion.button>
                       <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => setActiveTab('duty')}
@@ -1945,14 +1927,6 @@ export default function SwkOneApp() {
           device={device}
           userName={data?.user?.name || 'SWK Agent'}
           onUnlock={async () => setBiometricLocked(false)}
-        />
-
-        <ReceptionQrScannerModal
-          open={qrModalOpen}
-          onClose={() => setQrModalOpen(false)}
-          receptionQrPreview={data?.reception_qr}
-          device={device}
-          onScanSubmit={handleOfficeScanSubmit}
         />
 
         <PropertyComparisonModal

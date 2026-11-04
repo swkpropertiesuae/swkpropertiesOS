@@ -753,14 +753,15 @@ export function resolveStandaloneEmployee(
 function parseReceptionQrInput(rawInput: string) {
   const trimmed = String(rawInput || '').trim()
   if (!trimmed) return ''
+  if (/^SWK-OFFICE-PRINTED-QR$/i.test(trimmed)) return 'SWK-RECEPTION-STAND-DXB-1'
   try {
     if (trimmed.startsWith('{')) {
       const obj = JSON.parse(trimmed)
       return String(obj.token || obj.short_code || obj.stand_code || trimmed)
     }
-    if (/^https?:\/\//i.test(trimmed) || trimmed.includes('/reception-qr')) {
+    if (/^https?:\/\//i.test(trimmed) || trimmed.includes('/reception-qr') || trimmed.includes('/qr-checkin')) {
       const u = new URL(trimmed, 'https://os.swkpropertiesuae.com')
-      return String(u.searchParams.get('token') || u.searchParams.get('stand') || u.searchParams.get('code') || trimmed)
+      return String(u.searchParams.get('token') || u.searchParams.get('stand') || u.searchParams.get('code') || 'SWK-RECEPTION-STAND-DXB-1')
     }
   } catch { /* plain string */ }
   return trimmed
