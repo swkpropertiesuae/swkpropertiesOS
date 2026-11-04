@@ -10,11 +10,15 @@ import { syncStudioLibrary } from '../studio/library'
 import { hashPassword } from '../auth'
 import { SWK_STAFF_ACCOUNTS, RESTRICTED_STAFF_PERMISSIONS } from '../../shared/swk-staff-access'
 
-const done = (g: string) => !!q.val(`SELECT 1 FROM settings WHERE key = ?`, `seed:${g}`)
-const mark = (g: string) => q.run(`INSERT INTO settings(key, value, updated_at) VALUES (?, '1', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`, `seed:${g}`, nowIso())
 const idOf = (table: string, col: string, val: string) => q.val<number>(`SELECT id FROM ${table} WHERE ${col} = ? AND deleted_at IS NULL`, val)
 
 export async function seedReference(opts: { users?: boolean; demo?: boolean } = {}) {
+  const seededSet = new Set(q.all<{ key: string }>(`SELECT key FROM settings WHERE key LIKE 'seed:%'`).map(r => r.key))
+  const done = (g: string) => seededSet.has(`seed:${g}`)
+  const mark = (g: string) => {
+    seededSet.add(`seed:${g}`)
+    q.run(`INSERT INTO settings(key, value, updated_at) VALUES (?, '1', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`, `seed:${g}`, nowIso())
+  }
   const withUsers = opts.users !== false
   const mk = (key: string, payload: Record<string, any>) => createRecord(getDef(key), payload, SYSTEM_CTX)
 
@@ -375,10 +379,14 @@ export async function seedReference(opts: { users?: boolean; demo?: boolean } = 
     }
     mark('market_pulse_swk_v2')
   }
-  if (withUsers && !opts.demo) {
+  if (withUsers && !opts.demo && !done('swk_staff_accounts_v2')) {
     ensureHardcodedSwkStaffAccounts()
+    mark('swk_staff_accounts_v2')
   }
-  syncStudioLibrary()
+  if (!done('studio_library_v2')) {
+    syncStudioLibrary()
+    mark('studio_library_v2')
+  }
 }
 
 /**

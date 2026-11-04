@@ -16,9 +16,10 @@ import { businessSnapshot } from '../integrations/snapshot'
 const MAX_STEPS = 8
 
 export function ensureAgents() {
+  const haveRoles = new Set(q.all<{ role_key: string }>(`SELECT role_key FROM ai_agents WHERE deleted_at IS NULL AND role_key IS NOT NULL`).map(r => r.role_key))
+  const seeded = new Set(q.all<{ key: string }>(`SELECT key FROM settings WHERE key LIKE 'seed:agent:%'`).map(r => r.key))
   for (const t of AGENT_TEMPLATES) {
-    if (q.get(`SELECT id FROM ai_agents WHERE role_key = ? AND deleted_at IS NULL`, t.key)) continue
-    if (q.val(`SELECT 1 FROM settings WHERE key = ?`, `seed:agent:${t.key}`)) continue
+    if (haveRoles.has(t.key) || seeded.has(`seed:agent:${t.key}`)) continue
     createRecord(getDef('ai_agents'), { name: t.name, title: t.title, avatar: t.avatar, instructions: t.instructions, autonomy: t.autonomy, schedule: t.schedule, run_hour: t.run_hour, deliver_to: t.deliver_to, tools: t.tools, active: false, role_key: t.key }, SYSTEM_CTX)
     q.run(`INSERT INTO settings(key, value, updated_at) VALUES (?, '1', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`, `seed:agent:${t.key}`, nowIso())
   }

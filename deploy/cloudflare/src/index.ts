@@ -15,13 +15,12 @@ interface Env {
   RELEASE_SHA?: string
 }
 
-const INSTANCE = 'main' // one instance only – the app holds a single database connection and runs its own scheduler
-const DEFAULT_RELEASE = '2026-11-04-reception-qr-v1'
+const DEFAULT_RELEASE = '2026-11-04-os-v2'
 
 export class SwkOs extends Container<Env> {
   defaultPort = 8080
-  // Idle containers sleep; the cron trigger below keeps this one awake, so it is effectively always on.
-  sleepAfter = '1h'
+  // Idle containers sleep; the cron trigger below keeps the active release awake.
+  sleepAfter = '15m'
   enableInternet = true // needs outbound access to Supabase, e-mail, WhatsApp, etc.
 
   constructor(ctx: DurableObjectState, env: Env) {
@@ -43,33 +42,18 @@ export class SwkOs extends Container<Env> {
       ...(env.PUBLIC_URL ? { PUBLIC_URL: env.PUBLIC_URL } : {}),
     }
   }
-
-  async ensureReleaseRunning(releaseId: string): Promise<void> {
-    const runningRelease = await this.ctx.storage.get<string>('running_release_id')
-    if (runningRelease !== releaseId) {
-      await this.ctx.storage.put('running_release_id', releaseId)
-      try {
-        await this.destroy()
-      } catch {
-        // ignore if already stopped
-      }
-      await new Promise(r => setTimeout(r, 2500))
-      await this.startAndWaitForPorts({ ports: 8080, cancellationOptions: { portReadyTimeoutMS: 240_000 } })
-      return
-    }
-    const state = await this.getState()
-    if (state.status !== 'healthy') {
-      await this.startAndWaitForPorts({ ports: 8080, cancellationOptions: { portReadyTimeoutMS: 240_000 } })
-    }
-  }
 }
 
-/** Start the container if it is not up (or roll it over when a new release image is deployed). */
+/** Start the container for the current release if it is not up. */
 async function ensureRunning(env: Env) {
   const missing = ['DATABASE_URL', 'APP_SECRET', 'ADMIN_PASSWORD', 'MANAGER_PASSWORD'].filter(k => !(env as unknown as Record<string, string | undefined>)[k])
   if (missing.length) throw new Error(`Missing secret(s): ${missing.join(', ')}. Set them with "npx wrangler secret put <NAME>".`)
-  const c = getContainer(env.SWK_OS, INSTANCE)
-  await c.ensureReleaseRunning(env.RELEASE_SHA || DEFAULT_RELEASE)
+  const releaseKey = (env.RELEASE_SHA || DEFAULT_RELEASE).slice(0, 12)
+  const c = getContainer(env.SWK_OS, `swk-${releaseKey}`)
+  const state = await c.getState()
+  if (state.status !== 'healthy') {
+    await c.startAndWaitForPorts({ ports: 8080, cancellationOptions: { portReadyTimeoutMS: 240_000 } })
+  }
   return c
 }
 

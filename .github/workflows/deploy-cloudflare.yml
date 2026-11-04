@@ -21,7 +21,7 @@ on:
 # One deploy at a time; never cancel one that is already running.
 concurrency:
   group: deploy-cloudflare
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: read
