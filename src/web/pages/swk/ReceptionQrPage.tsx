@@ -329,9 +329,9 @@ export default function ReceptionQrPage() {
 
           <div className="relative z-10 flex items-center gap-4 min-w-0">
             <img
-              src={SWK_BRAND.logoWhite}
-              alt="SWK Properties"
-              className="h-13 w-auto shrink-0 hidden sm:block"
+              src={SWK_BRAND.fullLogoDark}
+              alt="SWK Properties OS"
+              className="h-16 w-auto shrink-0 hidden sm:block object-contain"
             />
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-2">
@@ -385,6 +385,11 @@ export default function ReceptionQrPage() {
 
         {/* Printable Reception Stand Placard (Visible When Printing A4 Stand for When Office Screens Are Off) */}
         <div className="hidden print:block p-8 rounded-3xl border-2 border-[#0b1a33] bg-white text-center space-y-5">
+          <img
+            src={SWK_BRAND.fullLogoLight}
+            alt="SWK Properties OS"
+            className="h-24 w-auto mx-auto object-contain"
+          />
           <div className="text-xs font-bold uppercase tracking-[0.2em] text-[#9a7a42]">
             SWK Properties L.L.C. · Dubai Head Office Reception
           </div>

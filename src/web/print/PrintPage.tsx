@@ -18,7 +18,10 @@ export function Letterhead() {
   const s = S()
   return (
     <div className="flex items-start justify-between gap-6 pb-3 mb-4" style={{ borderBottom: '3px solid #0b1a33' }}>
-      <img src="/brand/swk-logo-ink.png" alt={s.company_name} style={{ height: 52 }} />
+      <div className="flex items-center gap-2.5">
+        <img src="/brand/swk-mark-light.png" alt="" style={{ height: 48, width: 48, objectFit: 'contain' }} />
+        <img src="/brand/swk-logo-ink.png" alt={s.company_name} style={{ height: 40, width: 'auto', objectFit: 'contain' }} />
+      </div>
       <div style={{ textAlign: 'right', fontSize: 10.5, lineHeight: 1.45 }}><b style={{ fontSize: 12.5 }}>{s.company_name}</b><div style={{ whiteSpace: 'pre-line' }}>{s.company_address}</div>{s.company_phone && <div>Tel {s.company_phone}</div>}<div>{s.company_email}{s.company_info_email && s.company_info_email !== s.company_email ? ` · ${s.company_info_email}` : ''}{s.company_website ? ` · ${String(s.company_website).replace(/^https?:\/\//, '')}` : ''}</div></div>
     </div>
   )

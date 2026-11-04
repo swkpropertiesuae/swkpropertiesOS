@@ -53,6 +53,8 @@ export class SwkOs extends Container<Env> {
       } catch {
         // ignore if already stopped
       }
+      await new Promise(r => setTimeout(r, 2500))
+      await this.startAndWaitForPorts({ ports: 8080, cancellationOptions: { portReadyTimeoutMS: 240_000 } })
       return
     }
     const state = await this.getState()

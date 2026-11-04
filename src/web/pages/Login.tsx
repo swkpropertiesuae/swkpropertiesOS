@@ -217,7 +217,7 @@ export function Login() {
 
       {/* ---------------------------------------------------------------- hero side: studio brand showcase */}
       <section className="swk-login-hero" aria-hidden>
-        <motion.div className="swk-login-hero-img" style={{ backgroundImage: 'url(/brand/swk-signage-logo.png)', backgroundPosition: 'center center', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundColor: '#FFFFFF' }}
+        <motion.div className="swk-login-hero-img" style={{ backgroundImage: 'url(/brand/swk-signage-logo.png)', backgroundPosition: 'center center', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundColor: '#000000' }}
           initial={{ opacity: 0, scale: 1.03 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.9, ease }}>
         </motion.div>
         <div className="swk-login-hero-shade" />
@@ -237,7 +237,7 @@ export function Login() {
             <div className="font-display text-white text-[34px] xl:text-[40px] leading-[1.08] font-semibold max-w-[540px] mb-5">Every listing, viewing, lease and transfer — <span className="text-[#dcc8a2]">in one workspace.</span></div>
             <MarketMoments />
           </motion.div>
-          <motion.div className="hidden xl:block w-[180px] h-[180px] rounded-2xl overflow-hidden border border-white/20 shadow-2xl flex-none bg-white p-2" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.65, duration: 0.6, ease }}>
+          <motion.div className="hidden xl:block w-[180px] h-[180px] rounded-2xl overflow-hidden border border-[#c9a96e]/35 shadow-2xl flex-none bg-black p-2" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.65, duration: 0.6, ease }}>
             <img src="/brand/swk-signage-icon.png" alt="" className="w-full h-full object-contain" />
           </motion.div>
         </div>

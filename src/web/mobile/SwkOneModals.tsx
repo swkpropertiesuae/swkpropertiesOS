@@ -62,7 +62,7 @@ export function BiometricLockModal({
             transition={{ duration: 0.35, ease: EASE }}
             className="relative z-10 w-full max-w-sm rounded-3xl bg-[#0f1f3d]/90 border border-[#c9a96e]/40 p-6 text-center space-y-5 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.85)]"
           >
-            <img src={SWK_BRAND.logoWhite} alt="SWK Properties" className="h-9 w-auto mx-auto" />
+            <img src={SWK_BRAND.fullLogoDark} alt="SWK Properties OS" className="h-16 w-auto mx-auto object-contain" />
 
             <div className="relative w-18 h-18 rounded-2xl bg-[#c9a96e]/15 border border-[#c9a96e] mx-auto grid place-items-center text-[#f3ead8]">
               {scanning && (
@@ -232,7 +232,7 @@ export function ReceptionQrScannerModal({
                 className="absolute bottom-0 left-0 right-0 w-full h-10 object-cover opacity-15 pointer-events-none"
               />
               <div className="relative z-10 flex items-center gap-3">
-                <img src={SWK_BRAND.logoWhite} alt="SWK" className="h-7 w-auto" />
+                <img src={SWK_BRAND.mark} alt="SWK" className="h-8 w-8 object-contain" />
                 <div>
                   <div className="font-bold font-display text-sm text-white">Office Reception QR Scanner</div>
                   <div className="text-[11px] text-[#dcc8a2]">

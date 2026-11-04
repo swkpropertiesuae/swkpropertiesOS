@@ -648,7 +648,8 @@ export default function SwkOneApp() {
           className="relative z-10 w-full max-w-[468px] mb-3 px-4 py-2.5 rounded-2xl bg-[#0f1f3d]/85 backdrop-blur-xl border border-white/15 text-white flex items-center justify-between text-xs shadow-xl"
         >
           <div className="flex items-center gap-2.5">
-            <img src={SWK_BRAND.logoWhite} alt="SWK Properties" className="h-6 w-auto" />
+            <img src={SWK_BRAND.mark} alt="" className="h-7 w-7 object-contain" />
+            <img src={SWK_BRAND.logoWhite} alt="SWK Properties" className="h-5 w-auto object-contain" />
             <div className="h-4 w-px bg-white/20" />
             <div>
               <div className="font-bold font-display text-[12px] tracking-tight text-white flex items-center gap-1.5">
@@ -783,12 +784,17 @@ export default function SwkOneApp() {
               <motion.div
                 whileHover={{ scale: 1.04 }}
                 whileTap={{ scale: 0.96 }}
-                className="px-2.5 py-1.5 rounded-2xl bg-white/[0.08] backdrop-blur-md border border-[#c9a96e]/40 shadow-md flex items-center justify-center shrink-0"
+                className="px-2.5 py-1.5 rounded-2xl bg-black/55 backdrop-blur-md border border-[#c9a96e]/40 shadow-md flex items-center gap-1.5 justify-center shrink-0"
               >
+                <img
+                  src={SWK_BRAND.mark}
+                  alt=""
+                  className="h-7 w-7 object-contain"
+                />
                 <img
                   src={SWK_BRAND.logoWhite}
                   alt="SWK Properties"
-                  className="h-8 w-auto object-contain"
+                  className="h-6 w-auto object-contain"
                 />
               </motion.div>
               <div className="min-w-0">

@@ -1,22 +1,13 @@
 /**
- * SWK Properties Brand Asset Pipeline for SWK OS & SWK ONE.
+ * SWK Properties Matte Gold Brand Asset Pipeline for SWK OS & SWK ONE.
  *
- * Uses the official studio brand renders in assets-src/:
- *   - SWK_Studio_Logo_UAE.jpg            Studio master: 3D Metallic Gold + UAE Monogram, connected SWK, UAE PRO PER TIES & tagline
- *   - SWK_Studio_Logo_Gold.jpg           Studio master: Pure 3D Brushed Metallic Gold Monogram, connected SWK, Gold PROPERTIES & tagline
- *   - SWK_favicon.ico                    Multi-size favicon
+ * Uses the official Matte Gold brand package in assets-src/Matte_gold/:
+ *   - black/                  Solid black (#000000) background variants (Emblem_only, Favicons_Emblem_only, Favicons_SWK_only, Full_logo, SWK_only)
+ *   - white/                  Solid white (#FFFFFF) background variants
+ *   - transparent_for_black/  Transparent background variants optimized for dark/charcoal/midnight surfaces
+ *   - transparent_for_white/  Transparent background variants optimized for light/ivory/white surfaces & print
  *
- * Generates:
- *   - public/brand/swk-logo-ink.png      Transparent SWK Properties wordmark (UAE PRO PER TIES, for light headers & print)
- *   - public/brand/swk-logo-dark.png     Transparent SWK Properties wordmark (UAE PRO PER TIES, for light surfaces)
- *   - public/brand/swk-logo-white.png    Transparent SWK Properties wordmark (Pure Metallic Gold, for charcoal & dark surfaces)
- *   - public/brand/swk-logo.png          Master transparent wordmark
- *   - public/brand/swk-mark.png          512x512 Architectural Tower Monogram (with padding)
- *   - public/brand/swk-signage-logo.png  Full Studio Lockup (UAE colours + Brushed Metallic Gold + "From arrival to address.")
- *   - public/brand/swk-signage-icon.png  Full Studio Lockup (Pure Brushed Metallic Gold + "From arrival to address.")
- *   - public/favicon/favicon-<n>.png     16..512 favicons with entire architectural mark visible & sufficient padding
- *   - public/favicon/apple-touch-icon.png, favicon.ico, favicon.svg
- *   - public/app-icon-192.png / 512.png  PWA & Android icons
+ * Updates all web, PWA, favicon, OpenGraph, brand library, and Android native launcher/adaptive/splash assets.
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -24,17 +15,12 @@ import { createRequire } from 'node:module'
 
 const require = createRequire(import.meta.url)
 const { PNG } = require('pngjs')
-const { chromium } = require('playwright-core')
 
 const root = path.resolve(import.meta.dirname, '..')
-const brandDir = path.join(root, 'public', 'brand')
-const favDir = path.join(root, 'public', 'favicon')
-const srcUaeJpg = path.join(root, 'assets-src', 'SWK_Studio_Logo_UAE.jpg')
-const srcGoldJpg = path.join(root, 'assets-src', 'SWK_Studio_Logo_Gold.jpg')
-const srcIco = path.join(root, 'assets-src', 'SWK_favicon.ico')
-
-fs.mkdirSync(brandDir, { recursive: true })
-fs.mkdirSync(favDir, { recursive: true })
+const matteDir = path.join(root, 'assets-src', 'Matte_gold')
+const pubDir = path.join(root, 'public')
+const brandDir = path.join(pubDir, 'brand')
+const favDir = path.join(pubDir, 'favicon')
 
 const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v)
 
@@ -95,29 +81,29 @@ function resizeSmooth(src, w, h) {
   return out
 }
 
-/** Compose the Architectural Tower Monogram onto a square canvas with sufficient padding so the entire mark is visible. */
-function renderMonogramTile(monogramSrc, size, bg = null, ratio = 0.86) {
-  const img = new PNG({ width: size, height: size })
+/** Compose a source PNG onto a w x h canvas with optional solid background and fit ratio. */
+function composeOnCanvas(src, w, h, bg = null, ratio = 0.78) {
+  const img = new PNG({ width: w, height: h })
   if (bg) {
-    for (let y = 0; y < size; y++) {
-      for (let x = 0; x < size; x++) {
-        const di = (y * size + x) * 4
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const di = (y * w + x) * 4
         img.data[di] = bg[0]; img.data[di + 1] = bg[1]; img.data[di + 2] = bg[2]; img.data[di + 3] = 255
       }
     }
   }
-  const scale = Math.min((size * ratio) / monogramSrc.width, (size * ratio) / monogramSrc.height)
-  const mw = Math.max(8, Math.round(monogramSrc.width * scale))
-  const mh = Math.max(8, Math.round(monogramSrc.height * scale))
-  const mark = resizeSmooth(monogramSrc, mw, mh)
-  const ox = Math.round((size - mark.width) / 2)
-  const oy = Math.round((size - mark.height) / 2)
+  const scale = Math.min((w * ratio) / src.width, (h * ratio) / src.height)
+  const mw = Math.max(8, Math.round(src.width * scale))
+  const mh = Math.max(8, Math.round(src.height * scale))
+  const mark = resizeSmooth(src, mw, mh)
+  const ox = Math.round((w - mark.width) / 2)
+  const oy = Math.round((h - mark.height) / 2)
   for (let y = 0; y < mark.height; y++) {
     for (let x = 0; x < mark.width; x++) {
       const si = (y * mark.width + x) * 4
       const a = mark.data[si + 3] / 255
       if (a <= 0) continue
-      const di = ((y + oy) * size + (x + ox)) * 4
+      const di = ((y + oy) * w + (x + ox)) * 4
       if (bg) {
         for (let c = 0; c < 3; c++) img.data[di + c] = Math.round(img.data[di + c] * (1 - a) + mark.data[si + c] * a)
         img.data[di + 3] = 255
@@ -129,260 +115,206 @@ function renderMonogramTile(monogramSrc, size, bg = null, ratio = 0.86) {
   return img
 }
 
-/**
- * Extract transparent PNG regions (monogram and wordmark) from a studio white-background JPG
- * using connected-component BFS on the solid metallic/ink pixels + 2px anti-aliased edge feathering.
- * This guarantees ZERO clipping of the K spire or W chevron and ZERO ambient drop-shadow halo.
- */
-async function extractStudioRegions(page, jpgPath, { yMonogramCentroidMax, yWordmarkEnd }) {
-  const b64 = fs.readFileSync(jpgPath).toString('base64')
-  const extracted = await page.evaluate(async ({ src, yMonogramCentroidMax, yWordmarkEnd }) => {
-    const img = new Image()
-    img.src = 'data:image/jpeg;base64,' + src
-    await img.decode()
-    const width = img.width
-    const height = img.height
-    const c = document.createElement('canvas')
-    c.width = width; c.height = height
-    const ctx = c.getContext('2d')
-    ctx.drawImage(img, 0, 0)
-    const raw = ctx.getImageData(0, 0, width, height).data
-
-    // 1. Classify core metallic/ink pixels vs neutral white/grey studio background & soft drop shadow
-    const isCore = new Uint8Array(width * height)
-    const alphaMap = new Float32Array(width * height)
-    for (let p = 0; p < width * height; p++) {
-      const i = p * 4
-      const r = raw[i], g = raw[i + 1], b = raw[i + 2]
-      const maxC = Math.max(r, g, b)
-      const minC = Math.min(r, g, b)
-      const sat = maxC - minC
-      const lum = r * 0.299 + g * 0.587 + b * 0.114
-      const darkness = 255 - lum
-
-      // Studio drop shadow is neutral grey (sat <= 12) and relatively light (lum > 185, darkness < 70).
-      // Gold metal has warm saturation (sat >= 16) or dark bronze bevel (darkness >= 68).
-      // UAE Red / Green have high saturation; Charcoal PER has high darkness (darkness >= 75).
-      const metalSignal = Math.max(
-        sat >= 14 ? sat * 2.1 + darkness * 0.45 : 0,
-        darkness >= 68 ? (darkness - 52) * 1.8 : 0
-      )
-      if (metalSignal >= 26) {
-        isCore[p] = 1
-      }
-      const edgeSignal = Math.max(
-        sat >= 10 ? (sat - 8) * 2.0 + darkness * 0.35 : 0,
-        darkness >= 54 ? (darkness - 48) * 1.65 : 0
-      )
-      alphaMap[p] = Math.min(1, Math.max(0, (edgeSignal - 6) / 28))
+function makeWhiteSilhouette(src, w, h, ratio = 0.72) {
+  const fitted = composeOnCanvas(src, w, h, null, ratio)
+  for (let i = 0; i < fitted.data.length; i += 4) {
+    const a = fitted.data[i + 3]
+    if (a > 0) {
+      fitted.data[i] = 255
+      fitted.data[i + 1] = 255
+      fitted.data[i + 2] = 255
+      fitted.data[i + 3] = Math.min(255, Math.round(a * 1.25))
     }
-
-    // 2. Connected components (8-connected BFS) on isCore pixels
-    //    Assign group: 1 = Monogram, 2 = Wordmark (SWK + PROPERTIES), 3 = Tagline
-    const compGroup = new Uint8Array(width * height)
-    const visited = new Uint8Array(width * height)
-    const queue = new Int32Array(width * height)
-
-    for (let p = 0; p < width * height; p++) {
-      if (!isCore[p] || visited[p]) continue
-      let head = 0, tail = 0
-      queue[tail++] = p
-      visited[p] = 1
-      let sumY = 0
-      while (head < tail) {
-        const cur = queue[head++]
-        const cy = Math.floor(cur / width)
-        const cx = cur - cy * width
-        sumY += cy
-        for (let dy = -1; dy <= 1; dy++) {
-          const ny = cy + dy
-          if (ny < 0 || ny >= height) continue
-          for (let dx = -1; dx <= 1; dx++) {
-            if (dx === 0 && dy === 0) continue
-            const nx = cx + dx
-            if (nx < 0 || nx >= width) continue
-            const np = ny * width + nx
-            if (isCore[np] && !visited[np]) {
-              visited[np] = 1
-              queue[tail++] = np
-            }
-          }
-        }
-      }
-      // Noise filter: ignore tiny specks < 12px
-      if (tail < 12) continue
-      const meanY = sumY / tail
-      const grp = meanY < yMonogramCentroidMax ? 1 : (meanY <= yWordmarkEnd ? 2 : 3)
-      for (let k = 0; k < tail; k++) {
-        compGroup[queue[k]] = grp
-      }
-    }
-
-    // 3. Dilate component group by 2px into anti-aliased edge pixels (where alphaMap > 0)
-    const finalGroup = new Uint8Array(compGroup)
-    for (let pass = 0; pass < 2; pass++) {
-      const prev = new Uint8Array(finalGroup)
-      for (let y = 1; y < height - 1; y++) {
-        for (let x = 1; x < width - 1; x++) {
-          const p = y * width + x
-          if (prev[p] !== 0 || alphaMap[p] <= 0.02) continue
-          // Inherit group from nearest 8-neighbor
-          for (let dy = -1; dy <= 1 && finalGroup[p] === 0; dy++) {
-            for (let dx = -1; dx <= 1; dx++) {
-              const ng = prev[(y + dy) * width + (x + dx)]
-              if (ng !== 0) {
-                finalGroup[p] = ng
-                break
-              }
-            }
-          }
-        }
-      }
-    }
-
-    // 4. Render a specific group (1 = Monogram, 2 = Wordmark) with color unmixing against white
-    const renderGroup = (targetGroup, pad = 12) => {
-      const outCanvas = document.createElement('canvas')
-      outCanvas.width = width; outCanvas.height = height
-      const outCtx = outCanvas.getContext('2d')
-      const outImg = outCtx.createImageData(width, height)
-      const dst = outImg.data
-
-      let minX = width, maxX = 0, minY = height, maxY = 0
-      for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-          const p = y * width + x
-          if (finalGroup[p] !== targetGroup) continue
-          const alpha = isCore[p] ? Math.max(0.92, alphaMap[p]) : alphaMap[p]
-          if (alpha <= 0.04) continue
-          const i = p * 4
-          const r = raw[i], g = raw[i + 1], b = raw[i + 2]
-          // Unmix white matte on semi-transparent anti-aliased edges
-          const ur = Math.max(0, Math.min(255, Math.round((r - 255 * (1 - alpha)) / Math.max(0.35, alpha))))
-          const ug = Math.max(0, Math.min(255, Math.round((g - 255 * (1 - alpha)) / Math.max(0.35, alpha))))
-          const ub = Math.max(0, Math.min(255, Math.round((b - 255 * (1 - alpha)) / Math.max(0.35, alpha))))
-          const ua = Math.round(alpha * 255)
-          dst[i] = ur; dst[i + 1] = ug; dst[i + 2] = ub; dst[i + 3] = ua
-          if (ua > 20) {
-            if (x < minX) minX = x
-            if (x > maxX) maxX = x
-            if (y < minY) minY = y
-            if (y > maxY) maxY = y
-          }
-        }
-      }
-      outCtx.putImageData(outImg, 0, 0)
-      const cx0 = Math.max(0, minX - pad)
-      const cy0 = Math.max(0, minY - pad)
-      const cw = Math.min(width - cx0, (maxX - minX + 1) + pad * 2)
-      const ch = Math.min(height - cy0, (maxY - minY + 1) + pad * 2)
-      const crop = document.createElement('canvas')
-      crop.width = cw; crop.height = ch
-      crop.getContext('2d').drawImage(outCanvas, cx0, cy0, cw, ch, 0, 0, cw, ch)
-      return crop.toDataURL('image/png').split(',')[1]
-    }
-
-    return {
-      monogramB64: renderGroup(1, 10),
-      wordmarkB64: renderGroup(2, 12),
-    }
-  }, { src: b64, yMonogramCentroidMax, yWordmarkEnd })
-
-  return {
-    monogram: PNG.sync.read(Buffer.from(extracted.monogramB64, 'base64')),
-    wordmark: PNG.sync.read(Buffer.from(extracted.wordmarkB64, 'base64')),
   }
+  return fitted
 }
 
-async function main() {
-  const chromeCandidates = [
-    process.env.CHROME_PATH,
-    'C:/Program Files/Google/Chrome/Application/chrome.exe',
-    'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-    '/usr/bin/google-chrome',
-    '/usr/bin/chromium',
-  ].filter(Boolean)
-  const executablePath = chromeCandidates.find(p => fs.existsSync(p))
-  if (!executablePath) throw new Error('No Chromium/Chrome binary found for brand extraction')
+function copyFile(srcRel, destAbs) {
+  const srcAbs = path.join(matteDir, srcRel)
+  fs.mkdirSync(path.dirname(destAbs), { recursive: true })
+  fs.copyFileSync(srcAbs, destAbs)
+}
 
-  const browser = await chromium.launch({ executablePath, headless: true, args: ['--no-sandbox'] })
-  const page = await browser.newPage()
+function main() {
+  if (!fs.existsSync(matteDir)) {
+    throw new Error(`Missing Matte_gold directory at ${matteDir}`)
+  }
 
-  // Extract from UAE Studio Master (1024x682) and Gold Studio Master (1024x1024)
-  const uae = await extractStudioRegions(page, srcUaeJpg, { yMonogramCentroidMax: 340, yWordmarkEnd: 615 })
-  const gold = await extractStudioRegions(page, srcGoldJpg, { yMonogramCentroidMax: 500, yWordmarkEnd: 896 })
-  await browser.close()
+  // 1. Primary /brand/* assets used throughout Web & Mobile UI
+  //    - swk-mark.png: 512x512 transparent Emblem (for sidebars, headers, badges, launcher)
+  copyFile('transparent_for_black/Favicons_Emblem_only/512x512.png', path.join(brandDir, 'swk-mark.png'))
+  copyFile('transparent_for_white/Favicons_Emblem_only/512x512.png', path.join(brandDir, 'swk-mark-light.png'))
+  copyFile('black/Favicons_Emblem_only/512x512.png', path.join(brandDir, 'swk-mark-black.png'))
 
-  // 1. Wordmarks:
-  //    - swk-logo-ink.png / swk-logo-dark.png: UAE-coloured PROPERTIES + Brushed Metallic Gold SWK (for light surfaces)
-  //    - swk-logo-white.png / swk-logo.png: Pure Brushed Metallic Gold SWK PROPERTIES (for dark/charcoal surfaces)
-  const uaeWordmarkBuf = PNG.sync.write(uae.wordmark)
-  const goldWordmarkBuf = PNG.sync.write(gold.wordmark)
-  fs.writeFileSync(path.join(brandDir, 'swk-logo-ink.png'), uaeWordmarkBuf)
-  fs.writeFileSync(path.join(brandDir, 'swk-logo-dark.png'), uaeWordmarkBuf)
-  fs.writeFileSync(path.join(brandDir, 'swk-logo-white.png'), goldWordmarkBuf)
-  fs.writeFileSync(path.join(brandDir, 'swk-logo.png'), goldWordmarkBuf)
+  //    - swk-logo-white.png: Transparent SWK wordmark for dark/charcoal/midnight surfaces
+  //    - swk-logo-ink.png / swk-logo-dark.png: Transparent SWK wordmark for light/ivory/white surfaces & print
+  //    - swk-logo.png: Full Matte Gold SWK OS Lockup (Emblem + SWK + OS)
+  copyFile('transparent_for_black/SWK_only/SWK_OS_SWK_only_1024px.png', path.join(brandDir, 'swk-logo-white.png'))
+  copyFile('transparent_for_white/SWK_only/SWK_OS_SWK_only_1024px.png', path.join(brandDir, 'swk-logo-ink.png'))
+  copyFile('transparent_for_white/SWK_only/SWK_OS_SWK_only_1024px.png', path.join(brandDir, 'swk-logo-dark.png'))
+  copyFile('transparent_for_black/Full_logo/SWK_OS_Full_logo_1024px.png', path.join(brandDir, 'swk-logo.png'))
+  copyFile('transparent_for_black/Full_logo/SWK_OS_Full_logo_1024px.png', path.join(brandDir, 'swk-full-logo-dark.png'))
+  copyFile('transparent_for_white/Full_logo/SWK_OS_Full_logo_1024px.png', path.join(brandDir, 'swk-full-logo-light.png'))
 
-  // 2. Architectural Tower Monogram (512x512 with generous padding)
-  const paddedMonogram512 = renderMonogramTile(uae.monogram, 512, null, 0.88)
-  fs.writeFileSync(path.join(brandDir, 'swk-mark.png'), PNG.sync.write(paddedMonogram512))
+  //    - swk-signage-logo.png & swk-signage-icon.png: Hero / Login / Reception Showcase lockups
+  copyFile('black/Full_logo/SWK_OS_Full_logo_2048px.png', path.join(brandDir, 'swk-signage-logo.png'))
+  copyFile('black/Emblem_only/SWK_OS_Emblem_only_1024px.png', path.join(brandDir, 'swk-signage-icon.png'))
 
-  // 3. Full Studio Lockups (for Welcome / Login showcase)
-  fs.writeFileSync(path.join(brandDir, 'swk-signage-logo.png'), fs.readFileSync(srcUaeJpg))
-  fs.writeFileSync(path.join(brandDir, 'swk-signage-icon.png'), fs.readFileSync(srcGoldJpg))
+  // 3. Root public/ icons, favicons & PWA icons
+  copyFile('transparent_for_black/Favicons_Emblem_only/favicon.ico', path.join(pubDir, 'favicon.ico'))
+  copyFile('transparent_for_black/Favicons_Emblem_only/32x32.png', path.join(pubDir, 'favicon-32.png'))
+  copyFile('black/Favicons_Emblem_only/180x180.png', path.join(pubDir, 'apple-touch-icon.png'))
+  copyFile('black/Favicons_Emblem_only/192x192.png', path.join(pubDir, 'app-icon-192.png'))
+  copyFile('black/Favicons_Emblem_only/512x512.png', path.join(pubDir, 'app-icon-512.png'))
+  copyFile('black/Favicons_Emblem_only/192x192.png', path.join(pubDir, 'icon-192.png'))
+  copyFile('black/Favicons_Emblem_only/512x512.png', path.join(pubDir, 'icon-512.png'))
+  copyFile('transparent_for_black/Full_logo/SWK_OS_Full_logo_1024px.png', path.join(pubDir, 'swk-logo.png'))
 
-  // 4. Favicons & App Icons (from the Architectural Tower Monogram)
-  const CHARCOAL_TILE = [32, 36, 33] // #202421
-  const favSizes = [16, 32, 48, 64, 128, 180, 192, 256, 512]
+  // 4. public/favicon/* (All sizes 16..512, apple-touch-icon, favicon.ico, favicon.svg)
+  const favSizes = [16, 32, 48, 64, 96, 128, 180, 192, 256, 512]
   for (const n of favSizes) {
-    const t = renderMonogramTile(uae.monogram, n, null, 0.86)
-    fs.writeFileSync(path.join(favDir, `favicon-${n}.png`), PNG.sync.write(t))
+    copyFile(`transparent_for_black/Favicons_Emblem_only/${n}x${n}.png`, path.join(favDir, `favicon-${n}.png`))
   }
-  const appleIcon = renderMonogramTile(uae.monogram, 180, CHARCOAL_TILE, 0.82)
-  const pwa192 = renderMonogramTile(uae.monogram, 192, CHARCOAL_TILE, 0.82)
-  const pwa512 = renderMonogramTile(uae.monogram, 512, CHARCOAL_TILE, 0.82)
-  fs.writeFileSync(path.join(favDir, 'apple-touch-icon.png'), PNG.sync.write(appleIcon))
-  fs.writeFileSync(path.join(root, 'public', 'app-icon-192.png'), PNG.sync.write(pwa192))
-  fs.writeFileSync(path.join(root, 'public', 'app-icon-512.png'), PNG.sync.write(pwa512))
+  copyFile('black/Favicons_Emblem_only/180x180.png', path.join(favDir, 'apple-touch-icon.png'))
+  copyFile('transparent_for_black/Favicons_Emblem_only/favicon.ico', path.join(favDir, 'favicon.ico'))
 
-  if (fs.existsSync(srcIco)) {
-    fs.copyFileSync(srcIco, path.join(favDir, 'favicon.ico'))
+  const b64Fav512 = fs.readFileSync(path.join(favDir, 'favicon-512.png')).toString('base64')
+  const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><image href="data:image/png;base64,${b64Fav512}" x="0" y="0" width="512" height="512"/></svg>`
+  fs.writeFileSync(path.join(favDir, 'favicon.svg'), svgContent)
+
+  // 5. public/brand/app-icons/* & public/brand/favicon/* & public/brand/icons/* & public/brand/masters/*
+  copyFile('black/Favicons_Emblem_only/192x192.png', path.join(brandDir, 'app-icons', 'android-chrome-192x192.png'))
+  copyFile('black/Favicons_Emblem_only/512x512.png', path.join(brandDir, 'app-icons', 'android-chrome-512x512.png'))
+  copyFile('black/Favicons_Emblem_only/192x192.png', path.join(brandDir, 'app-icons', 'maskable-192x192.png'))
+  copyFile('black/Favicons_Emblem_only/512x512.png', path.join(brandDir, 'app-icons', 'maskable-512x512.png'))
+  copyFile('black/Favicons_Emblem_only/180x180.png', path.join(brandDir, 'app-icons', 'apple-touch-icon.png'))
+
+  const emblemTransBlack1024 = PNG.sync.read(fs.readFileSync(path.join(matteDir, 'transparent_for_black/Emblem_only/SWK_OS_Emblem_only_1024px.png')))
+  const appStore1024 = composeOnCanvas(emblemTransBlack1024, 1024, 1024, [0, 0, 0], 0.84)
+  fs.writeFileSync(path.join(brandDir, 'app-icons', 'app-store-1024.png'), PNG.sync.write(appStore1024))
+
+  for (const n of [16, 32, 48, 64]) {
+    copyFile(`transparent_for_black/Favicons_Emblem_only/${n}x${n}.png`, path.join(brandDir, 'favicon', `favicon-dark-${n}.png`))
+    copyFile(`transparent_for_white/Favicons_Emblem_only/${n}x${n}.png`, path.join(brandDir, 'favicon', `favicon-light-${n}.png`))
   }
+  copyFile('transparent_for_black/Favicons_Emblem_only/favicon.ico', path.join(brandDir, 'favicon', 'favicon.ico'))
+  copyFile('transparent_for_black/Favicons_Emblem_only/favicon.ico', path.join(brandDir, 'favicon', 'favicon-dark.ico'))
+  copyFile('transparent_for_white/Favicons_Emblem_only/favicon.ico', path.join(brandDir, 'favicon', 'favicon-light.ico'))
 
-  const svgTile = (n) => Buffer.from(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n} ${n}">` +
-    `<image href="/favicon/favicon-512.png" x="${Math.round(n * 0.06)}" y="${Math.round(n * 0.06)}" width="${Math.round(n * 0.88)}" height="${Math.round(n * 0.88)}"/>` +
-    `</svg>`
-  )
-  fs.writeFileSync(path.join(favDir, 'favicon.svg'), svgTile(512))
+  for (const n of favSizes) {
+    copyFile(`transparent_for_black/Favicons_Emblem_only/${n}x${n}.png`, path.join(brandDir, 'icons', 'transparent', `swk-icon-${n}.png`))
+  }
+  copyFile('transparent_for_black/Emblem_only/SWK_OS_Emblem_only_1024px.png', path.join(brandDir, 'icons', 'transparent', 'swk-icon-1024.png'))
+  copyFile('transparent_for_black/Emblem_only/SWK_OS_Emblem_only_2048px.png', path.join(brandDir, 'icons', 'transparent', 'swk-icon-2048.png'))
 
-  // 5. Sync to Android res/drawable & res/mipmap-*
-  const resDir = path.join(root, 'android', 'app', 'src', 'main', 'res')
+  copyFile('transparent_for_white/Full_logo/SWK_OS_Full_logo_2048px.png', path.join(brandDir, 'masters', 'swk-primary.png'))
+  copyFile('transparent_for_white/Full_logo/SWK_OS_Full_logo_2048px.png', path.join(brandDir, 'masters', 'swk-primary-approved-original.png'))
+  copyFile('transparent_for_black/Full_logo/SWK_OS_Full_logo_2048px.png', path.join(brandDir, 'masters', 'swk-dark.png'))
+  copyFile('transparent_for_black/Full_logo/SWK_OS_Full_logo_2048px.png', path.join(brandDir, 'masters', 'swk-dark-companion-original.png'))
+  copyFile('transparent_for_black/Emblem_only/SWK_OS_Emblem_only_2048px.png', path.join(brandDir, 'masters', 'swk-icon.png'))
+  copyFile('transparent_for_black/Emblem_only/SWK_OS_Emblem_only_2048px.png', path.join(brandDir, 'masters', 'swk-icon-original.png'))
+  copyFile('white/Emblem_only/SWK_OS_Emblem_only_2048px.png', path.join(brandDir, 'masters', 'swk-icon-approved-white-reference.png'))
+  copyFile('transparent_for_black/SWK_only/SWK_OS_SWK_only_2048px.png', path.join(brandDir, 'masters', 'swk-wordmark.png'))
+
+  // 5b. public/brand/logos/*, wordmark/*, monochrome/*, tagline/*
+  for (const w of ['240', '320', '480', '640', '960', '1280', '1600', '4096-upscaled']) {
+    const srcSize = Number.parseInt(w, 10) <= 256 ? '256px' : Number.parseInt(w, 10) <= 512 ? '512px' : Number.parseInt(w, 10) <= 1024 ? '1024px' : '2048px'
+    copyFile(`transparent_for_black/Full_logo/SWK_OS_Full_logo_${srcSize}.png`, path.join(brandDir, 'logos', 'dark', `swk-properties-${w}.png`))
+    copyFile(`transparent_for_white/Full_logo/SWK_OS_Full_logo_${srcSize}.png`, path.join(brandDir, 'logos', 'light', `swk-properties-${w}.png`))
+  }
+  for (const w of ['320', '640', '1280', '1600']) {
+    const srcSize = Number.parseInt(w, 10) <= 512 ? '512px' : Number.parseInt(w, 10) <= 1024 ? '1024px' : '2048px'
+    copyFile(`transparent_for_black/SWK_only/SWK_OS_SWK_only_${srcSize}.png`, path.join(brandDir, 'wordmark', `swk-wordmark-${w}.png`))
+  }
+  copyFile('transparent_for_white/SWK_only/SWK_OS_SWK_only_1024px.png', path.join(brandDir, 'wordmark', 'swk-wordmark-black.png'))
+  copyFile('transparent_for_black/SWK_only/SWK_OS_SWK_only_1024px.png', path.join(brandDir, 'wordmark', 'swk-wordmark-flat-gold.png'))
+  copyFile('transparent_for_black/SWK_only/SWK_OS_SWK_only_1024px.png', path.join(brandDir, 'wordmark', 'swk-wordmark-white.png'))
+  copyFile('transparent_for_white/Full_logo/SWK_OS_Full_logo_1024px.png', path.join(brandDir, 'monochrome', 'swk-properties-black.png'))
+  copyFile('transparent_for_black/Full_logo/SWK_OS_Full_logo_1024px.png', path.join(brandDir, 'monochrome', 'swk-properties-flat-gold.png'))
+  copyFile('transparent_for_black/Full_logo/SWK_OS_Full_logo_1024px.png', path.join(brandDir, 'monochrome', 'swk-properties-white.png'))
+  copyFile('transparent_for_white/Emblem_only/SWK_OS_Emblem_only_512px.png', path.join(brandDir, 'icons', 'monochrome', 'swk-icon-black.png'))
+  copyFile('transparent_for_black/Emblem_only/SWK_OS_Emblem_only_512px.png', path.join(brandDir, 'icons', 'monochrome', 'swk-icon-flat-gold.png'))
+  copyFile('transparent_for_black/Emblem_only/SWK_OS_Emblem_only_512px.png', path.join(brandDir, 'icons', 'monochrome', 'swk-icon-white.png'))
+  copyFile('transparent_for_black/Full_logo/SWK_OS_Full_logo_2048px.png', path.join(brandDir, 'tagline', 'swk-with-tagline-dark.png'))
+  copyFile('transparent_for_white/Full_logo/SWK_OS_Full_logo_2048px.png', path.join(brandDir, 'tagline', 'swk-with-tagline-light.png'))
+
+  // 6. OpenGraph & Social Cards (1200x630 & 1080x1080)
+  const fullTransBlack1024 = PNG.sync.read(fs.readFileSync(path.join(matteDir, 'transparent_for_black/Full_logo/SWK_OS_Full_logo_1024px.png')))
+  const fullTransWhite1024 = PNG.sync.read(fs.readFileSync(path.join(matteDir, 'transparent_for_white/Full_logo/SWK_OS_Full_logo_1024px.png')))
+  const ogDark = composeOnCanvas(fullTransBlack1024, 1200, 630, [0, 0, 0], 0.78)
+  const ogLight = composeOnCanvas(fullTransWhite1024, 1200, 630, [255, 255, 255], 0.78)
+  const ogDarkBuf = PNG.sync.write(ogDark)
+  fs.writeFileSync(path.join(pubDir, 'og.png'), ogDarkBuf)
+  fs.writeFileSync(path.join(brandDir, 'social', 'social-card-charcoal-1200x630.png'), ogDarkBuf)
+  fs.writeFileSync(path.join(brandDir, 'social', 'social-card-pearl-1200x630.png'), PNG.sync.write(ogLight))
+  fs.writeFileSync(path.join(brandDir, 'social', 'avatar-charcoal-1080.png'), PNG.sync.write(composeOnCanvas(fullTransBlack1024, 1080, 1080, [0, 0, 0], 0.82)))
+  fs.writeFileSync(path.join(brandDir, 'social', 'avatar-pearl-1080.png'), PNG.sync.write(composeOnCanvas(fullTransWhite1024, 1080, 1080, [255, 255, 255], 0.82)))
+
+  // 7. assets-src root convenience copies
+  copyFile('transparent_for_black/Emblem_only/SWK_OS_Emblem_only_512px.png', path.join(root, 'assets-src', 'swk-logo.png'))
+  copyFile('transparent_for_black/Favicons_Emblem_only/favicon.ico', path.join(root, 'assets-src', 'SWK_favicon.ico'))
+  copyFile('transparent_for_black/Favicons_Emblem_only/512x512.png', path.join(root, 'assets-src', 'SWK_favicon_512.png'))
+  copyFile('transparent_for_black/Favicons_Emblem_only/512x512.png', path.join(root, 'assets-src', 'favicon.png'))
+
+  // 8. Android App Icons, Adaptive Foreground/Monochrome, Splash Icons & Drawables
+  const androidMain = path.join(root, 'android', 'app', 'src', 'main')
+  const resDir = path.join(androidMain, 'res')
   if (fs.existsSync(resDir)) {
-    const mipmapMap = [
-      { folder: 'mipmap-mdpi', size: 48 },
-      { folder: 'mipmap-hdpi', size: 128 },
-      { folder: 'mipmap-xhdpi', size: 192 },
-      { folder: 'mipmap-xxhdpi', size: 256 },
-      { folder: 'mipmap-xxxhdpi', size: 512 },
+    copyFile('black/Favicons_Emblem_only/512x512.png', path.join(androidMain, 'ic_launcher-playstore.png'))
+
+    const emblem512 = PNG.sync.read(fs.readFileSync(path.join(matteDir, 'transparent_for_black/Emblem_only/SWK_OS_Emblem_only_512px.png')))
+    const full512 = PNG.sync.read(fs.readFileSync(path.join(matteDir, 'transparent_for_black/Full_logo/SWK_OS_Full_logo_512px.png')))
+
+    const densities = [
+      { name: 'mdpi', scale: 1.0, launcherFile: 'black/Favicons_Emblem_only/48x48.png' },
+      { name: 'hdpi', scale: 1.5, launcherFile: 'black/Favicons_Emblem_only/128x128.png' },
+      { name: 'xhdpi', scale: 2.0, launcherFile: 'black/Favicons_Emblem_only/192x192.png' },
+      { name: 'xxhdpi', scale: 3.0, launcherFile: 'black/Favicons_Emblem_only/256x256.png' },
+      { name: 'xxxhdpi', scale: 4.0, launcherFile: 'black/Favicons_Emblem_only/512x512.png' },
     ]
-    for (const item of mipmapMap) {
-      const targetDir = path.join(resDir, item.folder)
-      fs.mkdirSync(targetDir, { recursive: true })
-      const launcherTile = PNG.sync.write(renderMonogramTile(uae.monogram, item.size, CHARCOAL_TILE, 0.82))
-      fs.writeFileSync(path.join(targetDir, 'ic_launcher.png'), launcherTile)
-      fs.writeFileSync(path.join(targetDir, 'ic_launcher_round.png'), launcherTile)
+
+    for (const d of densities) {
+      const mipDir = path.join(resDir, `mipmap-${d.name}`)
+      const drawDir = path.join(resDir, `drawable-${d.name}`)
+      fs.mkdirSync(mipDir, { recursive: true })
+      fs.mkdirSync(drawDir, { recursive: true })
+
+      // Legacy & round launcher icons (solid black background with Matte Gold Emblem)
+      copyFile(d.launcherFile, path.join(mipDir, 'ic_launcher.png'))
+      copyFile(d.launcherFile, path.join(mipDir, 'ic_launcher_round.png'))
+
+      // Adaptive icon foreground & monochrome (108dp canvas, emblem inside 66dp safe zone -> ratio 0.58)
+      const canvas = Math.round(108 * d.scale)
+      const fg = composeOnCanvas(emblem512, canvas, canvas, null, 0.58)
+      const mono = makeWhiteSilhouette(emblem512, canvas, canvas, 0.58)
+      fs.writeFileSync(path.join(mipDir, 'ic_launcher_foreground.png'), PNG.sync.write(fg))
+      fs.writeFileSync(path.join(mipDir, 'ic_launcher_monochrome.png'), PNG.sync.write(mono))
+
+      // Status-bar notification icon (24dp white silhouette)
+      const statSize = Math.round(24 * d.scale)
+      const statIcon = makeWhiteSilhouette(emblem512, statSize, statSize, 0.88)
+      fs.writeFileSync(path.join(drawDir, 'ic_stat_swk.png'), PNG.sync.write(statIcon))
+
+      // Android 12+ splash icon (288dp canvas with Full Matte Gold SWK OS Logo)
+      const splashSize = Math.round(288 * d.scale)
+      const splashIcon = composeOnCanvas(full512, splashSize, splashSize, null, 0.52)
+      fs.writeFileSync(path.join(drawDir, 'splash_icon.png'), PNG.sync.write(splashIcon))
     }
+
     const drawableDir = path.join(resDir, 'drawable')
     fs.mkdirSync(drawableDir, { recursive: true })
-    fs.copyFileSync(path.join(brandDir, 'swk-logo-white.png'), path.join(drawableDir, 'swk_logo_white.png'))
-    fs.copyFileSync(path.join(brandDir, 'swk-logo-ink.png'), path.join(drawableDir, 'swk_logo_ink.png'))
-    fs.copyFileSync(path.join(brandDir, 'swk-mark.png'), path.join(drawableDir, 'swk_logo.png'))
-    fs.copyFileSync(path.join(root, 'public', 'app-icon-512.png'), path.join(drawableDir, 'swk_app_icon.png'))
+    copyFile('black/Favicons_Emblem_only/512x512.png', path.join(drawableDir, 'swk_app_icon.png'))
+    copyFile('transparent_for_black/Favicons_Emblem_only/512x512.png', path.join(drawableDir, 'swk_logo.png'))
+    copyFile('transparent_for_black/SWK_only/SWK_OS_SWK_only_1024px.png', path.join(drawableDir, 'swk_logo_white.png'))
+    copyFile('transparent_for_white/SWK_only/SWK_OS_SWK_only_1024px.png', path.join(drawableDir, 'swk_logo_ink.png'))
+
+    const bgXmlPath = path.join(resDir, 'values', 'ic_launcher_background.xml')
+    if (fs.existsSync(path.dirname(bgXmlPath))) {
+      fs.writeFileSync(bgXmlPath, `<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">#000000</color>\n</resources>\n`)
+    }
   }
 
-  console.log('✓ Extracted official studio SWK Properties wordmarks, architectural monogram, and favicons:',
-    { uaeWordmark: `${uae.wordmark.width}x${uae.wordmark.height}`, goldWordmark: `${gold.wordmark.width}x${gold.wordmark.height}`, monogram: `${uae.monogram.width}x${uae.monogram.height}` })
+  console.log('✓ Synced Matte Gold SWK OS logos, emblems, favicons, PWA icons, OpenGraph cards, and Android icons.')
 }
 
-main().catch(e => { console.error(e); process.exit(1) })
+main()
