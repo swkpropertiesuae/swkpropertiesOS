@@ -187,10 +187,15 @@ export function isFullAccessSwkUser(
 }
 
 export function isRestrictedStaffUser(
-  user: { email?: string | null; role?: string | null; role_name?: string | null; name?: string | null } | null | undefined,
+  user: { email?: string | null; role?: string | null; role_name?: string | null; name?: string | null; party_id?: number | null } | null | undefined,
 ): boolean {
-  if (!user) return false
-  return !isFullAccessSwkUser(user)
+  if (!user || user.party_id) return false
+  const email = String(user.email || '').trim().toLowerCase()
+  const role = String(user.role_name || user.role || '').trim().toLowerCase()
+  if (RESTRICTED_STAFF_EMAILS.has(email)) return true
+  if (role === 'staff (attendance & general)') return true
+  if (email.endsWith('@swk.property') && !FULL_ACCESS_EMAILS.has(email)) return true
+  return false
 }
 
 export function isAllowedPathForRestrictedStaff(pathname: string): boolean {
@@ -200,6 +205,7 @@ export function isAllowedPathForRestrictedStaff(pathname: string): boolean {
     '/home',
     '/login',
     '/swk-one',
+    '/qr-checkin',
     '/reception-qr',
     '/swk/reception-qr',
     '/qr-reception',
