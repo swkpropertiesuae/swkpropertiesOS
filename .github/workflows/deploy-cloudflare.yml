@@ -52,7 +52,9 @@ jobs:
         run: npm run typecheck
       - name: Deploy (builds the image from ../../Dockerfile)
         working-directory: deploy/cloudflare
-        run: npx wrangler deploy --var RELEASE_SHA:${GITHUB_SHA}
+        run: |
+          node -e "const fs=require('fs');const f='wrangler.jsonc';fs.writeFileSync(f,fs.readFileSync(f,'utf8').replace('\"swkproperties-os-v4\"','\"os-' + process.env.GITHUB_SHA.slice(0,12) + '\"'));"
+          npx wrangler deploy --var RELEASE_SHA:${GITHUB_SHA} --var RELEASE_ID:os-${GITHUB_SHA:0:12}
       - name: Wait for the app and Standalone Reception QR to answer
         # The container cold-starts after a new image; allow up to 15 minutes.
         run: |

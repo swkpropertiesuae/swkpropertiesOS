@@ -9,7 +9,11 @@
     { "pattern": "os.swkpropertiesuae.com", "custom_domain": true },
     { "pattern": "ae.swkpropertiesuae.com", "custom_domain": true }
   ],
-  "vars": { "PUBLIC_URL": "https://os.swkpropertiesuae.com", "PG_SCHEMA": "swk" },
+  "vars": {
+    "PUBLIC_URL": "https://os.swkpropertiesuae.com",
+    "PG_SCHEMA": "swk",
+    "RELEASE_ID": "swkproperties-os-v4"
+  },
   "observability": { "enabled": true },
 
   // Wakes the app every 5 minutes so its own scheduler keeps running (reminders, e-mail outbox, nightly backup).

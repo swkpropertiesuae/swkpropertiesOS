@@ -13,9 +13,10 @@ interface Env {
   PG_SCHEMA?: string
   DEMO_ENABLED?: string
   RELEASE_SHA?: string
+  RELEASE_ID?: string
 }
 
-const DEFAULT_RELEASE = '2026-11-05-swkproperties-os-v3'
+const DEFAULT_RELEASE = 'swkproperties-os-v4'
 
 export class SwkOs extends Container<Env> {
   defaultPort = 8080
@@ -42,29 +43,50 @@ export class SwkOs extends Container<Env> {
       ...(env.PUBLIC_URL ? { PUBLIC_URL: env.PUBLIC_URL } : {}),
     }
   }
+
+  async ensureReleaseRunning(releaseId: string): Promise<void> {
+    const runningRelease = await this.ctx.storage.get<string>('running_release_id')
+    if (runningRelease && runningRelease !== releaseId) {
+      await this.ctx.storage.put('running_release_id', releaseId)
+      try {
+        await this.destroy()
+      } catch {
+        // ignore if already stopped
+      }
+      await new Promise(r => setTimeout(r, 2000))
+      await this.startAndWaitForPorts({ ports: 8080, cancellationOptions: { portReadyTimeoutMS: 240_000 } })
+      return
+    }
+    if (!runningRelease) {
+      await this.ctx.storage.put('running_release_id', releaseId)
+    }
+    const state = await this.getState()
+    if (state.status !== 'healthy') {
+      await this.startAndWaitForPorts({ ports: 8080, cancellationOptions: { portReadyTimeoutMS: 240_000 } })
+    }
+  }
 }
 
-let legacyMainCleaned = false
+let legacyCleaned = false
 
 /** Start the container for the current release if it is not up. */
 async function ensureRunning(env: Env) {
   const missing = ['DATABASE_URL', 'APP_SECRET', 'ADMIN_PASSWORD', 'MANAGER_PASSWORD'].filter(k => !(env as unknown as Record<string, string | undefined>)[k])
   if (missing.length) throw new Error(`Missing secret(s): ${missing.join(', ')}. Set them with "npx wrangler secret put <NAME>".`)
-  if (!legacyMainCleaned) {
-    legacyMainCleaned = true
-    try {
-      const legacy = getContainer(env.SWK_OS, 'main')
-      await legacy.destroy()
-    } catch {
-      // ignore if not running
+  if (!legacyCleaned) {
+    legacyCleaned = true
+    for (const staleId of ['main', 'swk-2026-11-05-s', 'swk-2026-11-04-o']) {
+      try {
+        await getContainer(env.SWK_OS, staleId).destroy()
+      } catch {
+        // ignore if not running
+      }
     }
   }
-  const releaseKey = (env.RELEASE_SHA || DEFAULT_RELEASE).slice(0, 12)
-  const c = getContainer(env.SWK_OS, `swk-${releaseKey}`)
-  const state = await c.getState()
-  if (state.status !== 'healthy') {
-    await c.startAndWaitForPorts({ ports: 8080, cancellationOptions: { portReadyTimeoutMS: 240_000 } })
-  }
+  const rawRelease = env.RELEASE_ID || env.RELEASE_SHA || DEFAULT_RELEASE
+  const releaseKey = rawRelease.slice(0, 24)
+  const c = getContainer(env.SWK_OS, `os-${releaseKey}`)
+  await c.ensureReleaseRunning(rawRelease)
   return c
 }
 
