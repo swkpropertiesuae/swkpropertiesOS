@@ -447,6 +447,7 @@ export function ensureHardcodedSwkStaffAccounts() {
           ? managerRoleId
           : staffRoleId
 
+    const initialRoleSeedDone = Boolean(q.val(`SELECT 1 FROM settings WHERE key = 'seed:swk_staff_roles_v3'`))
     let userId = q.val<number>(`SELECT id FROM users WHERE lower(email) = ? AND deleted_at IS NULL LIMIT 1`, acc.email.toLowerCase())
     const pwHash = hashPassword(acc.password)
 
@@ -469,7 +470,7 @@ export function ensureHardcodedSwkStaffAccounts() {
         targetRoleId,
         userId,
       )
-    } else {
+    } else if (!initialRoleSeedDone || acc.fullAccess) {
       q.run(
         `UPDATE users SET name = ?, password_hash = ?, role_id = ?, department_id = ?, designation = ?, active = 1, must_change_password = 0, failed_logins = 0, locked_until = NULL, updated_at = ? WHERE id = ?`,
         acc.name,
@@ -480,17 +481,37 @@ export function ensureHardcodedSwkStaffAccounts() {
         nowIso(),
         userId,
       )
+    } else {
+      q.run(
+        `UPDATE users SET name = ?, password_hash = ?, role_id = COALESCE(role_id, ?), department_id = ?, designation = ?, active = 1, must_change_password = 0, failed_logins = 0, locked_until = NULL, updated_at = ? WHERE id = ?`,
+        acc.name,
+        pwHash,
+        targetRoleId,
+        dept(acc.departmentCode),
+        acc.designation,
+        nowIso(),
+        userId,
+      )
     }
 
-    // If this staff account is restricted (e.g., Talha), also restrict any legacy alias account (talha@swkpropertiesuae.com)
+    // If this staff account is restricted (e.g., Talha), also restrict any legacy alias account (talha@swkpropertiesuae.com) on initial seed
     if (!acc.fullAccess) {
       for (const alias of acc.aliases) {
-        q.run(
-          `UPDATE users SET role_id = ?, password_hash = ?, must_change_password = 0, active = 1, failed_logins = 0, locked_until = NULL WHERE lower(email) = ? AND deleted_at IS NULL`,
-          staffRoleId,
-          pwHash,
-          alias.toLowerCase(),
-        )
+        if (!initialRoleSeedDone) {
+          q.run(
+            `UPDATE users SET role_id = ?, password_hash = ?, must_change_password = 0, active = 1, failed_logins = 0, locked_until = NULL WHERE lower(email) = ? AND deleted_at IS NULL`,
+            staffRoleId,
+            pwHash,
+            alias.toLowerCase(),
+          )
+        } else {
+          q.run(
+            `UPDATE users SET role_id = COALESCE(role_id, ?), password_hash = ?, must_change_password = 0, active = 1, failed_logins = 0, locked_until = NULL WHERE lower(email) = ? AND deleted_at IS NULL`,
+            staffRoleId,
+            pwHash,
+            alias.toLowerCase(),
+          )
+        }
       }
     }
 
@@ -532,4 +553,8 @@ export function ensureHardcodedSwkStaffAccounts() {
       )
     }
   }
+  q.run(
+    `INSERT INTO settings(key, value, updated_at) VALUES ('seed:swk_staff_roles_v3', '1', ?) ON CONFLICT(key) DO UPDATE SET value = '1', updated_at = excluded.updated_at`,
+    nowIso(),
+  )
 }

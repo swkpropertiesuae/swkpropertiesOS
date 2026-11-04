@@ -1,4 +1,5 @@
 import { documentNotice, documentRecipient, useDocumentSeal } from '@shared/document-presentation'
+import { SWK_OFFICIAL_WEBSITES_TEXT, normalizeSwkCompanyName } from '@shared/corporate-footer'
 import { CorporateFooter } from '../components/CorporateFooter'
 import { DocumentPrinter } from '../components/ui/document-printer'
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
@@ -16,13 +17,30 @@ import { StudioDoc } from '../pages/StudioPage'
 const S = () => useMeta().meta!.settings
 export function Letterhead() {
   const s = S()
+  const companyName = normalizeSwkCompanyName(s.company_name)
   return (
-    <div className="flex items-start justify-between gap-6 pb-3 mb-4" style={{ borderBottom: '3px solid #0b1a33' }}>
-      <div className="flex items-center gap-2.5">
-        <img src="/brand/swk-mark-light.png" alt="" style={{ height: 48, width: 48, objectFit: 'contain' }} />
-        <img src="/brand/swk-logo-ink.png" alt={s.company_name} style={{ height: 40, width: 'auto', objectFit: 'contain' }} />
+    <div className="flex items-start justify-between gap-6 pb-3 mb-4" style={{ borderBottom: '3px solid #08142a' }}>
+      <div
+        className="flex items-center gap-3"
+        style={{
+          background: 'linear-gradient(135deg, #08142a 0%, #102445 100%)',
+          padding: '8px 16px',
+          borderRadius: 10,
+          border: '1px solid rgba(201,169,110,.45)',
+          boxShadow: '0 4px 12px rgba(8,20,42,.14)',
+          WebkitPrintColorAdjust: 'exact',
+          printColorAdjust: 'exact',
+        }}
+      >
+        <img src="/brand/swk-properties-horizontal.svg" alt={companyName} style={{ height: 42, width: 'auto', objectFit: 'contain', display: 'block' }} />
       </div>
-      <div style={{ textAlign: 'right', fontSize: 10.5, lineHeight: 1.45 }}><b style={{ fontSize: 12.5 }}>{s.company_name}</b><div style={{ whiteSpace: 'pre-line' }}>{s.company_address}</div>{s.company_phone && <div>Tel {s.company_phone}</div>}<div>{s.company_email}{s.company_info_email && s.company_info_email !== s.company_email ? ` · ${s.company_info_email}` : ''}{s.company_website ? ` · ${String(s.company_website).replace(/^https?:\/\//, '')}` : ''}</div></div>
+      <div style={{ textAlign: 'right', fontSize: 10.5, lineHeight: 1.45 }}>
+        <b style={{ fontSize: 12.5, color: '#08142a' }}>{companyName}</b>
+        <div style={{ whiteSpace: 'pre-line' }}>{s.company_address}</div>
+        {s.company_phone && <div>Tel {s.company_phone}</div>}
+        <div>{s.company_email}{s.company_info_email && s.company_info_email !== s.company_email ? ` · ${s.company_info_email}` : ''}</div>
+        <div style={{ fontWeight: 700, color: '#08142a', marginTop: 1 }}>{SWK_OFFICIAL_WEBSITES_TEXT}</div>
+      </div>
     </div>
   )
 }
@@ -137,7 +155,7 @@ function StatementDoc({ partyId }: { partyId: string }) {
     {s && <Recipient record={{ _labels: { party_id: s.party.name } }} />}
     <Title sub={<div>{fmtDate(from)} – {fmtDate(to)}</div>}>STATEMENT OF ACCOUNT</Title>
     {!s ? <DocumentPrinter /> : <><Grid cols={2}><Box label="Account">{`${s.party.name}\n${s.party.code}`}</Box><Kv items={[['Opening balance (AED)', fmtMoney(s.opening)], ['Closing balance (AED)', fmtMoney(s.closing)]]} /></Grid>
-      <table><thead><tr><th>Date</th><th>Type</th><th>Document</th><th>Description</th><th style={{ textAlign: 'right' }}>Debit</th><th style={{ textAlign: 'right' }}>Credit</th><th style={{ textAlign: 'right' }}>Balance</th></tr></thead><tbody><tr><td colSpan={6}><i>Opening balance</i></td><R>{fmtMoney(s.opening)}</R></tr>{s.rows.map((r: any, i: number) => <tr key={i}><td>{fmtDate(r.date)}</td><td>{r.type}</td><td>{r.doc_no}</td><td>{r.description}</td><R>{r.debit ? fmtMoney(r.debit) : ''}</R><R>{r.credit ? fmtMoney(r.credit) : ''}</R><R>{fmtMoney(r.balance)}</R></tr>)}<tr style={{ fontWeight: 800, background: '#f2ede2' }}><td colSpan={6}>Closing balance (AED) — positive = amount due to SWK OS</td><R>{fmtMoney(s.closing)}</R></tr></tbody></table><Foot>Please notify us of any discrepancy within 7 days. {S().invoice_footer}</Foot></>}
+      <table><thead><tr><th>Date</th><th>Type</th><th>Document</th><th>Description</th><th style={{ textAlign: 'right' }}>Debit</th><th style={{ textAlign: 'right' }}>Credit</th><th style={{ textAlign: 'right' }}>Balance</th></tr></thead><tbody><tr><td colSpan={6}><i>Opening balance</i></td><R>{fmtMoney(s.opening)}</R></tr>{s.rows.map((r: any, i: number) => <tr key={i}><td>{fmtDate(r.date)}</td><td>{r.type}</td><td>{r.doc_no}</td><td>{r.description}</td><R>{r.debit ? fmtMoney(r.debit) : ''}</R><R>{r.credit ? fmtMoney(r.credit) : ''}</R><R>{fmtMoney(r.balance)}</R></tr>)}<tr style={{ fontWeight: 800, background: '#f2ede2' }}><td colSpan={6}>Closing balance (AED) — positive = amount due to SWK Properties LLC</td><R>{fmtMoney(s.closing)}</R></tr></tbody></table><Foot>Please notify us of any discrepancy within 7 days. {S().invoice_footer}</Foot></>}
   </>)
 }
 

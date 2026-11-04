@@ -1,17 +1,98 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { ArrowRight, Check, Eye, EyeOff, KeyRound, Loader2, Lock, Mail, ShieldCheck } from 'lucide-react'
+import { ArrowRight, Building2, Check, ChevronLeft, ChevronRight, Eye, EyeOff, Flame, KeyRound, Loader2, Lock, Mail, MapPin, ShieldCheck } from 'lucide-react'
 import { get, post } from '../lib/api'
 import { useMeta } from '../lib/meta'
 import { COMMUNITIES } from '../swk/uae'
 
 /**
- * SWK OS sign-in — split-screen layout with official SWK Properties Studio Logos
- * (Architectural Tower Monogram + Connected SWK Wordmark + UAE Colours & Brushed Metallic Gold).
+ * SWK OS sign-in — split-screen layout with official SWK Properties LLC branding
+ * and full-screen Dubai Developer Project Hot Images showcase on the right side.
  */
 const ease = [0.16, 1, 0.3, 1] as const
 const item = { hidden: { opacity: 0, y: 12, filter: 'blur(6px)' }, show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.7, ease } } }
+
+interface HotDeveloperProject {
+  id: string
+  project: string
+  developer: string
+  community: string
+  tag: string
+  priceFrom: string
+  plan: string
+  roiOrHighlight: string
+  image: string
+}
+
+const HOT_DEVELOPER_PROJECTS: readonly HotDeveloperProject[] = [
+  {
+    id: 'creek-harbour',
+    project: 'Creek Waterside Residences & Marina Penthouses',
+    developer: 'Emaar Properties',
+    community: 'Dubai Creek Harbour',
+    tag: 'Hot Waterfront Launch',
+    priceFrom: 'AED 3.8M',
+    plan: '80/20 Payment Plan · Handover Q4 2027',
+    roiOrHighlight: 'Direct Creek Marina & Downtown Skyline Views',
+    image: '/media/properties/creek-harbour-waterside-townhouse-1.webp',
+  },
+  {
+    id: 'palm-jumeirah',
+    project: 'Palm Jumeirah Signature Frond Beach Villas',
+    developer: 'Nakheel',
+    community: 'Palm Jumeirah',
+    tag: 'Ultra-Prime Trophy Asset',
+    priceFrom: 'AED 38.5M',
+    plan: 'Ready & Custom Bespoke Editions',
+    roiOrHighlight: 'Private Beachfront · +13.7% YoY Capital Growth',
+    image: '/media/properties/palm-garden-homes-1.webp',
+  },
+  {
+    id: 'dubai-hills',
+    project: 'Fairway Signature Golf Course Mansions',
+    developer: 'Emaar Properties',
+    community: 'Dubai Hills Estate',
+    tag: 'High-Demand Master Community',
+    priceFrom: 'AED 26.0M',
+    plan: '70/30 Construction Linked',
+    roiOrHighlight: '18-Hole Championship Golf & Park Panorama',
+    image: '/media/properties/hills-estate-golf-mansion-1.webp',
+  },
+  {
+    id: 'dubai-marina',
+    project: 'Marina Gate & Six Senses Sky Penthouses',
+    developer: 'Select Group · Sobha Realty',
+    community: 'Dubai Marina',
+    tag: 'Prime Waterfront',
+    priceFrom: 'AED 14.5M',
+    plan: '60/40 Plan · Golden Visa Eligible',
+    roiOrHighlight: 'Full Marina & Arabian Gulf Horizon Views',
+    image: '/media/properties/marina-sky-penthouse-1.webp',
+  },
+  {
+    id: 'business-bay',
+    project: 'Marasi Bay & Canal Executive Sky Residences',
+    developer: 'Omniyat · Binghatti',
+    community: 'Business Bay & Burj District',
+    tag: 'Investor Hot Pick',
+    priceFrom: 'AED 2.95M',
+    plan: '60/40 Payment Plan · 7.4% Gross Yield',
+    roiOrHighlight: 'Private Sky Pools & Dubai Water Canal Frontage',
+    image: '/media/properties/business-bay-executive-tower-1.webp',
+  },
+  {
+    id: 'dubai-islands',
+    project: 'Dubai Islands Beachfront Resort Residences',
+    developer: 'Nakheel',
+    community: 'Dubai Islands',
+    tag: 'New Coastal Masterplan',
+    priceFrom: 'AED 2.4M',
+    plan: '80/20 Payment Plan · Handover Q2 2028',
+    roiOrHighlight: '20 km Blue Flag Beaches & Yacht Marina Access',
+    image: '/media/properties/islands-2-1.webp',
+  },
+] as const
 
 function DubaiTime() {
   const [t, setT] = useState(new Date())
@@ -26,21 +107,16 @@ function MarketMoments() {
   useEffect(() => { if (reduce) return; const t = setInterval(() => setI(v => (v + 1) % moments.length), 4200); return () => clearInterval(t) }, [moments.length, reduce])
   const m = moments[i]!
   return (
-    <div className="swk-glass p-6 w-full max-w-[560px]">
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <span className="text-[10.5px] font-semibold tracking-[.24em] uppercase text-[#dcc8a2]">Dubai market pulse</span>
-        <span className="flex gap-1">{moments.map((_, k) => <span key={k} className="h-1 rounded-full transition-all duration-500" style={{ width: k === i ? 18 : 6, background: k === i ? '#c9a96e' : 'rgba(255,255,255,.25)' }} />)}</span>
+    <div className="swk-glass p-4 w-full">
+      <div className="flex items-center justify-between gap-3 mb-2">
+        <span className="text-[10px] font-semibold tracking-[.22em] uppercase text-[#dcc8a2]">DLD Live Market Pulse · {m.name}</span>
+        <span className="flex gap-1">{moments.map((_, k) => <span key={k} className="h-1 rounded-full transition-all duration-500" style={{ width: k === i ? 16 : 5, background: k === i ? '#c9a96e' : 'rgba(255,255,255,.25)' }} />)}</span>
       </div>
-      <AnimatePresence mode="wait">
-        <motion.div key={m.name} initial={{ opacity: 0, y: 10, filter: 'blur(4px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} exit={{ opacity: 0, y: -8, filter: 'blur(4px)' }} transition={{ duration: 0.5, ease }}>
-          <div className="font-display text-white text-[26px] font-semibold leading-tight">{m.name}</div>
-          <div className="mt-4 grid grid-cols-3 gap-4">
-            <div><div className="text-[11px] text-white/55 uppercase tracking-wider">Price / sq ft</div><div className="font-display text-white text-[19px] font-semibold mt-0.5">AED {m.ppsf.toLocaleString()}</div></div>
-            <div><div className="text-[11px] text-white/55 uppercase tracking-wider">Year on year</div><div className="font-display text-[19px] font-semibold mt-0.5 text-[#8fe3bd]">+{m.yoy.toFixed(1)}%</div></div>
-            <div><div className="text-[11px] text-white/55 uppercase tracking-wider">Gross yield</div><div className="font-display text-white text-[19px] font-semibold mt-0.5">{m.yieldPct.toFixed(1)}%</div></div>
-          </div>
-        </motion.div>
-      </AnimatePresence>
+      <div className="grid grid-cols-3 gap-3">
+        <div><div className="text-[10px] text-white/60 uppercase tracking-wider">Price / sq ft</div><div className="font-display text-white text-[16px] font-semibold mt-0.5">AED {m.ppsf.toLocaleString()}</div></div>
+        <div><div className="text-[10px] text-white/60 uppercase tracking-wider">Year on year</div><div className="font-display text-[16px] font-semibold mt-0.5 text-[#8fe3bd]">+{m.yoy.toFixed(1)}%</div></div>
+        <div><div className="text-[10px] text-white/60 uppercase tracking-wider">Gross yield</div><div className="font-display text-white text-[16px] font-semibold mt-0.5">{m.yieldPct.toFixed(1)}%</div></div>
+      </div>
     </div>
   )
 }
@@ -54,7 +130,16 @@ export function Login() {
   const [show, setShow] = useState(false); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false); const [done, setDone] = useState(false)
   const [help, setHelp] = useState(false); const [caps, setCaps] = useState(false)
   const [demo, setDemo] = useState<{ enabled: boolean; email: string; password: string } | null>(null)
+  const [slideIdx, setSlideIdx] = useState(0)
+
   useEffect(() => { void get<any>('/api/demo/status').then(setDemo).catch(() => {}) }, [])
+  useEffect(() => {
+    if (reduce) return
+    const timer = setInterval(() => setSlideIdx(v => (v + 1) % HOT_DEVELOPER_PROJECTS.length), 5400)
+    return () => clearInterval(timer)
+  }, [reduce])
+
+  const activeProject = HOT_DEVELOPER_PROJECTS[slideIdx]!
 
   const signIn = async (em: string, pass: string, targetPath?: string) => {
     setErr(''); setBusy(true)
@@ -77,22 +162,27 @@ export function Login() {
         <div className="swk-login-grid" aria-hidden />
         <img src="/brand/skyline-front.svg" alt="" aria-hidden className="absolute left-0 right-0 bottom-0 w-full h-[120px] opacity-[.07] pointer-events-none" />
 
-        <motion.header className="relative flex items-center gap-3.5" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease }}>
-          <img src="/brand/swk-os-emblem.svg" alt="SWK Tower Monogram" className="h-[46px] w-[46px] object-contain" />
-          <img src="/brand/swk-os-wordmark.svg" alt="SWK OS" className="h-[44px] w-auto" />
-          <div className="h-8 w-px bg-white/15 mx-0.5" />
+        <motion.header
+          className="relative flex items-center gap-3.5 rounded-2xl px-4 py-3 border border-[#c9a96e]/35 bg-[#050d1c]/95 shadow-[0_12px_32px_rgba(0,0,0,.45)] w-fit"
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease }}
+        >
+          <img src="/brand/swk-os-emblem.svg" alt="SWK Tower Monogram" className="h-[46px] w-[46px] object-contain drop-shadow-[0_2px_8px_rgba(201,169,110,.35)]" />
+          <img src="/brand/swk-os-wordmark.svg" alt="SWK OS" className="h-[44px] w-auto drop-shadow-[0_2px_8px_rgba(201,169,110,.25)]" />
+          <div className="h-8 w-px bg-[#c9a96e]/30 mx-0.5" />
           <div>
-            <div className="font-display text-white text-[16px] font-semibold leading-none tracking-tight">Business Workspace</div>
-            <div className="text-[10px] tracking-[.22em] uppercase text-[#c9a96e] mt-1.5 font-semibold">SWK Properties · OS</div>
+            <div className="font-display text-white text-[15.5px] font-semibold leading-none tracking-tight">SWK Properties LLC</div>
+            <div className="text-[10px] tracking-[.2em] uppercase text-[#e6c88f] mt-1.5 font-semibold">Operating System · Dubai</div>
           </div>
         </motion.header>
 
         <motion.div className="relative w-full max-w-[430px] mx-auto lg:mx-0 py-10" variants={{ show: { transition: { staggerChildren: 0.08, delayChildren: 0.15 } } }} initial="hidden" animate="show">
-          <motion.div variants={item} className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-[.26em] uppercase text-[#c9a96e]"><span className="w-6 h-px bg-[#c9a96e]" />Private office · Dubai</motion.div>
+          <motion.div variants={item} className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-[.26em] uppercase text-[#c9a96e]"><span className="w-6 h-px bg-[#c9a96e]" />SWK Properties LLC · Dubai</motion.div>
           <motion.h1 variants={item} className="mt-4 mb-0 text-white font-display font-medium leading-[1.04] text-[44px] sm:text-[52px]">
             Welcome <span className="swk-shimmer-text font-semibold">back</span>
           </motion.h1>
-          <motion.p variants={item} className="mt-3 text-[15.5px] text-[#a9b6cd]">Sign in to continue to your SWK OS workspace.</motion.p>
+          <motion.p variants={item} className="mt-3 text-[15.5px] text-[#a9b6cd]">Sign in to continue to your SWK Properties OS workspace.</motion.p>
 
           <AnimatePresence>{err && (
             <motion.div role="alert" initial={{ opacity: 0, height: 0, marginTop: 0 }} animate={{ opacity: 1, height: 'auto', marginTop: 22 }} exit={{ opacity: 0, height: 0, marginTop: 0 }} className="overflow-hidden">
@@ -149,37 +239,136 @@ export function Login() {
           </form>
         </motion.div>
 
-        <motion.footer className="relative flex items-center justify-between gap-4 flex-wrap text-[12px] text-[#7f90ad]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9, duration: 0.6 }}>
-          <span className="inline-flex items-center gap-2"><ShieldCheck size={15} className="text-[#c9a96e]" />Encrypted session · activity is audited</span>
-          <span>© {new Date().getFullYear()} SWK Properties L.L.C · RERA ORN 51517</span>
+        <motion.footer className="relative flex flex-col gap-1.5 text-[11.5px] text-[#8a9ab5]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9, duration: 0.6 }}>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <span className="inline-flex items-center gap-2"><ShieldCheck size={15} className="text-[#c9a96e]" />Encrypted session · activity is audited</span>
+            <span className="font-semibold text-[#dcc8a2]">© {new Date().getFullYear()} SWK Properties LLC</span>
+          </div>
+          <div className="text-[11px] text-[#9eb0cc]">www.swk.properties · www.swkpropertiesuae.com · www.swk.rent</div>
         </motion.footer>
       </section>
 
-      {/* ---------------------------------------------------------------- hero side: studio brand showcase */}
-      <section className="swk-login-hero" aria-hidden>
-        <motion.div className="swk-login-hero-img" style={{ backgroundImage: 'url(/brand/swk-signage-logo.png)', backgroundPosition: 'center center', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundColor: '#000000' }}
-          initial={{ opacity: 0, scale: 1.03 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.9, ease }}>
-        </motion.div>
-        <div className="swk-login-hero-shade" />
+      {/* ---------------------------------------------------------------- hero side: developer project hot images */}
+      <section className="swk-login-hero" aria-label="Featured Dubai Developer Projects">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeProject.id}
+            className="swk-login-hero-img"
+            style={{
+              backgroundImage: `url(${activeProject.image})`,
+              backgroundPosition: 'center center',
+              backgroundSize: 'cover',
+              backgroundRepeat: 'no-repeat',
+            }}
+            initial={{ opacity: 0, scale: 1.06 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.02 }}
+            transition={{ duration: 0.95, ease }}
+          />
+        </AnimatePresence>
+        <div
+          className="swk-login-hero-shade"
+          style={{
+            background:
+              'linear-gradient(180deg, rgba(6,13,26,.62) 0%, rgba(6,13,26,.22) 38%, rgba(6,13,26,.82) 78%, rgba(6,13,26,.96) 100%)',
+          }}
+        />
 
-        <motion.div className="absolute top-10 left-10 swk-glass px-3.5 py-2.5 flex items-center gap-3 text-[12.5px] text-white" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.5, ease }}>
-          <img src="/brand/swk-mark.png" alt="" className="w-7 h-7 object-contain" />
-          <span>SWK Properties L.L.C · <b>RERA ORN 51517</b></span>
+        <motion.div className="absolute top-8 left-10 swk-glass px-4 py-2.5 flex items-center gap-3 text-[12.5px] text-white" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.5, ease }}>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#c9a96e]/25 border border-[#c9a96e]/50 text-[#f5e3be] text-[10.5px] font-bold uppercase tracking-wider">
+            <Flame size={13} className="text-[#f5c77e]" /> Developer Hot Projects
+          </span>
+          <span className="text-white/85 font-medium">SWK Properties LLC · Dubai</span>
         </motion.div>
 
-        <motion.div className="absolute top-10 right-10 swk-glass px-4 py-2.5 flex items-center gap-3 text-[13px] text-white" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6, duration: 0.5, ease }}>
+        <motion.div className="absolute top-8 right-10 swk-glass px-4 py-2.5 flex items-center gap-3 text-[13px] text-white" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.5, ease }}>
           <span className="w-2 h-2 rounded-full bg-[#4fd39a] shadow-[0_0_0_4px_rgba(79,211,154,.2)]" />Dubai · <b className="font-semibold"><DubaiTime /></b>
         </motion.div>
 
-        <div className="absolute left-10 right-10 bottom-10 flex items-end justify-between gap-6">
-          <motion.div className="flex-1" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45, duration: 0.6, ease }}>
-            <div className="text-[11px] tracking-[.26em] uppercase text-[#dcc8a2] mb-2.5 font-semibold">From arrival to address · Dubai</div>
-            <div className="font-display text-white text-[34px] xl:text-[40px] leading-[1.08] font-semibold max-w-[540px] mb-5">Every listing, viewing, lease and transfer — <span className="text-[#dcc8a2]">in one workspace.</span></div>
+        <div className="absolute left-10 right-10 bottom-8 flex flex-col gap-5">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeProject.id}
+              className="swk-glass p-6 border border-[#c9a96e]/35"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.5, ease }}
+            >
+              <div className="flex items-center justify-between gap-3 flex-wrap mb-2.5">
+                <div className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[.18em] text-[#f3dfb8]">
+                  <Building2 size={14} className="text-[#c9a96e]" />
+                  <span>{activeProject.developer}</span>
+                  <span className="text-white/35">·</span>
+                  <span className="inline-flex items-center gap-1 text-[#8fe3bd]"><MapPin size={12} /> {activeProject.community}</span>
+                </div>
+                <span className="px-2.5 py-1 rounded-full text-[10.5px] font-bold uppercase tracking-wider bg-[#c9a96e] text-[#08142a]">
+                  {activeProject.tag}
+                </span>
+              </div>
+
+              <div className="font-display text-white text-[28px] xl:text-[34px] leading-[1.1] font-semibold">
+                {activeProject.project}
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3.5 border-t border-white/12">
+                <div>
+                  <div className="text-[10.5px] text-white/60 uppercase tracking-wider">Starting From</div>
+                  <div className="font-display text-[#f3dfb8] text-[20px] font-semibold mt-0.5">{activeProject.priceFrom}</div>
+                </div>
+                <div>
+                  <div className="text-[10.5px] text-white/60 uppercase tracking-wider">Payment Structure</div>
+                  <div className="text-white text-[13px] font-semibold mt-1">{activeProject.plan}</div>
+                </div>
+                <div>
+                  <div className="text-[10.5px] text-white/60 uppercase tracking-wider">Project Highlight</div>
+                  <div className="text-[#8fe3bd] text-[13px] font-semibold mt-1">{activeProject.roiOrHighlight}</div>
+                </div>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+
+          <div className="grid grid-cols-1 xl:grid-cols-[1fr_auto] gap-4 items-center">
             <MarketMoments />
-          </motion.div>
-          <motion.div className="hidden xl:block w-[180px] h-[180px] rounded-2xl overflow-hidden border border-[#c9a96e]/35 shadow-2xl flex-none bg-black p-2" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.65, duration: 0.6, ease }}>
-            <img src="/brand/swk-signage-icon.png" alt="" className="w-full h-full object-contain" />
-          </motion.div>
+
+            <div className="swk-glass p-2.5 flex items-center gap-2 self-stretch">
+              <button
+                type="button"
+                onClick={() => setSlideIdx(v => (v - 1 + HOT_DEVELOPER_PROJECTS.length) % HOT_DEVELOPER_PROJECTS.length)}
+                className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center border-0 cursor-pointer transition-colors"
+                aria-label="Previous developer project"
+              >
+                <ChevronLeft size={17} />
+              </button>
+              <div className="flex items-center gap-1.5 px-1">
+                {HOT_DEVELOPER_PROJECTS.map((proj, idx) => (
+                  <button
+                    key={proj.id}
+                    type="button"
+                    onClick={() => setSlideIdx(idx)}
+                    aria-label={`Show ${proj.project}`}
+                    className="relative rounded-xl overflow-hidden border transition-all cursor-pointer p-0 bg-black"
+                    style={{
+                      width: idx === slideIdx ? 58 : 42,
+                      height: 40,
+                      borderColor: idx === slideIdx ? '#c9a96e' : 'rgba(255,255,255,.2)',
+                      opacity: idx === slideIdx ? 1 : 0.65,
+                    }}
+                  >
+                    <img src={proj.image} alt={proj.project} className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setSlideIdx(v => (v + 1) % HOT_DEVELOPER_PROJECTS.length)}
+                className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center border-0 cursor-pointer transition-colors"
+                aria-label="Next developer project"
+              >
+                <ChevronRight size={17} />
+              </button>
+            </div>
+          </div>
         </div>
       </section>
     </div>

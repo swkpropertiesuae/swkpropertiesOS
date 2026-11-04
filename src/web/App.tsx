@@ -4,7 +4,7 @@ import {CompetencyPage} from './pages/EnterprisePages'
 import { Navigate, Route, Routes, useLocation, Link } from 'react-router-dom'
 import { Suspense, lazy, type ReactNode } from 'react'
 import { useMeta } from './lib/meta'
-import { isRestrictedStaffUser, isAllowedPathForRestrictedStaff } from '@shared/swk-staff-access'
+import { canAccessSwkAdminLogic, isRestrictedStaffUser, isAllowedPathForRestrictedStaff } from '@shared/swk-staff-access'
 import { Shell } from './components/Shell'
 import { Login } from './pages/Login'
 import { Dashboard } from './pages/Dashboard'
@@ -45,7 +45,10 @@ const RecycleBinPage = lazy(() => import('./pages/swk/RecycleBinPage'))
 const WithdrawalsPage = lazy(() => import('./pages/swk/WithdrawalsPage'))
 
 function Guard({ module, children }: { module: string; children: ReactNode }) {
-  const { can } = useMeta()
+  const { can, me } = useMeta()
+  if (module === 'admin' && !canAccessSwkAdminLogic(me)) {
+    return <ErrorBox error={new Error('Administration access is restricted until proper role access is granted by the Owner.')} />
+  }
   return can(module, 'view') ? <>{children}</> : <ErrorBox error={new Error('You do not have access to this page. Ask an administrator to grant the permission.')} />
 }
 const Statements = () => <ReportsPage fixed={['trial_balance', 'profit_loss', 'balance_sheet', 'general_ledger', 'vat_return', 'ar_aging', 'ap_aging', 'tax_invoice_register']} />
@@ -120,10 +123,10 @@ export default function App() {
           <Route index element={<Navigate to={defaultLanding} replace />} />
           <Route path="/home" element={<Launcher />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/enterprise/master-os" element={<EnterpriseMasterOsPage />} />
+          <Route path="/enterprise/master-os" element={<Guard module="admin"><EnterpriseMasterOsPage /></Guard>} />
           <Route path="/reception-qr" element={<ReceptionQrPage />} />
-          <Route path="/recycle-bin" element={<RecycleBinPage />} />
-          <Route path="/withdrawals" element={<WithdrawalsPage />} />
+          <Route path="/recycle-bin" element={<Guard module="admin"><RecycleBinPage /></Guard>} />
+          <Route path="/withdrawals" element={<Guard module="admin"><WithdrawalsPage /></Guard>} />
           <Route path="/workspaces" element={<Workspaces />} />
           <Route path="/market" element={<MarketPage />} />
           <Route path="/toolkit" element={<ToolkitPage />} />

@@ -125,7 +125,7 @@ function buildCopy(l: Listing, tone: Tone) {
     '',
     `Price: ${priceTxt}`,
     `Trakheesi permit: ${p.rera_permit_no || '[PERMIT REQUIRED]'}${p.permit_expiry ? ` (valid until ${String(p.permit_expiry).slice(0, 10)})` : ''} · Ref: ${p.property_no ?? p.id}`,
-    'SWK Properties · RERA ORN 51517 · Scan the Madmoun QR to verify this listing.',
+    'SWK Properties LLC · www.swk.properties · www.swkpropertiesuae.com · www.swk.rent · Scan the Madmoun QR to verify this listing.',
   ].filter(x => x !== '').join('\n').replace(/\n\n\n+/g, '\n\n')
   const arType = ({ Apartment: 'شقة', Villa: 'فيلا', Townhouse: 'تاون هاوس', Studio: 'استوديو', Penthouse: 'بنتهاوس', Duplex: 'دوبلكس' } as Record<string, string>)[type] ?? 'عقار'
   const ar = [

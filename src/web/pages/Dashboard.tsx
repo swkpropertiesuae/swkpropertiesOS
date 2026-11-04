@@ -14,6 +14,7 @@ import { fmtDate, fmtDateTime } from '../lib/format'
 import { ErrorBox } from '../ui/kit'
 import { AnimatedNumber, Bar, CHART, Card, EmptyState, Pill, ProgressRing, Reveal, RevealItem, SWK, Sparkline, StatTile, aed, num, rise } from '../swk/ui'
 import { COMMUNITIES } from '../swk/uae'
+import { canAccessSwkAdminLogic, isAllowedPathForRestrictedStaff, isRestrictedStaffUser } from '@shared/swk-staff-access'
 
 const PHOTOS = ['marina-sky-penthouse-1', 'palm-garden-homes-1', 'hills-estate-golf-mansion-1', 'business-bay-executive-tower-2', 'creek-harbour-waterside-townhouse-1', 'jvc-boulevard-residences-2', 'arabian-ranches-courtyard-villa-2', 'villa-sanctuary-6', 'islands-2-1', 'river-cove-residences-1']
 const photoFor = (id: number) => `/media/properties/${PHOTOS[Math.abs(id) % PHOTOS.length]}.webp`
@@ -27,13 +28,15 @@ export function Dashboard() {
   const nav = useNavigate()
   const toast = useToast()
   const reduce = useReducedMotion()
+  const adminOk = canAccessSwkAdminLogic(me)
+  const restricted = isRestrictedStaffUser(me)
   const [sendingBrief, setSendingBrief] = useState<string | null>(null)
   const q = useQuery({ queryKey: ['dashboard'], queryFn: () => get<any>('/api/dashboard'), refetchInterval: 120000 })
-  const props = useQuery({ queryKey: ['dash-props'], queryFn: () => get<any>('/api/e/properties', { pageSize: 12, sort: 'listed_date', dir: 'desc' }), enabled: can('properties', 'view') })
-  const units = useQuery({ queryKey: ['dash-units'], queryFn: () => get<any>('/api/e/units', { pageSize: 500 }), enabled: can('properties', 'view') })
-  const brief = useQuery({ queryKey: ['ai-brief'], queryFn: () => get<{ output: string; started_at: string; name: string }>('/api/ai/brief'), retry: false, enabled: can('ai', 'view') })
-  const binQ = useQuery({ queryKey: ['dash-bin'], queryFn: () => get<any>('/api/swk-ops/recycle-bin') })
-  const withQ = useQuery({ queryKey: ['dash-withdrawals'], queryFn: () => get<any>('/api/swk-ops/withdrawals') })
+  const props = useQuery({ queryKey: ['dash-props'], queryFn: () => get<any>('/api/e/properties', { pageSize: 12, sort: 'listed_date', dir: 'desc' }), enabled: can('properties', 'view') && !restricted })
+  const units = useQuery({ queryKey: ['dash-units'], queryFn: () => get<any>('/api/e/units', { pageSize: 500 }), enabled: can('properties', 'view') && !restricted })
+  const brief = useQuery({ queryKey: ['ai-brief'], queryFn: () => get<{ output: string; started_at: string; name: string }>('/api/ai/brief'), retry: false, enabled: can('ai', 'view') && adminOk })
+  const binQ = useQuery({ queryKey: ['dash-bin'], queryFn: () => get<any>('/api/swk-ops/recycle-bin'), enabled: adminOk })
+  const withQ = useQuery({ queryKey: ['dash-withdrawals'], queryFn: () => get<any>('/api/swk-ops/withdrawals'), enabled: adminOk })
 
   const triggerBrief = async (kind: 'morning' | 'attendance-1030') => {
     setSendingBrief(kind)
@@ -107,56 +110,58 @@ export function Dashboard() {
       </motion.section>
 
       {/* ------------------------------------------------------------ 3 Core Operational Departments + Leadership & Briefings */}
-      <Reveal className="grid gap-4 grid-cols-1 lg:grid-cols-3">
-        {[
-          {
-            code: 'OFFPLAN',
-            title: '1. Sales of Off-Plan Projects',
-            sub: 'Developer launches → Bayut/Dubizzle/Campaigns → Leads → Site Visit → EOI/SPA → DLD Oqood → 50/50 Commission Split',
-            to: '/pipeline?dept=offplan',
-            accent: '#BE984C',
-            Icon: Rocket,
-          },
-          {
-            code: 'SECONDARY',
-            title: '2. Secondary Projects (Ready Transfers)',
-            sub: 'Seller / 3rd-Party A2A → Detailed Seller Req → Cash / Mortgaged / Pre-Approved → Form F (MOU) → NOC → DLD Title Deed',
-            to: '/pipeline?dept=secondary',
-            accent: '#174B3B',
-            Icon: Building2,
-          },
-          {
-            code: 'LEASING',
-            title: '3. Leasing & Tenancy Department',
-            sub: 'Connected Bayut & Dubizzle Ads → 3rd-Party A2A Match (Form I) → PDC Cheques → Ejari Registration → 50/50 Split after A2A',
-            to: '/pipeline?dept=leasing',
-            accent: '#7E3039',
-            Icon: KeyRound,
-          },
-        ].map(dept => (
-          <Link
-            key={dept.code}
-            to={dept.to}
-            className="card p-5 border-t-4 hover:shadow-lg transition flex flex-col justify-between group"
-            style={{ borderTopColor: dept.accent }}
-          >
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-extrabold uppercase tracking-widest px-2.5 py-0.5 rounded bg-[#fbf9f5] text-ink border border-[#efe9dc]">
-                  DEPT · {dept.code}
-                </span>
-                <dept.Icon size={18} className="text-muted group-hover:text-ink transition" />
+      {!restricted && (
+        <Reveal className="grid gap-4 grid-cols-1 lg:grid-cols-3">
+          {[
+            {
+              code: 'OFFPLAN',
+              title: '1. Sales of Off-Plan Projects',
+              sub: 'Developer launches → Bayut/Dubizzle/Campaigns → Leads → Site Visit → EOI/SPA → DLD Oqood → 50/50 Commission Split',
+              to: '/pipeline?dept=offplan',
+              accent: '#BE984C',
+              Icon: Rocket,
+            },
+            {
+              code: 'SECONDARY',
+              title: '2. Secondary Projects (Ready Transfers)',
+              sub: 'Seller / 3rd-Party A2A → Detailed Seller Req → Cash / Mortgaged / Pre-Approved → Form F (MOU) → NOC → DLD Title Deed',
+              to: '/pipeline?dept=secondary',
+              accent: '#174B3B',
+              Icon: Building2,
+            },
+            {
+              code: 'LEASING',
+              title: '3. Leasing & Tenancy Department',
+              sub: 'Connected Bayut & Dubizzle Ads → 3rd-Party A2A Match (Form I) → PDC Cheques → Ejari Registration → 50/50 Split after A2A',
+              to: '/pipeline?dept=leasing',
+              accent: '#7E3039',
+              Icon: KeyRound,
+            },
+          ].map(dept => (
+            <Link
+              key={dept.code}
+              to={dept.to}
+              className="card p-5 border-t-4 hover:shadow-lg transition flex flex-col justify-between group"
+              style={{ borderTopColor: dept.accent }}
+            >
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-extrabold uppercase tracking-widest px-2.5 py-0.5 rounded bg-[#fbf9f5] text-ink border border-[#efe9dc]">
+                    DEPT · {dept.code}
+                  </span>
+                  <dept.Icon size={18} className="text-muted group-hover:text-ink transition" />
+                </div>
+                <div className="font-display font-bold text-lg text-ink mt-2.5">{dept.title}</div>
+                <p className="text-xs text-muted mt-1 leading-relaxed">{dept.sub}</p>
               </div>
-              <div className="font-display font-bold text-lg text-ink mt-2.5">{dept.title}</div>
-              <p className="text-xs text-muted mt-1 leading-relaxed">{dept.sub}</p>
-            </div>
-            <div className="mt-3 pt-2.5 border-t border-[#efe9dc] flex items-center justify-between text-xs font-bold text-[#0B1A33]">
-              <span>Open Department Pipeline</span>
-              <ArrowRight size={14} />
-            </div>
-          </Link>
-        ))}
-      </Reveal>
+              <div className="mt-3 pt-2.5 border-t border-[#efe9dc] flex items-center justify-between text-xs font-bold text-[#0B1A33]">
+                <span>Open Department Pipeline</span>
+                <ArrowRight size={14} />
+              </div>
+            </Link>
+          ))}
+        </Reveal>
+      )}
 
       {/* ------------------------------------------------------------ 10-Step Sequential UAE Real Estate Dedicated Buttons */}
       <Reveal className="card p-5 border border-[#efe9dc] bg-white">
@@ -166,7 +171,7 @@ export function Dashboard() {
             <h2 className="font-display font-bold text-base text-ink m-0 mt-0.5">Sequential UAE Real Estate Execution Buttons (Click Any Step)</h2>
           </div>
           <Link to="/home" className="btn outline sm">
-            Open Full 8-Stage Step-by-Step Directory <ArrowRight size={13} />
+            Open Full Step-by-Step Directory <ArrowRight size={13} />
           </Link>
         </div>
         <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
@@ -179,63 +184,67 @@ export function Dashboard() {
             { step: 'Step 06', title: 'Closing: Form F / SPA / Ejari', sub: 'Cash / Mortgage, NOC & Transfer', to: '/e/jobs' },
             { step: 'Step 07', title: 'Legal UAE Payment Modes', sub: 'Bank, Escrow, Exchange, USDT', to: '/e/receipts' },
             { step: 'Step 08', title: '50–50% Commission Split', sub: '50% SWK / 50% Advisor + A2A', to: '/e/agent_commissions' },
-            { step: 'Step 09', title: 'Withdrawals & Client Refunds', sub: 'Terms-Based Refund & Sign-Off', to: '/withdrawals' },
-            { step: 'Step 10', title: 'Attendance, Reports & Bin', sub: '10am–7pm, Daily Report & Audit', to: '/e/attendance' },
-          ].map(st => (
-            <Link
-              key={st.step}
-              to={st.to}
-              className="p-3 rounded-xl border border-[#e7e1d4] bg-[#fbf9f5] hover:bg-[#f4efe3] hover:border-[#c9a96e] transition flex flex-col justify-between group"
-            >
-              <div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-[#0B1A33] text-[#e8d4a2]">{st.step}</span>
-                  <ArrowUpRight size={14} className="text-muted group-hover:text-ink" />
+            ...(adminOk ? [{ step: 'Step 09', title: 'Withdrawals & Client Refunds', sub: 'Terms-Based Refund & Sign-Off', to: '/withdrawals' }] : []),
+            { step: 'Step 10', title: adminOk ? 'Attendance, Reports & Bin' : 'Attendance Scan & Check-In', sub: adminOk ? '10am–7pm, Daily Report & Audit' : 'Scan Office QR & Daily Report', to: adminOk ? '/e/attendance' : '/reception-qr' },
+          ]
+            .filter(st => !restricted || isAllowedPathForRestrictedStaff(st.to))
+            .map(st => (
+              <Link
+                key={st.step}
+                to={st.to}
+                className="p-3 rounded-xl border border-[#e7e1d4] bg-[#fbf9f5] hover:bg-[#f4efe3] hover:border-[#c9a96e] transition flex flex-col justify-between group"
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-[#0B1A33] text-[#e8d4a2]">{st.step}</span>
+                    <ArrowUpRight size={14} className="text-muted group-hover:text-ink" />
+                  </div>
+                  <div className="font-bold text-[13px] text-ink mt-2 leading-snug">{st.title}</div>
+                  <div className="text-[11px] text-muted mt-0.5 leading-snug">{st.sub}</div>
                 </div>
-                <div className="font-bold text-[13px] text-ink mt-2 leading-snug">{st.title}</div>
-                <div className="text-[11px] text-muted mt-0.5 leading-snug">{st.sub}</div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            ))}
         </div>
       </Reveal>
 
-      <Reveal className="card p-4 border border-[#efe9dc] bg-[#fbf9f5]">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="space-y-0.5">
-            <div className="text-xs font-extrabold uppercase tracking-wider text-ink flex items-center gap-1.5">
-              <ShieldCheck size={15} className="text-[#174B3B]" /> SWK Leadership Governance, Office Hours (Mon–Fri 10am–7pm · Sat 10am–4pm · Sun Holiday · 10:05 Grace) & WhatsApp Briefings
+      {adminOk && (
+        <Reveal className="card p-4 border border-[#efe9dc] bg-[#fbf9f5]">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="space-y-0.5">
+              <div className="text-xs font-extrabold uppercase tracking-wider text-ink flex items-center gap-1.5">
+                <ShieldCheck size={15} className="text-[#174B3B]" /> SWK Leadership Governance, Office Hours (Mon–Fri 10am–7pm · Sat 10am–4pm · Sun Holiday · 10:05 Grace) & WhatsApp Briefings
+              </div>
+              <div className="text-xs text-muted">
+                <strong>Owner:</strong> Shabib Siraj (Full Control & Final Approver) · <strong>Manager:</strong> Mohammad Haseeb (Operations) · <strong>Sales Advisors:</strong> Company Visa, AED 0 Basic, 50–50% Net Commission Split
+              </div>
             </div>
-            <div className="text-xs text-muted">
-              <strong>Owner:</strong> Shabib Siraj (Full Control & Final Approver) · <strong>Manager:</strong> Mohammad Haseeb (Operations) · <strong>BDM & IT Admin:</strong> Talha Shabbir · <strong>Sales Advisors:</strong> Company Visa, AED 0 Basic, 50–50% Net Commission Split
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                className="btn outline sm"
+                disabled={sendingBrief !== null}
+                onClick={() => void triggerBrief('morning')}
+              >
+                <MessageCircle size={13} /> {sendingBrief === 'morning' ? 'Sending…' : 'Send Owner Morning Briefing'}
+              </button>
+              <button
+                type="button"
+                className="btn outline sm"
+                disabled={sendingBrief !== null}
+                onClick={() => void triggerBrief('attendance-1030')}
+              >
+                <Clock size={13} /> {sendingBrief === 'attendance-1030' ? 'Running…' : 'Run 10:30 AM Attendance & Contemptor Report'}
+              </button>
+              <Link to="/recycle-bin" className="btn red sm">
+                <Trash2 size={13} /> Pending Bin ({binQ.data?.counts?.pending ?? 0})
+              </Link>
+              <Link to="/withdrawals" className="btn green sm">
+                <Scale size={13} /> Withdrawals ({(withQ.data?.items ?? []).length})
+              </Link>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              type="button"
-              className="btn outline sm"
-              disabled={sendingBrief !== null}
-              onClick={() => void triggerBrief('morning')}
-            >
-              <MessageCircle size={13} /> {sendingBrief === 'morning' ? 'Sending…' : 'Send Owner Morning Briefing'}
-            </button>
-            <button
-              type="button"
-              className="btn outline sm"
-              disabled={sendingBrief !== null}
-              onClick={() => void triggerBrief('attendance-1030')}
-            >
-              <Clock size={13} /> {sendingBrief === 'attendance-1030' ? 'Running…' : 'Run 10:30 AM Attendance & Contemptor Report'}
-            </button>
-            <Link to="/recycle-bin" className="btn red sm">
-              <Trash2 size={13} /> Pending Bin ({binQ.data?.counts?.pending ?? 0})
-            </Link>
-            <Link to="/withdrawals" className="btn green sm">
-              <Scale size={13} /> Withdrawals ({(withQ.data?.items ?? []).length})
-            </Link>
-          </div>
-        </div>
-      </Reveal>
+        </Reveal>
+      )}
 
       {/* ------------------------------------------------------------ KPI strip */}
       <Reveal className="grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">

@@ -6,12 +6,12 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 export const SETTING_DEFAULTS: Record<string, any> = {
-  company_name: 'SWK Properties L.L.C',
+  company_name: 'SWK Properties LLC',
   company_address: 'Bur Dubai, Dubai, UAE',
   company_phone: '',
   company_email: 'sales@swkpropertiesuae.com',
   company_info_email: 'info@swkpropertiesuae.com',
-  company_website: 'https://www.swkpropertiesuae.com',
+  company_website: 'www.swk.properties · www.swkpropertiesuae.com · www.swk.rent',
   company_trn: '',
   company_trade_license: '',
   base_currency: config.baseCurrency,

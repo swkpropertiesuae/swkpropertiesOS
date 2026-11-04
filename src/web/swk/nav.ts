@@ -7,7 +7,7 @@ import {
   ShieldHalf, History, Plug, DatabaseBackup, Building, Gavel, Layers, ShieldAlert, CheckCheck, MapPinned, Briefcase, Star, PackageCheck,
   Smartphone, QrCode, Trash2, BookOpen,
 } from 'lucide-react'
-import { isRestrictedStaffUser, isAllowedPathForRestrictedStaff } from '@shared/swk-staff-access'
+import { canAccessSwkAdminLogic, isRestrictedStaffUser, isAllowedPathForRestrictedStaff } from '@shared/swk-staff-access'
 
 export type NavItem = { label: string; to: string; icon: LucideIcon; module?: string; isNew?: boolean; desc?: string }
 export type NavSection = { key: string; label: string; items: NavItem[] }
@@ -20,12 +20,12 @@ export const SWK_NAV: NavSection[] = [
   { key: 'command', label: 'Dashboards', items: [
     { label: 'Overview', to: '/dashboard', icon: LayoutDashboard, module: 'dashboard', desc: 'Daily business summary' },
     { label: 'Deal Pipeline', to: '/pipeline', icon: KanbanSquare, module: 'sales', desc: 'Track deals step by step' },
-    { label: 'Approvals', to: '/e/universal_approvals', icon: CheckCheck, module: 'projects', desc: 'Items waiting for sign-off' },
-    { label: 'Delete Bin', to: '/recycle-bin', icon: Trash2, desc: 'Owner approval for deletions' },
+    { label: 'Approvals', to: '/e/universal_approvals', icon: CheckCheck, module: 'admin', desc: 'Items waiting for sign-off' },
+    { label: 'Delete Bin', to: '/recycle-bin', icon: Trash2, module: 'admin', desc: 'Owner approval for deletions' },
     { label: 'Calendar', to: '/calendar', icon: CalendarDays, desc: 'Viewings & meetings' },
-    { label: 'Daily Operations', to: '/enterprise/master-os', icon: ShieldCheck, desc: 'Company workflow control' },
+    { label: 'Daily Operations', to: '/enterprise/master-os', icon: ShieldCheck, module: 'admin', desc: 'Company workflow control' },
     { label: 'Market Pulse', to: '/market', icon: LineChart, desc: 'Dubai prices & yields' },
-    { label: 'Reception QR', to: '/reception-qr', icon: QrCode, desc: 'Office reception check-in' },
+    { label: 'Attendance Check-In', to: '/reception-qr', icon: QrCode, desc: 'Office reception scan & check-in' },
     { label: 'AI Assistant', to: '/ai', icon: Sparkles, module: 'ai', desc: 'Smart daily helper' },
   ] },
   { key: 'inventory', label: 'Properties', items: [
@@ -175,15 +175,15 @@ export type LauncherApp = { key: string; label: string; blurb: string; icon: Luc
 export const RESTRICTED_STAFF_LAUNCHER_APPS: LauncherApp[] = [
   {
     key: 'attendance',
-    label: 'Attendance & QR',
-    blurb: 'Daily Reception QR check-in, check-out, attendance history & leave',
-    icon: QrCode,
+    label: 'Attendance Check-In',
+    blurb: 'Daily office scan & check-in, attendance history & leave requests',
+    icon: Clock,
     tone: 'champ',
-    landing: '/reception-qr?scan=1',
+    landing: '/reception-qr',
     items: [
-      { label: 'Scan Reception QR', to: '/reception-qr?scan=1', icon: QrCode, desc: 'Daily QR attendance check-in' },
+      { label: 'Scan & Check-In Attendance', to: '/reception-qr', icon: Clock, desc: 'Daily office attendance check-in' },
       { label: 'My Attendance Log', to: '/e/attendance', icon: Clock, module: 'hr', desc: 'Personal daily check-in history' },
-      { label: 'Gate Scan Events', to: '/e/attendance_events', icon: Clock, module: 'hr', desc: 'Verified QR & Wi-Fi timestamps' },
+      { label: 'Gate Scan Events', to: '/e/attendance_events', icon: Clock, module: 'hr', desc: 'Verified office Wi-Fi timestamps' },
       { label: 'Leave Requests', to: '/e/leave_requests', icon: Plane, module: 'hr', desc: 'Apply for holiday or sick leave' },
       { label: 'Daily Work Summary', to: '/e/daily_reports', icon: ClipboardCheck, module: 'hr', desc: 'End-of-day activity report' },
     ],
@@ -191,7 +191,7 @@ export const RESTRICTED_STAFF_LAUNCHER_APPS: LauncherApp[] = [
   {
     key: 'manual',
     label: 'Company Manual',
-    blurb: 'SWK Properties handbook, RERA rules, SOPs & calculators',
+    blurb: 'SWK Properties LLC handbook, RERA rules, SOPs & calculators',
     icon: BookOpen,
     tone: 'navy',
     landing: '/competency',
@@ -229,14 +229,32 @@ export const RESTRICTED_STAFF_LAUNCHER_APPS: LauncherApp[] = [
   },
 ]
 
+function isAdminOnlyItem(item: NavItem): boolean {
+  const clean = item.to.split('?')[0] || ''
+  return (
+    item.module === 'admin' ||
+    clean.startsWith('/admin') ||
+    clean === '/recycle-bin' ||
+    clean === '/withdrawals' ||
+    clean === '/approvals' ||
+    clean === '/e/universal_approvals' ||
+    clean === '/enterprise/master-os'
+  )
+}
+
 /** Permission-filtered apps for the launcher. An app is hidden when none of its features are permitted. */
-export function launcherApps(can: (module: string, action?: 'view') => boolean, user?: { email?: string | null; name?: string | null; role?: string | null; permissions?: any } | null): LauncherApp[] {
+export function launcherApps(can: (module: string, action?: 'view') => boolean, user?: { email?: string | null; name?: string | null; role?: string | null; role_name?: string | null; permissions?: any } | null): LauncherApp[] {
   if (user && isRestrictedStaffUser(user)) {
     return RESTRICTED_STAFF_LAUNCHER_APPS
   }
+  const adminOk = canAccessSwkAdminLogic(user)
   const out: LauncherApp[] = []
   for (const s of SWK_NAV) {
-    const items = s.items.filter(i => !i.module || can(i.module, 'view'))
+    if (s.key === 'admin' && !adminOk) continue
+    const items = s.items.filter(i => {
+      if (!adminOk && isAdminOnlyItem(i)) return false
+      return !i.module || can(i.module, 'view')
+    })
     const meta = APP_META[s.key]
     if (!items.length || !meta) continue
     out.push({ key: s.key, label: s.label, ...meta, items, landing: items[0]!.to })
@@ -254,13 +272,18 @@ export function rememberVisit(pathname: string) {
     localStorage.setItem(RECENT_KEY, JSON.stringify([hit.item.to, ...list.filter(t => t !== hit.item.to)].slice(0, 8)))
   } catch { /* storage unavailable — recents are a convenience only */ }
 }
-export function recentItems(can: (module: string, action?: 'view') => boolean, limit = 4, user?: { email?: string | null; name?: string | null; role?: string | null; permissions?: any } | null): (NavItem & { section: string })[] {
+export function recentItems(can: (module: string, action?: 'view') => boolean, limit = 4, user?: { email?: string | null; name?: string | null; role?: string | null; role_name?: string | null; permissions?: any } | null): (NavItem & { section: string })[] {
   let list: string[] = []
   try { list = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]') } catch { /* ignore */ }
   const restricted = !!(user && isRestrictedStaffUser(user))
+  const adminOk = canAccessSwkAdminLogic(user)
   const all = SWK_NAV.flatMap(s => s.items.map(i => ({ ...i, section: s.label })))
   return list
     .map(to => all.find(i => i.to === to))
-    .filter((i): i is NavItem & { section: string } => !!i && (!i.module || can(i.module, 'view')) && (!restricted || isAllowedPathForRestrictedStaff(i.to)))
+    .filter((i): i is NavItem & { section: string } => {
+      if (!i) return false
+      if (!adminOk && isAdminOnlyItem(i)) return false
+      return (!i.module || can(i.module, 'view')) && (!restricted || isAllowedPathForRestrictedStaff(i.to))
+    })
     .slice(0, limit)
 }

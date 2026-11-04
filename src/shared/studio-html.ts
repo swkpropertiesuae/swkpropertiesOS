@@ -1,4 +1,5 @@
 // Helpers shared by the Document Studio server and web app. Pure string functions – no DOM needed.
+import { normalizeSwkCompanyName, normalizeSwkWebsitesText } from './corporate-footer'
 
 const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
@@ -14,8 +15,8 @@ export const longDate = (iso: string) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.
 /** Replace {{company.*}}, {{today}} and {{year}} with the company's own details. Unknown tokens are left alone. */
 export function mergeCompanyTokens(html: string, s: CompanyTokens, todayIso: string): string {
   const map: Record<string, string> = {
-    'company.name': s.company_name ?? '', 'company.name_ar': s.company_name_ar ?? '', 'company.address': s.company_address ?? '', 'company.phone': s.company_phone ?? '',
-    'company.email': s.company_email ?? '', 'company.info_email': s.company_info_email ?? '', 'company.website': (s.company_website ?? '').replace(/^https?:\/\//, ''),
+    'company.name': normalizeSwkCompanyName(s.company_name), 'company.name_ar': s.company_name_ar ?? '', 'company.address': s.company_address ?? '', 'company.phone': s.company_phone ?? '',
+    'company.email': s.company_email ?? '', 'company.info_email': s.company_info_email ?? '', 'company.website': normalizeSwkWebsitesText(s.company_website),
     'company.trn': s.company_trn ?? '', 'company.trade_license': s.company_trade_license ?? '', today: longDate(todayIso), year: todayIso.slice(0, 4),
   }
   for (const key of ['company_address_ar', 'dcci_no', 'commercial_register_no', 'company_legal_form', 'licence_issue_date', 'licence_expiry_date', 'establishment_card_no', 'establishment_card_expiry', 'ct_application_reference', 'ct_application_date', 'ct_application_status'] as const) map[`company.${key.replace(/^company_/, '')}`] = s[key] ?? ''

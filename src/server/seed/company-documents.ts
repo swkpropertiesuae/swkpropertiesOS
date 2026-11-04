@@ -10,6 +10,14 @@ export function seedCompanyDocuments() {
     company_legal_form: 'Limited Liability Company - Single Owner (LLC - SO)',
   }
   for (const [key, value] of Object.entries(facts)) if (!getSetting(key)) patch[key] = value
+  const currentName = String(getSetting('company_name') || '').trim()
+  if (!currentName || currentName === 'SWK Properties L.L.C' || currentName.toUpperCase() === 'SWK OS') {
+    patch.company_name = 'SWK Properties LLC'
+  }
+  const currentWeb = String(getSetting('company_website') || '').trim()
+  if (!currentWeb || currentWeb === 'https://www.swkpropertiesuae.com' || currentWeb === 'www.swkpropertiesuae.com') {
+    patch.company_website = 'www.swk.properties · www.swkpropertiesuae.com · www.swk.rent'
+  }
   setSettings(patch)
   const items = [
     { type: 'ICP establishment card', name: 'ICP establishment card', status: 'To verify', notes: 'Enter the card number and expiry date. Not evidence of MOHRE/WPS enrolment.' },

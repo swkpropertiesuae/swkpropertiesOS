@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { CheckCircle2, Eye, EyeOff, Loader2, Lock, Mail, Printer, Wifi, WifiOff } from 'lucide-react'
+import { CheckCircle2, Eye, EyeOff, Loader2, Lock, Mail, Printer, QrCode, Wifi, WifiOff } from 'lucide-react'
 import { get, post } from '../../lib/api'
+import { useMeta } from '../../lib/meta'
+import { canPrintReceptionQr } from '@shared/swk-staff-access'
+import { SWK_OFFICIAL_WEBSITES_TEXT } from '@shared/corporate-footer'
 
 const PRINTED_QR_CODE = 'SWK-RECEPTION-STAND-DXB-1'
 
@@ -30,8 +33,19 @@ function getBrowserDeviceIdentity(): BrowserDeviceIdentity {
 }
 
 export default function ReceptionQrPage() {
-  const [searchParams] = useSearchParams()
-  const isPrintMode = searchParams.get('print') === '1'
+  const { me } = useMeta()
+  const [searchParams, setSearchParams] = useSearchParams()
+  // HARD RULE: Only Owner (Shabib Siraj) and Haseeb (Mohammad Haseeb) can view or print the QR code.
+  const allowPrintQr = canPrintReceptionQr(me)
+  const isPrintMode = allowPrintQr && searchParams.get('print') === '1'
+
+  useEffect(() => {
+    if (searchParams.get('print') === '1' && !allowPrintQr) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('print')
+      setSearchParams(next, { replace: true })
+    }
+  }, [searchParams, allowPrintQr, setSearchParams])
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -126,32 +140,37 @@ export default function ReceptionQrPage() {
     }
   }
 
-  // Printable single QR sheet mode (?print=1)
+  // Printable single QR sheet mode (?print=1) — Strictly restricted to Owner & Haseeb
   if (isPrintMode) {
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ae.swkpropertiesuae.com'
     const scanUrl = `${origin}/reception-qr?scan=1&stand=${PRINTED_QR_CODE}`
     return (
       <div className="min-h-screen bg-[#08142a] text-white flex flex-col items-center justify-center p-6">
         <div className="w-full max-w-md bg-white text-[#0b1a33] rounded-3xl p-8 shadow-2xl border-4 border-[#c9a96e] text-center space-y-5">
-          <div className="flex items-center justify-center gap-2.5">
-            <img src="/brand/swk-mark.png" alt="SWK" className="h-10 w-10 object-contain" />
-            <div className="text-left">
-              <div className="font-display font-bold text-lg leading-tight text-[#0b1a33]">SWK Properties</div>
-              <div className="text-[10px] uppercase tracking-[0.2em] text-[#9a7a42] font-bold">
-                Office Attendance QR
-              </div>
+          <div
+            className="flex flex-col items-center justify-center gap-2 rounded-2xl px-5 py-3.5 mx-auto"
+            style={{
+              background: 'linear-gradient(135deg, #08142a 0%, #102445 100%)',
+              border: '1px solid rgba(201,169,110,.55)',
+              WebkitPrintColorAdjust: 'exact',
+              printColorAdjust: 'exact',
+            }}
+          >
+            <img src="/brand/swk-properties-horizontal.svg" alt="SWK Properties LLC" className="h-12 w-auto object-contain" />
+            <div className="text-[10px] uppercase tracking-[0.2em] text-[#e6c88f] font-bold">
+              SWK Properties LLC · Office Attendance QR
             </div>
           </div>
 
           <div className="p-4 bg-white rounded-2xl border-2 border-[#e7e1d4] inline-block mx-auto">
             {qrDataUrl ? (
-              <img src={qrDataUrl} alt="SWK Office Attendance QR Code" className="w-64 h-64 mx-auto block" />
+              <img src={qrDataUrl} alt="SWK Properties LLC Office Attendance QR Code" className="w-64 h-64 mx-auto block" />
             ) : (
               <div className="w-64 h-64 grid place-items-center text-xs text-slate-400">Generating QR…</div>
             )}
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <h1 className="font-display font-bold text-xl text-[#0b1a33]">Scan to Sign In &amp; Check In</h1>
             <p className="text-xs text-[#5a6578] leading-relaxed">
               1. Connect your phone to <b>{networkInfo?.ssid || 'SWK-Properties-Office'}</b> Wi-Fi.
@@ -160,6 +179,12 @@ export default function ReceptionQrPage() {
               <br />
               3. Sign in with your SWK email &amp; password.
             </p>
+            <div className="pt-1 text-[11px] font-bold text-[#08142a]">
+              SWK Properties LLC
+            </div>
+            <div className="text-[10px] font-semibold text-[#8d6e35]">
+              {SWK_OFFICIAL_WEBSITES_TEXT}
+            </div>
           </div>
 
           <div className="pt-2 flex items-center justify-center gap-3 print:hidden">
@@ -169,6 +194,13 @@ export default function ReceptionQrPage() {
               className="px-5 py-2.5 rounded-xl bg-[#0b1a33] text-[#f3ead8] font-bold text-xs border-0 cursor-pointer inline-flex items-center gap-2"
             >
               <Printer size={15} /> Print QR Code
+            </button>
+            <button
+              type="button"
+              onClick={() => setSearchParams({}, { replace: true })}
+              className="px-4 py-2.5 rounded-xl bg-slate-100 text-[#0b1a33] font-semibold text-xs border border-slate-300 cursor-pointer"
+            >
+              Scan &amp; Check-In View
             </button>
           </div>
           <div className="text-[10px] font-mono text-slate-400 break-all">{scanUrl}</div>
@@ -183,13 +215,15 @@ export default function ReceptionQrPage() {
       <div className="w-full max-w-[400px] rounded-3xl bg-[#0d1f3c] border border-[#c9a96e]/35 p-6 shadow-2xl">
         {/* Header */}
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="flex items-center gap-2.5 mb-3">
-            <img src="/brand/swk-os-emblem.svg" alt="SWK" className="h-10 w-10 object-contain" />
-            <img src="/brand/swk-os-wordmark.svg" alt="SWK OS" className="h-8 w-auto object-contain" />
+          <div className="flex items-center justify-center px-4 py-2.5 rounded-2xl bg-[#061022] border border-[#c9a96e]/35 mb-3">
+            <img src="/brand/swk-properties-horizontal.svg" alt="SWK Properties LLC" className="h-10 w-auto object-contain" />
           </div>
           <h1 className="font-display font-bold text-xl text-white m-0">
             {checkInResult ? 'Attendance Confirmed' : 'Office Attendance Sign-In'}
           </h1>
+          <div className="text-[11px] text-[#dcc8a2] font-semibold mt-1">
+            SWK Properties LLC
+          </div>
         </div>
 
         {checkInResult ? (
@@ -348,6 +382,22 @@ export default function ReceptionQrPage() {
             </button>
           </form>
         )}
+
+        {allowPrintQr && (
+          <div className="mt-4 pt-3 border-t border-white/10 text-center">
+            <button
+              type="button"
+              onClick={() => setSearchParams({ print: '1' }, { replace: true })}
+              className="w-full py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/15 border border-[#c9a96e]/35 text-[#f3dfb8] font-semibold text-xs cursor-pointer inline-flex items-center justify-center gap-2"
+            >
+              <QrCode size={15} /> Print Office Attendance QR (Owner &amp; Haseeb Only)
+            </button>
+          </div>
+        )}
+
+        <div className="mt-4 pt-3 border-t border-white/10 text-center text-[10px] text-[#8a9ab5]">
+          {SWK_OFFICIAL_WEBSITES_TEXT}
+        </div>
       </div>
     </div>
   )

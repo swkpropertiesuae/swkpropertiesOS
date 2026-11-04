@@ -2,13 +2,39 @@ export interface FooterCompany {
   company_name?: string; company_address?: string; company_phone?: string
   company_email?: string; company_info_email?: string; company_website?: string
 }
-export function corporateFooterDetails(s: FooterCompany) {
+
+export const SWK_OFFICIAL_WEBSITES = [
+  'www.swk.properties',
+  'www.swkpropertiesuae.com',
+  'www.swk.rent',
+] as const
+
+export const SWK_OFFICIAL_WEBSITES_TEXT = SWK_OFFICIAL_WEBSITES.join(' · ')
+
+export function normalizeSwkCompanyName(raw?: string | null): string {
+  const trimmed = (raw || '').trim()
+  if (!trimmed || trimmed.toUpperCase() === 'SWK OS' || trimmed === 'SWK Properties L.L.C') {
+    return 'SWK Properties LLC'
+  }
+  return trimmed
+}
+
+export function normalizeSwkWebsitesText(raw?: string | null): string {
+  const cleaned = (raw || '').replace(/^https?:\/\//, '').replace(/\/$/, '').trim()
+  if (!cleaned) return SWK_OFFICIAL_WEBSITES_TEXT
+  const lower = cleaned.toLowerCase()
+  if (SWK_OFFICIAL_WEBSITES.every(domain => lower.includes(domain))) return cleaned
+  return SWK_OFFICIAL_WEBSITES_TEXT
+}
+
+export function corporateFooterDetails(s: FooterCompany = {}) {
   return {
-    name: s.company_name || 'SWK Properties L.L.C',
+    name: normalizeSwkCompanyName(s.company_name),
     address: s.company_address || 'Bur Dubai, Dubai, UAE',
-    phone: s.company_phone || '',
-    email: s.company_info_email || s.company_email || '',
-    website: (s.company_website || '').replace(/^https?:\/\//, '').replace(/\/$/, ''),
+    phone: s.company_phone || '+971 4 330 4899',
+    email: s.company_info_email || s.company_email || 'info@swkpropertiesuae.com',
+    website: normalizeSwkWebsitesText(s.company_website),
+    websites: [...SWK_OFFICIAL_WEBSITES],
   }
 }
 const esc = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')

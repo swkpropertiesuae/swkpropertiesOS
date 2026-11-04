@@ -4,7 +4,7 @@ import { motion } from 'motion/react'
 import { Check, Copy, Printer } from 'lucide-react'
 import { AnimatedNumber, Card, SWK, aed } from '../../../swk/ui'
 
-export const SIGNATURE = '\n— SWK Properties · RERA ORN 51517\n_Indicative figures; subject to DLD / bank / developer confirmation._'
+export const SIGNATURE = '\n— SWK Properties LLC · RERA ORN 35224\nwww.swk.properties · www.swkpropertiesuae.com · www.swk.rent\n_Indicative figures; subject to DLD / bank / developer confirmation._'
 
 export function Select({ label, value, onChange, options, hint }: { label: string; value: string; onChange: (v: string) => void; options: (string | { value: string; label: string })[]; hint?: ReactNode }) {
   return (

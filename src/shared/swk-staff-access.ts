@@ -109,7 +109,7 @@ export const SWK_STAFF_ACCOUNTS: readonly SwkHardcodedStaffAccount[] = [
   },
 ] as const
 
-const FULL_ACCESS_EMAILS = new Set<string>([
+const QR_PRINT_ALLOWED_EMAILS = new Set<string>([
   'admin@swkpropertiesuae.com',
   'shabib@swkpropertiesuae.com',
   'shabib@swk.property',
@@ -117,8 +117,59 @@ const FULL_ACCESS_EMAILS = new Set<string>([
   'haseeb@swk.property',
   'haseeb@swkpropertiesuae.com',
   'manager@swkpropertiesuae.com',
+])
+
+const FULL_ACCESS_EMAILS = new Set<string>([
+  ...QR_PRINT_ALLOWED_EMAILS,
   'demo@swkpropertiesuae.com',
 ])
+
+/**
+ * HARD RULE: ONLY Haseeb (Mohammad Haseeb) and Owner (Shabib Siraj / Admin) can view or print the Office Attendance QR code.
+ * All other staff must never see any UI, menu item, poster, or control related to printing the QR code — they only scan and check in.
+ */
+export function canPrintReceptionQr(
+  user: { email?: string | null; role?: string | null; role_name?: string | null; name?: string | null; party_id?: number | null } | null | undefined,
+): boolean {
+  if (!user || user.party_id) return false
+  const email = String(user.email || '').trim().toLowerCase()
+  if (RESTRICTED_STAFF_EMAILS.has(email)) return false
+  if (QR_PRINT_ALLOWED_EMAILS.has(email)) return true
+  const role = String(user.role_name || user.role || '').trim().toLowerCase()
+  const name = String(user.name || '').trim().toLowerCase()
+  if (role === 'owner' || role === 'admin') return true
+  if (name === 'shabib siraj' || name === 'mohammad haseeb') return true
+  if (role === 'manager' && (name.includes('haseeb') || email.includes('haseeb') || email.includes('manager'))) return true
+  return false
+}
+
+/**
+ * Hard check for Administration & Governance logic (Recycle Bin, Withdrawals, Universal Approvals,
+ * Owner Morning Briefing, 10:30 AM Contemptor Report, System Settings, Roles & Users).
+ * Visible ONLY to Owner, Haseeb, or staff who have been explicitly granted an Administrative role.
+ */
+export function canAccessSwkAdminLogic(
+  user: {
+    email?: string | null
+    role?: string | null
+    role_name?: string | null
+    name?: string | null
+    party_id?: number | null
+    permissions?: '*' | Record<string, string[]> | null
+  } | null | undefined,
+): boolean {
+  if (!user || user.party_id) return false
+  if (canPrintReceptionQr(user)) return true
+  if (isRestrictedStaffUser(user)) return false
+  const role = String(user.role_name || user.role || '').trim().toLowerCase()
+  if (role === 'admin' || role === 'owner') return true
+  const perms = user.permissions
+  if (perms === '*') return true
+  if (perms && typeof perms === 'object' && Array.isArray(perms.admin) && perms.admin.includes('view')) {
+    return true
+  }
+  return false
+}
 
 const RESTRICTED_STAFF_EMAILS = new Set<string>([
   'talha@swk.property',
@@ -190,10 +241,12 @@ export function isRestrictedStaffUser(
   user: { email?: string | null; role?: string | null; role_name?: string | null; name?: string | null; party_id?: number | null } | null | undefined,
 ): boolean {
   if (!user || user.party_id) return false
+  if (canPrintReceptionQr(user)) return false
   const email = String(user.email || '').trim().toLowerCase()
   const role = String(user.role_name || user.role || '').trim().toLowerCase()
-  if (RESTRICTED_STAFF_EMAILS.has(email)) return true
   if (role === 'staff (attendance & general)') return true
+  if (role && role !== 'staff (attendance & general)') return false
+  if (RESTRICTED_STAFF_EMAILS.has(email)) return true
   if (email.endsWith('@swk.property') && !FULL_ACCESS_EMAILS.has(email)) return true
   return false
 }

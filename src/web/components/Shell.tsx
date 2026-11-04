@@ -11,7 +11,7 @@ import { applyUpdate, isIosBrowser, promptInstall, usePwa } from '../lib/pwa'
 import { useToast } from '../lib/toast'
 import { CommandPalette } from './CommandPalette'
 import { APP_META, QUICK_CREATE, findNav, rememberVisit } from '../swk/nav'
-import { isRestrictedStaffUser, isAllowedPathForRestrictedStaff } from '@shared/swk-staff-access'
+import { canAccessSwkAdminLogic, canPrintReceptionQr, isRestrictedStaffUser, isAllowedPathForRestrictedStaff } from '@shared/swk-staff-access'
 
 /** Live Dubai time (Gulf Standard Time). */
 function DubaiClock() {
@@ -77,9 +77,16 @@ function AppSidebar({ pathname, collapsed, onToggle }: { pathname: string; colla
   const { me, can } = useMeta()
   const here = findNav(pathname)
   const restricted = isRestrictedStaffUser(me)
+  const adminOk = canAccessSwkAdminLogic(me)
   const items = useMemo(
-    () => (here?.section.items ?? []).filter(i => (!i.module || can(i.module, 'view')) && (!restricted || isAllowedPathForRestrictedStaff(i.to.split('?')[0]!))),
-    [here, can, restricted],
+    () => (here?.section.items ?? []).filter(i => {
+      const cleanTo = i.to.split('?')[0]!
+      if (!adminOk && (i.module === 'admin' || cleanTo.startsWith('/admin') || cleanTo === '/recycle-bin' || cleanTo === '/withdrawals' || cleanTo === '/approvals')) {
+        return false
+      }
+      return (!i.module || can(i.module, 'view')) && (!restricted || isAllowedPathForRestrictedStaff(cleanTo))
+    }),
+    [here, can, restricted, adminOk],
   )
   if (!here || items.length < 1) return null
   const meta = APP_META[here.section.key]
@@ -176,12 +183,12 @@ export function Shell() {
     <div className="swk-app">
       <div className="swk-main-col">
         <header className="swk-top no-print">
-          <Link to="/home" className="swk-brand" aria-label="SWK Properties Business Workspace home">
+          <Link to="/home" className="swk-brand" aria-label="SWK Properties LLC Business Workspace home">
             <img src="/brand/swk-os-emblem.svg" alt="SWK Properties Monogram" className="swk-brand-monogram" />
             <img src="/brand/swk-os-wordmark.svg" alt="SWK OS" className="swk-brand-wordmark" />
             <span className="swk-os-tag">
               <b>OS</b>
-              <small className="swk-hide-md">Business Workspace</small>
+              <small className="swk-hide-md">SWK Properties LLC</small>
             </span>
           </Link>
           <Link to="/home" className={cls('swk-apps-btn', isHome && 'on')} aria-label="All apps" title="All apps"><LayoutGrid size={16} /><span className="swk-hide-sm">All apps</span></Link>
@@ -200,7 +207,11 @@ export function Shell() {
               <motion.div className="swk-menu" style={{ minWidth: 250 }} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: .16 }}>
                 <div className="px-3 py-2"><div className="font-semibold text-ink text-[14px] truncate">{me?.name}</div><div className="text-xs text-muted truncate">{me?.email}</div></div>
                 <div className="sep" />
-                <Link to="/reception-qr?print=1" onClick={() => setUserMenu(false)}><span className="ic"><QrCode size={16} /></span>Print Office Attendance QR</Link>
+                {canPrintReceptionQr(me) ? (
+                  <Link to="/reception-qr?print=1" onClick={() => setUserMenu(false)}><span className="ic"><QrCode size={16} /></span>Print Office Attendance QR</Link>
+                ) : (
+                  <Link to="/reception-qr" onClick={() => setUserMenu(false)}><span className="ic"><Camera size={16} /></span>Scan &amp; Check-In Attendance</Link>
+                )}
                 <Link to="/profile" onClick={() => setUserMenu(false)}><span className="ic"><UserRound size={16} /></span>My profile & password</Link>
                 <Link to="/workspace-tools" onClick={() => setUserMenu(false)}><span className="ic"><Languages size={16} /></span>Language & preferences</Link>
                 <Link to="/home" onClick={() => setUserMenu(false)}><span className="ic"><LayoutGrid size={16} /></span>All apps</Link>

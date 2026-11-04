@@ -8,6 +8,7 @@ import { getSetting, setSettings } from '../settings'
 import { attemptLogin, createSession } from '../auth'
 import { COOKIE } from '../app'
 import { config } from '../config'
+import { canAccessSwkAdminLogic, canPrintReceptionQr } from '../../shared/swk-staff-access'
 
 export function computeDubaiShiftInfo(now = new Date(), clientVariableHours = false) {
   const parts = new Intl.DateTimeFormat('en-GB', {
@@ -908,8 +909,15 @@ export function syncDailyDldTransactionsAndNews(ctx: Ctx = SYSTEM_CTX) {
 }
 
 export default async function swkOpsRoutes(app: FastifyInstance) {
+  const requireAdminOrHaseeb = (req: any) => {
+    if (!canAccessSwkAdminLogic(req.user)) {
+      throw new HttpError(403, 'Administration access is restricted until proper role access is granted by the Owner.')
+    }
+  }
+
   // ------------------------------------------------------------------ 1. Recycle Bin (Pending Owner Approval)
-  app.get('/api/swk-ops/recycle-bin', async () => {
+  app.get('/api/swk-ops/recycle-bin', async (req) => {
+    requireAdminOrHaseeb(req)
     const items = q.all(`
       SELECT r.*, r.entity_key as entity, r.record_label as record_title, u1.email as requested_by_email, u2.name as decided_by_name
       FROM recycle_bin_requests r
@@ -971,7 +979,8 @@ export default async function swkOpsRoutes(app: FastifyInstance) {
   })
 
   // ------------------------------------------------------------------ 2. Deal Withdrawals & Client Refunds
-  app.get('/api/swk-ops/withdrawals', async () => {
+  app.get('/api/swk-ops/withdrawals', async (req) => {
+    requireAdminOrHaseeb(req)
     const items = q.all(`
       SELECT w.*, p.name as client_name, pr.title as property_title, j.job_no as job_no_ref, u.name as owner_approver_name
       FROM deal_withdrawals w
@@ -1089,7 +1098,8 @@ export default async function swkOpsRoutes(app: FastifyInstance) {
   })
 
   // ------------------------------------------------------------------ 3. Manager Administrative Decision Requests (Haseeb -> Shabib)
-  app.get('/api/swk-ops/admin-decisions', async () => {
+  app.get('/api/swk-ops/admin-decisions', async (req) => {
+    requireAdminOrHaseeb(req)
     const items = q.all(`
       SELECT a.*, u1.name as requested_by_name, u2.name as decided_by_name
       FROM approval_requests a
@@ -1101,6 +1111,7 @@ export default async function swkOpsRoutes(app: FastifyInstance) {
   })
 
   app.post('/api/swk-ops/admin-decisions', async (req) => {
+    requireAdminOrHaseeb(req)
     const body = (req.body ?? {}) as { subject?: string; category?: string; decision_type?: string; reason?: string; justification?: string; amount?: number; entity?: string; record_id?: number }
     const reasonText = body.reason || body.justification
     if (!body.subject || !reasonText) throw new HttpError(400, 'Subject and detailed reasoning are required for Owner approval.')
@@ -1332,11 +1343,13 @@ export default async function swkOpsRoutes(app: FastifyInstance) {
   })
 
   // ------------------------------------------------------------------ 6. Owner WhatsApp Morning Briefing & 10:30 AM Attendance Report
-  app.post('/api/swk-ops/briefings/morning', async () => {
+  app.post('/api/swk-ops/briefings/morning', async (req) => {
+    requireAdminOrHaseeb(req)
     return await sendOwnerMorningBriefing()
   })
 
-  app.post('/api/swk-ops/briefings/attendance-1030', async () => {
+  app.post('/api/swk-ops/briefings/attendance-1030', async (req) => {
+    requireAdminOrHaseeb(req)
     const reportRes = await sendOwner1030AttendanceReport()
     return reportRes
   })
@@ -1393,6 +1406,9 @@ export default async function swkOpsRoutes(app: FastifyInstance) {
   app.get('/api/public/reception-qr/wifi-config', async (req) => getWifiCfg(resolveClientIp(req)))
 
   app.post('/api/public/reception-qr/wifi-config', async (req) => {
+    if (!canPrintReceptionQr(req.user)) {
+      throw new HttpError(403, 'Only Owner (Shabib Siraj) or Mohammad Haseeb can modify Office Attendance QR configuration.')
+    }
     const b = (req.body ?? {}) as Record<string, any>
     const clientIp = resolveClientIp(req)
     if (b.lock_current_ip && clientIp) {
