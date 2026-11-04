@@ -141,6 +141,13 @@ export default function ReceptionQrPage() {
           </div>
 
           <div className="pt-2 flex items-center justify-center gap-3 print:hidden">
+            <a
+              href="/SWK_Office_Attendance_QR_Poster.pdf"
+              download="SWK_Office_Attendance_QR_Poster.pdf"
+              className="px-5 py-2.5 rounded-xl bg-[#c9a96e] text-[#08142a] font-bold text-xs no-underline inline-flex items-center gap-2"
+            >
+              Download Print PDF (A4)
+            </a>
             <button
               type="button"
               onClick={() => window.print()}
