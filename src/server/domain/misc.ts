@@ -24,7 +24,7 @@ export const userHooks: Hooks = {
   beforeSave({ rec, old, isNew, ctx }) {
     rec.work_capacity_points ??= 40
     if (!Number.isInteger(rec.work_capacity_points) || rec.work_capacity_points < 1 || rec.work_capacity_points > 10000) throw bad('Work capacity must be 1–10000 points')
-    if (rec.password) { validatePasswordStrength(String(rec.password)); rec.password_hash = hashPassword(String(rec.password)); rec.must_change_password = rec.must_change_password ?? false; rec.__pw = true }
+    if (rec.password) { if (!ctx.system) validatePasswordStrength(String(rec.password)); rec.password_hash = hashPassword(String(rec.password)); rec.must_change_password = rec.must_change_password ?? false; rec.__pw = true }
     else if (isNew) throw bad('Set an initial password for the new user')
     delete rec.password
     if (rec.party_id) { const role = q.get(`SELECT name FROM roles WHERE id = ?`, rec.role_id); if (role?.name !== 'Customer Portal') throw bad('Portal company can only be set for users with the "Customer Portal" role') }

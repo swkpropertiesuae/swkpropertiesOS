@@ -20,8 +20,8 @@ export function Launcher() {
   const nav = useNavigate()
   const reduce = useReducedMotion()
   const [query, setQuery] = useState('')
-  const apps = useMemo(() => launcherApps(can), [can])
-  const recents = useMemo(() => recentItems(can), [can])
+  const apps = useMemo(() => launcherApps(can, me), [can, me])
+  const recents = useMemo(() => recentItems(can, 4, me), [can, me])
   const needle = query.trim().toLocaleLowerCase()
   const shownApps = apps.filter(a => !needle || a.label.toLocaleLowerCase().includes(needle) || a.blurb.toLocaleLowerCase().includes(needle))
   const features = needle ? apps.flatMap(a => a.items.map(i => ({ ...i, app: a.label }))).filter(i => i.label.toLocaleLowerCase().includes(needle) || (i.desc ?? '').toLocaleLowerCase().includes(needle)) : []

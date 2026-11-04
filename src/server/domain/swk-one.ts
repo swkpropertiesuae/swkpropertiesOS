@@ -7,6 +7,8 @@ import { computeActivitySnapshot, recordEnterpriseAudit, submitDailyReport } fro
 import { notifyRole, notifyLeadership } from '../notify'
 import { getSetting, setSettings } from '../settings'
 import { attemptLogin, createSession } from '../auth'
+import { isFullAccessSwkUser, isRestrictedStaffUser, SWK_STAFF_ACCOUNTS } from '../../shared/swk-staff-access'
+import { ensureHardcodedSwkStaffAccounts } from '../seed'
 
 export function computeDubaiShiftInfo(now = new Date(), clientVariableHours = false) {
   const parts = new Intl.DateTimeFormat('en-GB', {
@@ -494,13 +496,28 @@ export function getCurrentReceptionQr(branchId = 1, ctx: Ctx = SYSTEM_CTX, clien
     today,
   )
 
-  const staffRows = q.all<any>(
+  let staffRows = q.all<any>(
     `SELECT e.id, e.emp_no, e.name, e.email, e.designation, e.department_id, e.user_id, d.name AS department_name
      FROM employees e
      LEFT JOIN departments d ON d.id = e.department_id
      WHERE e.deleted_at IS NULL AND COALESCE(e.status, 'Active') = 'Active'
      ORDER BY e.id ASC`,
   )
+  const missingSwkStaff = SWK_STAFF_ACCOUNTS.some(
+    acc => !staffRows.some((r: any) => String(r.email || '').toLowerCase() === acc.email.toLowerCase()),
+  )
+  if (missingSwkStaff && !inDemo()) {
+    try {
+      ensureHardcodedSwkStaffAccounts()
+      staffRows = q.all<any>(
+        `SELECT e.id, e.emp_no, e.name, e.email, e.designation, e.department_id, e.user_id, d.name AS department_name
+         FROM employees e
+         LEFT JOIN departments d ON d.id = e.department_id
+         WHERE e.deleted_at IS NULL AND COALESCE(e.status, 'Active') = 'Active'
+         ORDER BY e.id ASC`,
+      )
+    } catch { /* ignore */ }
+  }
 
   const staffRoster = staffRows.map((emp: any) => {
     const todayEv = todayCheckins.find((c: any) => Number(c.employee_id) === Number(emp.id))
@@ -784,7 +801,7 @@ export function officeQrCheckIn(
     const loginEmail = String(payload.email || '').trim().toLowerCase()
     const loginPassword = String(payload.password || '')
     if (!loginEmail || !loginPassword) {
-      throw bad('Enter your dedicated @swkpropertiesuae.com company login email and password to verify your identity and register attendance.')
+      throw bad('Enter your dedicated @swk.property or @swkpropertiesuae.com company login email and password to verify your identity and register attendance.')
     }
     const loginRes = attemptLogin(loginEmail, loginPassword, payload.totp, payload.client_ip || ctx.ip, payload.user_agent)
     if ('needsTotp' in loginRes && loginRes.needsTotp) {
@@ -971,6 +988,12 @@ export function officeQrCheckIn(
     late_minutes: lateMins,
     contemptor_alert: contemptorCheck.triggered,
   })
+
+  notifyLeadership(
+    'Attendance Check-In',
+    `${employee.name} (${employee.email || employee.emp_no}) checked in at ${now.slice(11, 16)} GST via Office Reception QR (${verified ? 'Verified' : 'Flagged for Review'}${shiftInfo.isLate ? `, Late +${lateMins}m` : ', On Time'})`,
+    `/e/attendance_events/${eventRecord.id}`,
+  )
 
   return {
     verified,
@@ -2622,23 +2645,30 @@ export function getSwkOneBootstrap(ctx: Ctx) {
     ...(empId ? [empId] : []),
   )
 
-  const leads = listRecords(getDef('leads'), { pageSize: 25 }, ctx).rows
-  const viewings = listRecords(getDef('viewings'), { pageSize: 25 }, ctx).rows
-  const properties = listRecords(getDef('properties'), { pageSize: 30 }, ctx).rows
-  const offers = listRecords(getDef('offers'), { pageSize: 20 }, ctx).rows
-  const inventorySubmissions = listRecords(getDef('inventory_submissions'), { pageSize: 25 }, ctx).rows
-  const listingMandates = listRecords(getDef('listing_mandates'), { pageSize: 20 }, ctx).rows
-  const developerRequests = listRecords(getDef('developer_requests'), { pageSize: 20 }, ctx).rows
-  const transactions = listRecords(getDef('transactions'), { pageSize: 20 }, ctx).rows
-  const commissions = listRecords(getDef('commission_entitlements'), { pageSize: 25 }, ctx).rows
-  const communications = listRecords(getDef('communications'), { pageSize: 25 }, ctx).rows
+  const restricted = isRestrictedStaffUser(ctx.user)
+  const fullAccess = isFullAccessSwkUser(ctx.user)
+
+  const leads = restricted ? [] : listRecords(getDef('leads'), { pageSize: 25 }, ctx).rows
+  const viewings = restricted ? [] : listRecords(getDef('viewings'), { pageSize: 25 }, ctx).rows
+  const properties = restricted ? [] : listRecords(getDef('properties'), { pageSize: 30 }, ctx).rows
+  const offers = restricted ? [] : listRecords(getDef('offers'), { pageSize: 20 }, ctx).rows
+  const inventorySubmissions = restricted ? [] : listRecords(getDef('inventory_submissions'), { pageSize: 25 }, ctx).rows
+  const listingMandates = restricted ? [] : listRecords(getDef('listing_mandates'), { pageSize: 20 }, ctx).rows
+  const developerRequests = restricted ? [] : listRecords(getDef('developer_requests'), { pageSize: 20 }, ctx).rows
+  const transactions = restricted ? [] : listRecords(getDef('transactions'), { pageSize: 20 }, ctx).rows
+  const commissions = restricted ? [] : listRecords(getDef('commission_entitlements'), { pageSize: 25 }, ctx).rows
+  const communications = restricted ? [] : listRecords(getDef('communications'), { pageSize: 25 }, ctx).rows
   const dailyReports = listRecords(getDef('daily_reports'), { pageSize: 15 }, ctx).rows
-  const tasks = listRecords(getDef('tasks'), { pageSize: 25 }, ctx).rows
+  const tasks = restricted ? [] : listRecords(getDef('tasks'), { pageSize: 25 }, ctx).rows
   const leaveRequests = listRecords(getDef('leave_requests'), { pageSize: 15 }, ctx).rows
-  const payslips = listRecords(getDef('payslips'), { pageSize: 12 }, ctx).rows
-  const immigrationCases = listRecords(getDef('immigration_cases'), { pageSize: 10 }, ctx).rows
-  const qaReviews = listRecords(getDef('qa_reviews'), { pageSize: 10 }, ctx).rows
-  const keyLogs = q.all(`SELECT * FROM property_key_logs ORDER BY id DESC LIMIT 20`)
+  const payslips = restricted ? [] : listRecords(getDef('payslips'), { pageSize: 12 }, ctx).rows
+  const immigrationCases = restricted ? [] : listRecords(getDef('immigration_cases'), { pageSize: 10 }, ctx).rows
+  const qaReviews = restricted ? [] : listRecords(getDef('qa_reviews'), { pageSize: 10 }, ctx).rows
+  const keyLogs = restricted ? [] : q.all(`SELECT * FROM property_key_logs ORDER BY id DESC LIMIT 20`)
+  const companyManual = listRecords(getDef('knowledge_articles'), { pageSize: 50 }, ctx).rows
+  const marketCommunities = listRecords(getDef('communities'), { pageSize: 30 }, ctx).rows
+  const marketDevelopers = listRecords(getDef('developers'), { pageSize: 20 }, ctx).rows
+  const marketNews = listRecords(getDef('real_estate_news'), { pageSize: 15 }, ctx).rows
   const devices = q.all(`SELECT * FROM mobile_devices WHERE user_id = ? ORDER BY id DESC`, userId)
   const colleagues = q.all(`SELECT id, name, email FROM users WHERE active = 1 AND party_id IS NULL AND deleted_at IS NULL ORDER BY name ASC`)
   const notifications = q.all(`SELECT * FROM notifications WHERE user_id = ? ORDER BY id DESC LIMIT 20`, userId)
@@ -2808,6 +2838,15 @@ export function getSwkOneBootstrap(ctx: Ctx) {
     devices,
     colleagues,
     notifications,
+    restricted_staff_mode: restricted,
+    full_access_mode: fullAccess,
+    admin_attendance_board: fullAccess ? qrPreviewRaw.staff_roster : [],
+    company_manual: companyManual,
+    market_pulse: {
+      communities: marketCommunities,
+      developers: marketDevelopers,
+      news: marketNews,
+    },
     // The live code is never sent to staff phones: it must be scanned from the reception screen.
     reception_qr_preview: publicQrInfo,
     reception_qr: publicQrInfo,

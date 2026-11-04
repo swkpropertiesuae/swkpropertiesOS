@@ -11,6 +11,7 @@ import { applyUpdate, isIosBrowser, promptInstall, usePwa } from '../lib/pwa'
 import { useToast } from '../lib/toast'
 import { CommandPalette } from './CommandPalette'
 import { APP_META, QUICK_CREATE, findNav, rememberVisit } from '../swk/nav'
+import { isRestrictedStaffUser, isAllowedPathForRestrictedStaff } from '@shared/swk-staff-access'
 
 /** Live Dubai time (Gulf Standard Time). */
 function DubaiClock() {
@@ -46,10 +47,11 @@ function NotificationBell() {
 }
 
 function QuickCreate() {
-  const { can } = useMeta()
+  const { me, can } = useMeta()
   const [open, setOpen] = useState(false)
   const ref = useClickOutside<HTMLDivElement>(() => setOpen(false))
-  const items = QUICK_CREATE.filter(i => can(i.module, 'create'))
+  const restricted = isRestrictedStaffUser(me)
+  const items = QUICK_CREATE.filter(i => can(i.module, 'create') && (!restricted || isAllowedPathForRestrictedStaff(i.to.split('?')[0]!)))
   if (!items.length) return null
   return (
     <div className="relative" ref={ref}>
@@ -72,9 +74,13 @@ function QuickCreate() {
  * - Zero cluttered descriptions or badge spam
  */
 function AppSidebar({ pathname, collapsed, onToggle }: { pathname: string; collapsed: boolean; onToggle: () => void }) {
-  const { can } = useMeta()
+  const { me, can } = useMeta()
   const here = findNav(pathname)
-  const items = useMemo(() => (here?.section.items ?? []).filter(i => !i.module || can(i.module, 'view')), [here, can])
+  const restricted = isRestrictedStaffUser(me)
+  const items = useMemo(
+    () => (here?.section.items ?? []).filter(i => (!i.module || can(i.module, 'view')) && (!restricted || isAllowedPathForRestrictedStaff(i.to.split('?')[0]!))),
+    [here, can, restricted],
+  )
   if (!here || items.length < 1) return null
   const meta = APP_META[here.section.key]
   return (

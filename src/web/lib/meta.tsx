@@ -1,6 +1,7 @@
 import { tr, lang } from './i18n'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { EntityDef, FieldDef, NavGroup, Action } from '@shared/types'
+import { isRestrictedStaffUser, RESTRICTED_STAFF_PERMISSIONS } from '@shared/swk-staff-access'
 import { get } from './api'
 
 export interface MetaEntity extends EntityDef { customFieldDefs: FieldDef[] }
@@ -31,7 +32,11 @@ export function MetaProvider({ children }: { children: ReactNode }) {
   const def = useCallback((k: string) => { const e = byKey.get(k); if (!e) throw new Error('Unknown entity ' + k); return e }, [byKey])
   const can = useCallback((module: string, a: Action = 'view') => {
     if (!me) return false
-    if (module === 'ai' && (me.permissions !== '*' || me.party_id)) return false
+    if (isRestrictedStaffUser(me)) {
+      const rp = RESTRICTED_STAFF_PERMISSIONS[module]
+      return !!rp && (rp.includes('*') || rp.includes(a))
+    }
+    if (module === 'ai' && me.party_id) return false
     if (me.permissions === '*') return true
     const p = me.permissions[module]; return !!p && (p.includes('*') || p.includes(a))
   }, [me])

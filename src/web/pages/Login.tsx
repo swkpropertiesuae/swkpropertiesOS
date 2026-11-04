@@ -106,8 +106,8 @@ export function Login() {
 
           <form onSubmit={submit} className="mt-7 grid gap-4" aria-label="Sign in" noValidate={false}>
             <motion.div variants={item}>
-              <label htmlFor="email" className="block text-[12.5px] font-medium text-[#a9b6cd] mb-2">Email address</label>
-              <div className="swk-login-input"><Mail size={18} /><input id="email" type="email" autoComplete="username" required autoFocus={!email} value={email} onChange={e => setEmail(e.target.value)} placeholder="name@swkpropertiesuae.com" /></div>
+              <label htmlFor="email" className="block text-[12.5px] font-medium text-[#a9b6cd] mb-2">Email address (@swk.property or @swkpropertiesuae.com)</label>
+              <div className="swk-login-input"><Mail size={18} /><input id="email" type="email" autoComplete="username" required autoFocus={!email} value={email} onChange={e => setEmail(e.target.value)} placeholder="Talha@swk.property or admin@swkpropertiesuae.com" /></div>
             </motion.div>
             <motion.div variants={item}>
               <div className="flex items-center justify-between mb-2"><label htmlFor="pw" className="text-[12.5px] font-medium text-[#a9b6cd]">Password</label><button type="button" onClick={() => setHelp(h => !h)} className="text-[12.5px] font-medium text-[#c9a96e] hover:text-[#e6d3a9] bg-transparent border-0 cursor-pointer p-0">Forgot password?</button></div>

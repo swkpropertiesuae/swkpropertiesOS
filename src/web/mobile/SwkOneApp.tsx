@@ -43,6 +43,8 @@ import {
   CrmAndDealsTab,
   PayHrAndSecurityTab,
 } from './SwkOneTabs'
+import { isRestrictedStaffUser, isFullAccessSwkUser } from '@shared/swk-staff-access'
+import { SwkOneRestrictedStaffView, AdminAttendanceRollCallCard } from './SwkOneRestrictedStaffView'
 
 export type SwkOneTabId = 'command' | 'duty' | 'inventory' | 'crm' | 'pay'
 
@@ -935,6 +937,45 @@ export default function SwkOneApp() {
 
         {/* Main Scrollable Content Area with Smooth Animated Tab Transitions */}
         <main className="flex-1 overflow-y-auto p-4 pb-24">
+          {isRestrictedStaffUser(data?.user) ? (
+            <SwkOneRestrictedStaffView
+              data={data}
+              activeCommunity={activeCommunity}
+              communityYoY={communityYoY}
+              pulseIndex={pulseIndex}
+              setPulseIndex={setPulseIndex}
+              areaCompanionCode={areaCompanionCode}
+              setAreaCompanionCode={setAreaCompanionCode}
+              areaCompanionData={areaCompanionData}
+              eodSummary={eodSummary}
+              setEodSummary={setEodSummary}
+              eodBlockers={eodBlockers}
+              setEodBlockers={setEodBlockers}
+              eodPriorities={eodPriorities}
+              setEodPriorities={setEodPriorities}
+              clientVarHours={clientVarHours}
+              setClientVarHours={setClientVarHours}
+              varHoursReason={varHoursReason}
+              setVarHoursReason={setVarHoursReason}
+              onOpenQrScanner={() => setQrModalOpen(true)}
+              onOfficeCheckOut={() => void handleOfficeCheckOut()}
+              onSubmitDailyReport={() => void handleOneTapDailyReport()}
+              onSubmitLeave={async payload => {
+                await runOrQueue(
+                  'office_check_in',
+                  'Leave Request',
+                  '/api/swk-one/hr/leave-request',
+                  payload,
+                  'Leave request submitted to Admin!',
+                )
+              }}
+              onAskKnowledge={async question => post('/api/swk-one/knowledge/ask', { question })}
+              onOpenAiStudio={() => setAiStudioModalOpen(true)}
+              onOpenApkModal={() => setApkModalOpen(true)}
+              device={device}
+              telemetry={telemetry}
+            />
+          ) : (
           <AnimatePresence mode="wait">
             {activeTab === 'command' && (
               <motion.div
@@ -945,6 +986,12 @@ export default function SwkOneApp() {
                 exit={{ opacity: 0, y: -8, transition: { duration: 0.2 } }}
                 className="space-y-4"
               >
+                {isFullAccessSwkUser(data?.user) && (
+                  <AdminAttendanceRollCallCard
+                    roster={data?.admin_attendance_board || []}
+                    onOpenReceptionQr={() => setQrModalOpen(true)}
+                  />
+                )}
                 {/* A. Agent Morning Briefing & Verified Activity Ring (SWK ONE 2.0 Priority #1) */}
                 <motion.div
                   variants={cardRise}
@@ -1824,9 +1871,11 @@ export default function SwkOneApp() {
               </motion.div>
             )}
           </AnimatePresence>
+          )}
         </main>
 
-        {/* Bottom Android App Navigation Dock with Spring-Animated Pill */}
+        {/* Bottom Android App Navigation Dock with Spring-Animated Pill (Full Access Users Only) */}
+        {!isRestrictedStaffUser(data?.user) && (
         <nav className="sticky bottom-0 z-30 bg-[#0b1a33]/95 backdrop-blur-xl border-t border-[#c9a96e]/30 px-2 pt-2 pb-2.5 grid grid-cols-5 gap-1 text-white">
           {[
             { id: 'command', label: 'Command', icon: Compass, badge: 0 },
@@ -1888,6 +1937,7 @@ export default function SwkOneApp() {
             )
           })}
         </nav>
+        )}
 
         {/* Modals */}
         <BiometricLockModal

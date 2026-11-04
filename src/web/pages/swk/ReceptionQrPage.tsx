@@ -13,6 +13,7 @@ import { get, post } from '../../lib/api'
 import { useMeta } from '../../lib/meta'
 import { Loading } from '../../ui/kit'
 import { SWK_BRAND } from '../../mobile/SwkOneBrandAssets'
+import { SWK_STAFF_ACCOUNTS } from '@shared/swk-staff-access'
 import {
   captureVideoFrameSignature,
   getDeviceIdentity,
@@ -376,7 +377,7 @@ export default function ReceptionQrPage() {
       setFeedbackBanner({
         tone: 'err',
         title: 'Dedicated Company Login Required',
-        detail: 'Enter your @swkpropertiesuae.com email and password to authenticate and register your office attendance.',
+        detail: 'Enter your @swk.property or @swkpropertiesuae.com email and password to authenticate and register your office attendance.',
       })
       return
     }
@@ -1116,10 +1117,35 @@ export default function ReceptionQrPage() {
               )}
 
               <form onSubmit={e => void handleLoginAndCheckIn(e)} className="space-y-3.5">
+                <div className="p-3 rounded-2xl bg-[#fbf8f2] border border-[#e7e1d4]">
+                  <div className="text-[11px] font-extrabold uppercase tracking-wider text-[#7d5f2c] mb-2">
+                    Quick Select Staff Account (@swk.property) — Tap Your Name, Enter Password &amp; Press Check In:
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {SWK_STAFF_ACCOUNTS.map(acc => {
+                      const active = loginEmail.toLowerCase() === acc.email.toLowerCase()
+                      return (
+                        <button
+                          key={acc.email}
+                          type="button"
+                          onClick={() => setLoginEmail(acc.displayEmail)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold border cursor-pointer transition ${
+                            active
+                              ? 'bg-[#0b1a33] text-[#f1e3c2] border-[#c9a96e]'
+                              : 'bg-white text-[#0b1a33] border-[#d8d0c0] hover:border-[#c9a96e]'
+                          }`}
+                        >
+                          {acc.name.split(' ')[0]} · <span className="font-mono text-[11px] opacity-85">{acc.displayEmail}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
                     <label className="block text-xs font-bold text-[#0b1a33] mb-1">
-                      Company Login ID (@swkpropertiesuae.com)
+                      Company Login ID (@swk.property / @swkpropertiesuae.com)
                     </label>
                     <input
                       type="email"
@@ -1127,7 +1153,7 @@ export default function ReceptionQrPage() {
                       autoComplete="username"
                       value={loginEmail}
                       onChange={e => setLoginEmail(e.target.value)}
-                      placeholder="name@swkpropertiesuae.com"
+                      placeholder="Talha@swk.property"
                       className="w-full rounded-xl border border-[#d8d0c0] bg-[#fbf8f2] px-3.5 py-2.5 text-sm font-semibold text-[#0b1a33]"
                     />
                   </div>

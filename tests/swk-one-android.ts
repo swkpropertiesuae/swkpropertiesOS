@@ -304,6 +304,69 @@ try {
   const stillSignedIn = await androidReq('/api/swk-one/bootstrap', 'GET', undefined, token)
   check('A refused offline item (logout) did not run', stillSignedIn.statusCode === 200)
 
+  // 10. Hardcoded @swk.property Staff Accounts, Reception QR Check-In & Strict Access Restriction
+  const staffCreds = [
+    { email: 'Talha@swk.property', pass: 'Talha123', restricted: true },
+    { email: 'Haseeb@swk.property', pass: 'Haseeb123', restricted: false },
+    { email: 'Fareed@swk.property', pass: 'Fareed123', restricted: true },
+    { email: 'Shahid@swk.property', pass: 'Shahid123', restricted: true },
+    { email: 'Umar@swk.property', pass: 'Umar123', restricted: true },
+    { email: 'Saifullah@swk.property', pass: 'Saifullah123', restricted: true },
+  ]
+
+  for (const sc of staffCreds) {
+    const devId = `SWK-STAFF-${sc.email.split('@')[0]!.toUpperCase()}-01`
+    const qrCheck = await app.inject({
+      method: 'POST',
+      url: '/api/public/reception-qr/scan-login-checkin',
+      payload: {
+        email: sc.email,
+        password: sc.pass,
+        require_login: true,
+        strict_anti_loophole: true,
+        qr_code_or_token: 'SWK-RECEPTION-STAND-DXB-1',
+        device_id: devId,
+        device_name: `${sc.email} Handset`,
+        network_ssid: 'SWK-Properties-Office',
+        connection_type: 'wifi',
+        camera_verified: true,
+        scan_frame_hash: `FRAME-${devId}-998122`,
+        lat: 25.1851,
+        lng: 55.2628,
+        accuracy_m: 8,
+      },
+    })
+    const qrBody = qrCheck.json()
+    check(
+      `${sc.email} can scan Reception QR, sign in with ${sc.pass}, and check in`,
+      qrCheck.statusCode === 200 && Boolean(qrBody.sessionToken) && Boolean(qrBody.attendance_event?.id),
+      JSON.stringify(qrBody),
+    )
+
+    const staffToken = qrBody.sessionToken as string
+    const bootRes = await androidReq('/api/swk-one/bootstrap', 'GET', undefined, staffToken)
+    const bootJson = bootRes.json()
+    check(
+      `${sc.email} bootstrap loads with restricted_staff_mode=${sc.restricted}`,
+      bootRes.statusCode === 200 && Boolean(bootJson.restricted_staff_mode) === sc.restricted,
+    )
+
+    const leadsAttempt = await androidReq('/api/e/leads', 'GET', undefined, staffToken)
+    if (sc.restricted) {
+      check(`${sc.email} is strictly blocked (403) from CRM leads`, leadsAttempt.statusCode === 403)
+      const marketAttempt = await androidReq('/api/e/communities', 'GET', undefined, staffToken)
+      check(`${sc.email} is allowed (200) to view Market Pulse communities`, marketAttempt.statusCode === 200)
+      const manualAttempt = await androidReq('/api/e/knowledge_articles', 'GET', undefined, staffToken)
+      check(`${sc.email} is allowed (200) to view Company Manual articles`, manualAttempt.statusCode === 200)
+    } else {
+      check(`${sc.email} (Haseeb) has full operational access to CRM leads (200)`, leadsAttempt.statusCode === 200)
+      check(
+        `${sc.email} (Haseeb) sees Admin/Manager Attendance Roll-Call Board`,
+        Array.isArray(bootJson.admin_attendance_board) && bootJson.admin_attendance_board.length >= 6,
+      )
+    }
+  }
+
   console.log(`\nAll ${checks} SWK ONE Android checks passed!`)
 } finally {
   await resetBusinessData({ user: null, system: true }, { backup: false })

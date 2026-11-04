@@ -5,8 +5,9 @@ import {
   KeyRound, CalendarClock, Wallet, ReceiptText, Wrench, ClipboardCheck, DoorOpen, UserRoundCog, FileBarChart, Percent, Receipt, FileInput,
   Banknote, Scale, BadgeCheck, ScrollText, FileStack, Trophy, IdCard, Clock, Plane, Calculator, FileCode2, BarChart3, Settings,
   ShieldHalf, History, Plug, DatabaseBackup, Building, Gavel, Layers, ShieldAlert, CheckCheck, MapPinned, Briefcase, Star, PackageCheck,
-  Smartphone, QrCode, Trash2,
+  Smartphone, QrCode, Trash2, BookOpen,
 } from 'lucide-react'
+import { isRestrictedStaffUser, isAllowedPathForRestrictedStaff } from '@shared/swk-staff-access'
 
 export type NavItem = { label: string; to: string; icon: LucideIcon; module?: string; isNew?: boolean; desc?: string }
 export type NavSection = { key: string; label: string; items: NavItem[] }
@@ -115,7 +116,9 @@ export const SWK_NAV: NavSection[] = [
     { label: 'Field Visits', to: '/e/field_sessions', icon: MapPinned, module: 'hr', desc: 'Step 4 · GPS site visits' },
     { label: 'Daily Reports', to: '/e/daily_reports', icon: ClipboardCheck, module: 'hr', desc: 'Step 5 · End-of-day summary' },
   ] },
-  { key: 'tools', label: 'Documents', items: [
+  { key: 'tools', label: 'Documents & Manual', items: [
+    { label: 'Company Manual', to: '/competency', icon: BookOpen, desc: 'Official SOPs, rules & knowledge base' },
+    { label: 'Manual Articles', to: '/e/knowledge_articles', icon: ScrollText, desc: 'RERA, Wi-Fi & company guidelines' },
     { label: 'Calculators', to: '/toolkit', icon: Calculator, desc: 'DLD fee, ROI & mortgage tools' },
     { label: 'Letter Studio', to: '/studio', icon: FileCode2, module: 'documents', desc: 'Contracts & letter templates' },
     { label: 'Reports', to: '/reports', icon: BarChart3, module: 'reports', desc: 'Custom business exports' },
@@ -172,8 +175,69 @@ export const APP_META: Record<string, { blurb: string; icon: LucideIcon; tone: A
 
 export type LauncherApp = { key: string; label: string; blurb: string; icon: LucideIcon; tone: AppTone; items: NavItem[]; landing: string }
 
+export const RESTRICTED_STAFF_LAUNCHER_APPS: LauncherApp[] = [
+  {
+    key: 'attendance',
+    label: 'Attendance & QR',
+    blurb: 'Daily Reception QR check-in, check-out, attendance history & leave',
+    icon: QrCode,
+    tone: 'champ',
+    landing: '/reception-qr?scan=1',
+    items: [
+      { label: 'Scan Reception QR', to: '/reception-qr?scan=1', icon: QrCode, desc: 'Daily QR attendance check-in' },
+      { label: 'My Attendance Log', to: '/e/attendance', icon: Clock, module: 'hr', desc: 'Personal daily check-in history' },
+      { label: 'Gate Scan Events', to: '/e/attendance_events', icon: Clock, module: 'hr', desc: 'Verified QR & Wi-Fi timestamps' },
+      { label: 'Leave Requests', to: '/e/leave_requests', icon: Plane, module: 'hr', desc: 'Apply for holiday or sick leave' },
+      { label: 'Daily Work Summary', to: '/e/daily_reports', icon: ClipboardCheck, module: 'hr', desc: 'End-of-day activity report' },
+    ],
+  },
+  {
+    key: 'manual',
+    label: 'Company Manual',
+    blurb: 'SWK Properties handbook, RERA rules, SOPs & calculators',
+    icon: BookOpen,
+    tone: 'navy',
+    landing: '/competency',
+    items: [
+      { label: 'Company Manual & SOPs', to: '/competency', icon: BookOpen, desc: 'Official staff handbook & knowledge test' },
+      { label: 'SOP Articles', to: '/e/knowledge_articles', icon: ScrollText, desc: 'Company policies & procedures' },
+      { label: 'Deal Calculators', to: '/toolkit', icon: Calculator, desc: 'DLD fee, ROI & mortgage calculator' },
+    ],
+  },
+  {
+    key: 'market_pulse',
+    label: 'Market Pulse',
+    blurb: 'Live Dubai community prices, rental yields, developers & DLD pulse',
+    icon: LineChart,
+    tone: 'oasis',
+    landing: '/market',
+    items: [
+      { label: 'Market Pulse Live', to: '/market', icon: LineChart, desc: 'Dubai community prices & gross yields' },
+      { label: 'Dubai Communities', to: '/e/communities', icon: Map, module: 'masters', desc: '24 prime Dubai districts' },
+      { label: 'Master Developers', to: '/e/developers', icon: DevIcon, module: 'masters', desc: 'Emaar, Nakheel, Sobha, DAMAC & more' },
+      { label: 'Market News', to: '/e/real_estate_news', icon: Megaphone, module: 'masters', desc: 'UAE property market updates' },
+    ],
+  },
+  {
+    key: 'general',
+    label: 'General Workspace',
+    blurb: 'SWK ONE mobile app, company calendar, AI assistant & profile',
+    icon: Smartphone,
+    tone: 'ocean',
+    landing: '/swk-one',
+    items: [
+      { label: 'SWK ONE Mobile App', to: '/swk-one', icon: Smartphone, desc: 'Mobile attendance, manual & market pulse' },
+      { label: 'Calendar', to: '/calendar', icon: CalendarDays, desc: 'Company schedule & events' },
+      { label: 'AI Assistant', to: '/ai', icon: Sparkles, module: 'ai', desc: 'Internal SWK AI assistant' },
+    ],
+  },
+]
+
 /** Permission-filtered apps for the launcher. An app is hidden when none of its features are permitted. */
-export function launcherApps(can: (module: string, action?: 'view') => boolean): LauncherApp[] {
+export function launcherApps(can: (module: string, action?: 'view') => boolean, user?: { email?: string | null; name?: string | null; role?: string | null; permissions?: any } | null): LauncherApp[] {
+  if (user && isRestrictedStaffUser(user)) {
+    return RESTRICTED_STAFF_LAUNCHER_APPS
+  }
   const out: LauncherApp[] = []
   for (const s of SWK_NAV) {
     const items = s.items.filter(i => !i.module || can(i.module, 'view'))
@@ -194,9 +258,13 @@ export function rememberVisit(pathname: string) {
     localStorage.setItem(RECENT_KEY, JSON.stringify([hit.item.to, ...list.filter(t => t !== hit.item.to)].slice(0, 8)))
   } catch { /* storage unavailable — recents are a convenience only */ }
 }
-export function recentItems(can: (module: string, action?: 'view') => boolean, limit = 4): (NavItem & { section: string })[] {
+export function recentItems(can: (module: string, action?: 'view') => boolean, limit = 4, user?: { email?: string | null; name?: string | null; role?: string | null; permissions?: any } | null): (NavItem & { section: string })[] {
   let list: string[] = []
   try { list = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]') } catch { /* ignore */ }
+  const restricted = !!(user && isRestrictedStaffUser(user))
   const all = SWK_NAV.flatMap(s => s.items.map(i => ({ ...i, section: s.label })))
-  return list.map(to => all.find(i => i.to === to)).filter((i): i is NavItem & { section: string } => !!i && (!i.module || can(i.module, 'view'))).slice(0, limit)
+  return list
+    .map(to => all.find(i => i.to === to))
+    .filter((i): i is NavItem & { section: string } => !!i && (!i.module || can(i.module, 'view')) && (!restricted || isAllowedPathForRestrictedStaff(i.to)))
+    .slice(0, limit)
 }

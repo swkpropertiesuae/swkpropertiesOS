@@ -1,9 +1,10 @@
 import EmailPage from './pages/EmailPage'
 import {ExtractionPage} from './pages/ExtractionPage'
 import {CompetencyPage} from './pages/EnterprisePages'
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation, Link } from 'react-router-dom'
 import { Suspense, lazy, type ReactNode } from 'react'
 import { useMeta } from './lib/meta'
+import { isRestrictedStaffUser, isAllowedPathForRestrictedStaff } from '@shared/swk-staff-access'
 import { Shell } from './components/Shell'
 import { Login } from './pages/Login'
 import { Dashboard } from './pages/Dashboard'
@@ -73,6 +74,44 @@ export default function App() {
   if (loading) return <div className="h-full grid place-items-center"><Loading label="Starting SWK OS…" /></div>
   if (!me) return <Routes><Route path="/login" element={<Login />} /><Route path="*" element={<Navigate to="/login" replace state={{ from: loc.pathname }} />} /></Routes>
   if (me.mustChangePassword && !loc.pathname.startsWith('/profile') && !loc.pathname.startsWith('/print')) return <Navigate to="/profile" replace />
+  if (isRestrictedStaffUser(me) && !isAllowedPathForRestrictedStaff(loc.pathname)) {
+    return (
+      <Suspense fallback={<Loading />}>
+        <Routes>
+          <Route element={<Shell />}>
+            <Route
+              path="*"
+              element={
+                <div className="max-w-2xl mx-auto my-12 p-8 rounded-2xl border border-[#c9a96e]/40 bg-[#0d1f3c] text-white shadow-xl">
+                  <div className="text-xs font-extrabold uppercase tracking-widest text-[#e6c98f] mb-2">
+                    Hardcoded Staff Access Policy · SWK Properties OS
+                  </div>
+                  <h2 className="text-xl font-bold mb-2">Restricted Module — Attendance, Manual, Market Pulse &amp; General Only</h2>
+                  <p className="text-sm text-slate-300 leading-relaxed mb-6">
+                    Signed in as <b>{me.name}</b> (<code className="text-[#e6c98f]">{me.email}</code>). Per company security policy, full OS operational modules are restricted exclusively to <b>Admin (Shabib Siraj)</b> and <b>Mohammad Haseeb (Haseeb@swk.property)</b>. Your account is authorised for <b>Attendance &amp; QR Check-In</b>, <b>Company Manual</b>, <b>Market Pulse</b>, and <b>General Workspace</b>.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <Link to="/reception-qr?scan=1" className="px-4 py-2.5 rounded-xl bg-[#c9a96e] text-[#08142a] font-bold text-xs no-underline">
+                      Scan &amp; Check In Attendance
+                    </Link>
+                    <Link to="/competency" className="px-4 py-2.5 rounded-xl bg-white/10 text-white font-bold text-xs no-underline border border-white/15">
+                      Company Manual
+                    </Link>
+                    <Link to="/market" className="px-4 py-2.5 rounded-xl bg-white/10 text-white font-bold text-xs no-underline border border-white/15">
+                      Market Pulse
+                    </Link>
+                    <Link to="/swk-one" className="px-4 py-2.5 rounded-xl bg-white/10 text-white font-bold text-xs no-underline border border-white/15">
+                      Open SWK ONE Mobile
+                    </Link>
+                  </div>
+                </div>
+              }
+            />
+          </Route>
+        </Routes>
+      </Suspense>
+    )
+  }
   return (
     <Suspense fallback={<Loading />}>
       <Routes>

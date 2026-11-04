@@ -7,6 +7,12 @@ import { hooksFor, type HookArgs } from './hooks'
 import { runAutomations } from './automation'
 import { emitWebhooks } from './webhooks'
 import { notifyLeadership } from './notify'
+import {
+  isRestrictedStaffUser,
+  RESTRICTED_STAFF_PERMISSIONS,
+  RESTRICTED_STAFF_ALLOWED_ENTITIES,
+  RESTRICTED_STAFF_SELF_SCOPED_ENTITIES,
+} from '../shared/swk-staff-access'
 
 export type Perms = '*' | Record<string, string[]>
 export interface SessionUser {
@@ -21,6 +27,10 @@ export type Rec = Record<string, any>
 // ------------------------------------------------------------------ permissions
 export function can(user: SessionUser | null, module: string, action: Action): boolean {
   if (!user) return false
+  if (!user.party_id && isRestrictedStaffUser(user)) {
+    const allowed = RESTRICTED_STAFF_PERMISSIONS[module]
+    return !!allowed && (allowed.includes('*') || allowed.includes(action))
+  }
   const p = user.permissions
   // Current AI tools read company-wide data. Limit them to company-wide users
   // until every tool carries the caller's record/branch scope.
@@ -251,6 +261,22 @@ function buildWhere(def: EntityDef, p: ListParams, ctx: Ctx): { where: string; a
     if(!sources.length)cl.push('1=0');else{cl.push(`source_entity IN (${sources.map(()=>'?').join(',')})`);args.push(...sources)}
   }
   if(!ctx.system&&def.key==='shift_handovers'&&!can(ctx.user,'admin','view')){cl.push('(from_user_id=? OR to_user_id=?)');args.push(ctx.user?.id??0,ctx.user?.id??0)}
+  if (!ctx.system && ctx.user && !ctx.user.party_id && isRestrictedStaffUser(ctx.user)) {
+    if (!RESTRICTED_STAFF_ALLOWED_ENTITIES.has(def.key)) {
+      cl.push('1=0')
+    } else if (RESTRICTED_STAFF_SELF_SCOPED_ENTITIES.has(def.key)) {
+      const uid = ctx.user.id ?? 0
+      const uemail = (ctx.user.email || '').toLowerCase()
+      const hasUserIdCol = def.fields.some(f => f.name === 'user_id')
+      if (hasUserIdCol) {
+        cl.push(`(user_id = ? OR employee_id IN (SELECT id FROM employees WHERE (user_id = ? OR lower(email) = ?) AND deleted_at IS NULL))`)
+        args.push(uid, uid, uemail)
+      } else {
+        cl.push(`employee_id IN (SELECT id FROM employees WHERE (user_id = ? OR lower(email) = ?) AND deleted_at IS NULL)`)
+        args.push(uid, uemail)
+      }
+    }
+  }
   if (!ctx.system && ctx.user && !ctx.user.party_id && ctx.user.permissions !== '*' && !can(ctx.user, 'admin', 'view') && !can(ctx.user, 'sales_director', 'view') && /broker|advisor|consultant/i.test(ctx.user.role_name || '')) {
     const uid = ctx.user.id ?? 0
     const uemail = (ctx.user.email || '').toLowerCase()
@@ -315,7 +341,13 @@ function buildWhere(def: EntityDef, p: ListParams, ctx: Ctx): { where: string; a
 
 // ------------------------------------------------------------------ read
 export function listRecords(def: EntityDef, p: ListParams, ctx: Ctx) {
-  assertCan(ctx, def.module, 'view')
+  if (!ctx.system && ctx.user && !ctx.user.party_id && isRestrictedStaffUser(ctx.user)) {
+    if (!RESTRICTED_STAFF_ALLOWED_ENTITIES.has(def.key)) {
+      throw forbidden('Access restricted: Your account has access only to Attendance, Company Manual, Market Pulse, and General features.')
+    }
+  } else {
+    assertCan(ctx, def.module, 'view')
+  }
   const { where, args } = buildWhere(def, p, ctx)
   const page = Math.max(1, Math.trunc(p.page ?? 1))
   const pageSize = clamp(Math.trunc(p.pageSize ?? 25), 1, 100000)
@@ -338,7 +370,13 @@ function redactHandover(r:Rec,ctx:Ctx){
 }
 
 export function getRecord(def: EntityDef, id: number, ctx: Ctx, opts: { children?: boolean | Record<string, boolean | object>; includeDeleted?: boolean } = {}): Rec {
-  assertCan(ctx, def.module, 'view')
+  if (!ctx.system && ctx.user && !ctx.user.party_id && isRestrictedStaffUser(ctx.user)) {
+    if (!RESTRICTED_STAFF_ALLOWED_ENTITIES.has(def.key)) {
+      throw forbidden('Access restricted: Your account has access only to Attendance, Company Manual, Market Pulse, and General features.')
+    }
+  } else {
+    assertCan(ctx, def.module, 'view')
+  }
   const row = q.get(`SELECT * FROM ${qi(def.key)} WHERE id = ?`, id)
   if (!row || (row.deleted_at && !opts.includeDeleted)) throw notFound()
   const scope = ctx.user?.party_id && !ctx.system ? SCOPE[def.key] : undefined
@@ -538,6 +576,9 @@ function fireHooks(phase: 'beforeSave' | 'afterSave', args: HookArgs) {
 }
 
 export function createRecord(def: EntityDef, payload: Rec, ctx: Ctx): Rec {
+  if (!ctx.system && ctx.user && !ctx.user.party_id && isRestrictedStaffUser(ctx.user) && !RESTRICTED_STAFF_SELF_SCOPED_ENTITIES.has(def.key)) {
+    throw forbidden('Access restricted: Your account has access only to Attendance, Company Manual, Market Pulse, and General features.')
+  }
   assertCan(ctx, def.module, 'create')
   if (def.readonlyApi && !ctx.system) throw forbidden('This record type is read-only')
   if (def.child && !ctx.system) throw forbidden('Edit this through its parent record')
@@ -576,6 +617,9 @@ export function createRecord(def: EntityDef, payload: Rec, ctx: Ctx): Rec {
 }
 
 export function updateRecord(def: EntityDef, id: number, payload: Rec, ctx: Ctx): Rec {
+  if (!ctx.system && ctx.user && !ctx.user.party_id && isRestrictedStaffUser(ctx.user) && !RESTRICTED_STAFF_SELF_SCOPED_ENTITIES.has(def.key)) {
+    throw forbidden('Access restricted: Your account has access only to Attendance, Company Manual, Market Pulse, and General features.')
+  }
   assertCan(ctx, def.module, 'edit')
   if (def.readonlyApi && !ctx.system) throw forbidden('This record type is read-only')
   if (def.child && !ctx.system) throw forbidden('Edit this through its parent record')

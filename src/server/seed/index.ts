@@ -7,6 +7,8 @@ import { setSettings } from '../settings'
 import { seedCompanyDocuments } from './company-documents'
 import { seedCompliance } from './compliance'
 import { syncStudioLibrary } from '../studio/library'
+import { hashPassword } from '../auth'
+import { SWK_STAFF_ACCOUNTS, RESTRICTED_STAFF_PERMISSIONS } from '../../shared/swk-staff-access'
 
 const done = (g: string) => !!q.val(`SELECT 1 FROM settings WHERE key = ?`, `seed:${g}`)
 const mark = (g: string) => q.run(`INSERT INTO settings(key, value, updated_at) VALUES (?, '1', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`, `seed:${g}`, nowIso())
@@ -373,5 +375,153 @@ export async function seedReference(opts: { users?: boolean; demo?: boolean } = 
     }
     mark('market_pulse_swk_v2')
   }
+  if (withUsers && !opts.demo) {
+    ensureHardcodedSwkStaffAccounts()
+  }
   syncStudioLibrary()
+}
+
+/**
+ * Ensures the 6 official @swk.property staff accounts (Talha, Haseeb, Fareed, Shahid, Umar, Saifullah)
+ * and Admin (Shabib Siraj) exist with their hardcoded credentials, roles, and employee profiles.
+ */
+export function ensureHardcodedSwkStaffAccounts() {
+  const mk = (key: string, payload: Record<string, any>) => createRecord(getDef(key), payload, SYSTEM_CTX)
+  const dxb = idOf('branches', 'code', 'DXB') ?? 1
+  const dept = (code: string) => idOf('departments', 'code', code) ?? idOf('departments', 'code', 'MGT') ?? 1
+
+  // 1. Ensure the restricted 'Staff (Attendance & General)' role exists with hardcoded restricted permissions
+  let staffRoleId = idOf('roles', 'name', 'Staff (Attendance & General)')
+  if (!staffRoleId) {
+    staffRoleId = mk('roles', {
+      name: 'Staff (Attendance & General)',
+      description: 'Restricted Staff Access – Attendance & QR Check-In, Company Manual, Market Pulse & General Only',
+      is_system: true,
+      permissions: RESTRICTED_STAFF_PERMISSIONS,
+    }).id
+  } else {
+    q.run(
+      `UPDATE roles SET permissions = ?, updated_at = ? WHERE id = ?`,
+      JSON.stringify(RESTRICTED_STAFF_PERMISSIONS),
+      nowIso(),
+      staffRoleId,
+    )
+  }
+
+  const adminRoleId = idOf('roles', 'name', 'Admin') ?? 1
+  const managerRoleId = idOf('roles', 'name', 'Manager') ?? adminRoleId
+
+  // Ensure Shabib@swk.property also exists for Admin (Shabib Siraj)
+  const shabibSwkEmail = 'shabib@swk.property'
+  if (!idOf('users', 'lower(email)', shabibSwkEmail)) {
+    mk('users', {
+      name: 'Shabib Siraj',
+      email: 'Shabib@swk.property',
+      password: config.accounts.adminPassword,
+      role_id: adminRoleId,
+      branch_id: dxb,
+      department_id: dept('MGT'),
+      designation: 'Owner & Managing Director',
+      active: true,
+      must_change_password: false,
+    })
+  }
+
+  const shabibEmpId =
+    q.val<number>(`SELECT id FROM employees WHERE lower(name) LIKE '%shabib%' AND deleted_at IS NULL ORDER BY id ASC LIMIT 1`) ?? null
+
+  // 2. Sync each of the 6 hardcoded @swk.property staff accounts + employee records
+  for (const acc of SWK_STAFF_ACCOUNTS) {
+    const targetRoleId =
+      acc.roleName === 'Admin'
+        ? adminRoleId
+        : acc.roleName === 'Manager'
+          ? managerRoleId
+          : staffRoleId
+
+    let userId = q.val<number>(`SELECT id FROM users WHERE lower(email) = ? AND deleted_at IS NULL LIMIT 1`, acc.email.toLowerCase())
+    const pwHash = hashPassword(acc.password)
+
+    if (!userId) {
+      const created = mk('users', {
+        name: acc.name,
+        email: acc.displayEmail,
+        password: acc.password,
+        role_id: targetRoleId,
+        branch_id: dxb,
+        department_id: dept(acc.departmentCode),
+        designation: acc.designation,
+        active: true,
+        must_change_password: false,
+      })
+      userId = created.id
+      q.run(
+        `UPDATE users SET password_hash = ?, must_change_password = 0, active = 1, role_id = ?, failed_logins = 0, locked_until = NULL WHERE id = ?`,
+        pwHash,
+        targetRoleId,
+        userId,
+      )
+    } else {
+      q.run(
+        `UPDATE users SET name = ?, password_hash = ?, role_id = ?, department_id = ?, designation = ?, active = 1, must_change_password = 0, failed_logins = 0, locked_until = NULL, updated_at = ? WHERE id = ?`,
+        acc.name,
+        pwHash,
+        targetRoleId,
+        dept(acc.departmentCode),
+        acc.designation,
+        nowIso(),
+        userId,
+      )
+    }
+
+    // If this staff account is restricted (e.g., Talha), also restrict any legacy alias account (talha@swkpropertiesuae.com)
+    if (!acc.fullAccess) {
+      for (const alias of acc.aliases) {
+        q.run(
+          `UPDATE users SET role_id = ?, password_hash = ?, must_change_password = 0, active = 1, failed_logins = 0, locked_until = NULL WHERE lower(email) = ? AND deleted_at IS NULL`,
+          staffRoleId,
+          pwHash,
+          alias.toLowerCase(),
+        )
+      }
+    }
+
+    // Ensure matching Employee profile exists and is linked to this userId for Reception QR Attendance
+    let emp = q.get(
+      `SELECT * FROM employees WHERE (user_id = ? OR lower(email) = ? OR lower(name) = ?) AND deleted_at IS NULL ORDER BY id ASC LIMIT 1`,
+      userId,
+      acc.email.toLowerCase(),
+      acc.name.toLowerCase(),
+    )
+    if (!emp) {
+      emp = mk('employees', {
+        emp_no: acc.empNo,
+        name: acc.name,
+        user_id: userId,
+        department_id: dept(acc.departmentCode),
+        designation: acc.designation,
+        branch_id: dxb,
+        manager_id: shabibEmpId,
+        status: 'Active',
+        join_date: '2024-01-15',
+        contract_type: 'Unlimited',
+        phone: acc.phone,
+        email: acc.displayEmail,
+        compensation_model: acc.fullAccess ? 'Salaried Management / Operations' : 'Commission Only (50/50 Company Visa – 0 Basic)',
+        company_visa_sponsored: true,
+        commission_split_company_pct: 50,
+        commission_split_agent_pct: 50,
+        basic_salary: 0,
+      })
+    } else {
+      q.run(
+        `UPDATE employees SET user_id = ?, email = ?, status = 'Active', designation = ?, updated_at = ? WHERE id = ?`,
+        userId,
+        acc.displayEmail,
+        acc.designation,
+        nowIso(),
+        emp.id,
+      )
+    }
+  }
 }

@@ -4,6 +4,8 @@ import { config } from './config'
 import { nowIso, safeJson, bad, HttpError } from './util'
 import { decryptSecret } from './settings'
 import type { SessionUser, Perms } from './engine'
+import { isRestrictedStaffUser, RESTRICTED_STAFF_PERMISSIONS, SWK_STAFF_ACCOUNTS } from '../shared/swk-staff-access'
+import { ensureHardcodedSwkStaffAccounts } from './seed'
 
 // ---------------------------------------------------------------- passwords (scrypt)
 const N = 16384, R = 8, P = 1, KEYLEN = 64
@@ -44,7 +46,12 @@ export function loadUser(userId: number): SessionUser | null {
   const u = q.get(`SELECT u.*, r.name AS role_name, r.permissions FROM users u LEFT JOIN roles r ON r.id = u.role_id WHERE u.id = ? AND u.deleted_at IS NULL AND u.active = 1`, userId)
   if (!u) return null
   const perms = safeJson<Perms>(u.permissions, {})
-  return { id: u.id, name: u.name, email: u.email, role_id: u.role_id, role_name: u.role_name ?? '', permissions: perms, branch_id: u.branch_id, party_id: u.party_id ?? null }
+  const userObj: SessionUser = { id: u.id, name: u.name, email: u.email, role_id: u.role_id, role_name: u.role_name ?? '', permissions: perms, branch_id: u.branch_id, party_id: u.party_id ?? null }
+  if (!userObj.party_id && isRestrictedStaffUser(userObj)) {
+    userObj.permissions = RESTRICTED_STAFF_PERMISSIONS
+    userObj.role_name = 'Staff (Attendance & General)'
+  }
+  return userObj
 }
 
 export function userFromToken(token: string | undefined): { user: SessionUser; hash: string } | null {
@@ -80,7 +87,11 @@ export function newApiKey() {
 const MAX_FAILS = 5
 export function attemptLogin(email: string, password: string, totp: string | undefined, ip?: string, ua?: string): { user: SessionUser; needsTotp?: false } | { needsTotp: true } {
   const e = email.trim().toLowerCase()
-  const row = q.get(`SELECT * FROM users WHERE lower(email) = ? AND deleted_at IS NULL`, e)
+  let row = q.get(`SELECT * FROM users WHERE lower(email) = ? AND deleted_at IS NULL`, e)
+  if (!row && SWK_STAFF_ACCOUNTS.some(a => a.email === e || a.aliases.includes(e))) {
+    try { ensureHardcodedSwkStaffAccounts() } catch { /* ignore */ }
+    row = q.get(`SELECT * FROM users WHERE lower(email) = ? AND deleted_at IS NULL`, e)
+  }
   const log = (success: boolean, reason: string) => q.run(`INSERT INTO login_events(at, email, user_id, success, reason, ip, user_agent) VALUES (?,?,?,?,?,?,?)`, nowIso(), e, row?.id ?? null, success ? 1 : 0, reason, ip ?? null, (ua ?? '').slice(0, 200))
   if (row?.locked_until && row.locked_until > nowIso().slice(0, 16)) { log(false, 'locked'); throw new HttpError(423, 'Account temporarily locked after repeated failures. Try again in 15 minutes.') }
   const ok = verifyPassword(password, row?.password_hash)
