@@ -46,19 +46,18 @@ export class SwkOs extends Container<Env> {
 
   async ensureReleaseRunning(releaseId: string): Promise<void> {
     const runningRelease = await this.ctx.storage.get<string>('running_release_id')
-    const state = await this.getState()
-    if (state.status === 'healthy' && runningRelease !== releaseId) {
+    if (runningRelease !== releaseId) {
+      await this.ctx.storage.put('running_release_id', releaseId)
       try {
         await this.destroy()
       } catch {
         // ignore if already stopped
       }
-      await new Promise(r => setTimeout(r, 2500))
+      return
     }
-    const afterState = await this.getState()
-    if (afterState.status !== 'healthy') {
+    const state = await this.getState()
+    if (state.status !== 'healthy') {
       await this.startAndWaitForPorts({ ports: 8080, cancellationOptions: { portReadyTimeoutMS: 240_000 } })
-      await this.ctx.storage.put('running_release_id', releaseId)
     }
   }
 }
