@@ -12,7 +12,8 @@
   "vars": {
     "PUBLIC_URL": "https://os.swkpropertiesuae.com",
     "PG_SCHEMA": "swk",
-    "RELEASE_ID": "swkproperties-os-v4"
+    "RELEASE_ID": "os-navy-pulse-v6",
+    "RELEASE_SHA": "os-navy-pulse-v6"
   },
   "observability": { "enabled": true },
 

@@ -16,7 +16,7 @@ interface Env {
   RELEASE_ID?: string
 }
 
-const DEFAULT_RELEASE = 'swkproperties-os-v4'
+const DEFAULT_RELEASE = 'os-navy-pulse-v6'
 
 export class SwkOs extends Container<Env> {
   defaultPort = 8080
