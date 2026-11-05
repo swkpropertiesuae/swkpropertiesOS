@@ -1,13 +1,14 @@
 /**
- * SWK Properties Matte Gold Brand Asset Pipeline for SWK OS & SWK ONE.
+ * SWK OS Brand Asset Pipeline.
  *
- * Uses the official Matte Gold brand package in assets-src/Matte_gold/:
- *   - black/                  Solid black (#000000) background variants (Emblem_only, Favicons_Emblem_only, Favicons_SWK_only, Full_logo, SWK_only)
- *   - white/                  Solid white (#FFFFFF) background variants
- *   - transparent_for_black/  Transparent background variants optimized for dark/charcoal/midnight surfaces
- *   - transparent_for_white/  Transparent background variants optimized for light/ivory/white surfaces & print
+ * Uses the official SWK OS Brand Pack in assets-src/SWK_OS_Brand_Pack/:
+ *   - Master/     Editable satin and flat SVGs (ForDark & ForLight)
+ *   - Logo/       Horizontal, Stacked, and Wordmark-only SVGs & PNGs (ForDark & ForLight)
+ *   - Icon/       Standalone architectural crest SVGs & PNGs (ForDark & ForLight)
+ *   - App_Icon/   Dark (#102E29) & Light (#F8F4EC) 1024px tiles, SVGs, iOS AppIcon.appiconset, and Android adaptive/legacy mipmaps
+ *   - Favicon/    SVG, multi-size ICO, 16/32/48 PNGs, and 180x180 apple-touch-icon.png
  *
- * Updates all web, PWA, favicon, OpenGraph, brand library, and Android native launcher/adaptive/splash assets.
+ * Syncs all web, PWA, favicon, OpenGraph, print, and brand library assets across public/ and assets-src/.
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -17,10 +18,11 @@ const require = createRequire(import.meta.url)
 const { PNG } = require('pngjs')
 
 const root = path.resolve(import.meta.dirname, '..')
-const matteDir = path.join(root, 'assets-src', 'Matte_gold')
+const packDir = path.join(root, 'assets-src', 'SWK_OS_Brand_Pack')
 const pubDir = path.join(root, 'public')
 const brandDir = path.join(pubDir, 'brand')
 const favDir = path.join(pubDir, 'favicon')
+const swkOsDir = path.join(brandDir, 'swk-os')
 
 const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v)
 
@@ -115,206 +117,215 @@ function composeOnCanvas(src, w, h, bg = null, ratio = 0.78) {
   return img
 }
 
-function makeWhiteSilhouette(src, w, h, ratio = 0.72) {
-  const fitted = composeOnCanvas(src, w, h, null, ratio)
-  for (let i = 0; i < fitted.data.length; i += 4) {
-    const a = fitted.data[i + 3]
-    if (a > 0) {
-      fitted.data[i] = 255
-      fitted.data[i + 1] = 255
-      fitted.data[i + 2] = 255
-      fitted.data[i + 3] = Math.min(255, Math.round(a * 1.25))
-    }
-  }
-  return fitted
-}
-
-function copyFile(srcRel, destAbs) {
-  const srcAbs = path.join(matteDir, srcRel)
+function copyFromPack(srcRel, destAbs) {
+  const srcAbs = path.join(packDir, srcRel)
   fs.mkdirSync(path.dirname(destAbs), { recursive: true })
   fs.copyFileSync(srcAbs, destAbs)
 }
 
+function copyTree(srcDir, destDir) {
+  fs.mkdirSync(destDir, { recursive: true })
+  for (const entry of fs.readdirSync(srcDir, { withFileTypes: true })) {
+    const s = path.join(srcDir, entry.name)
+    const d = path.join(destDir, entry.name)
+    if (entry.isDirectory()) copyTree(s, d)
+    else fs.copyFileSync(s, d)
+  }
+}
+
 function main() {
-  if (!fs.existsSync(matteDir)) {
-    throw new Error(`Missing Matte_gold directory at ${matteDir}`)
+  if (!fs.existsSync(packDir)) {
+    throw new Error(`Missing SWK_OS_Brand_Pack directory at ${packDir}`)
   }
 
-  // 1. Primary /brand/* assets used throughout Web & Mobile UI
-  //    - swk-mark.png: 512x512 transparent Emblem (for sidebars, headers, badges, launcher)
-  copyFile('transparent_for_black/Favicons_Emblem_only/512x512.png', path.join(brandDir, 'swk-mark.png'))
-  copyFile('transparent_for_white/Favicons_Emblem_only/512x512.png', path.join(brandDir, 'swk-mark-light.png'))
-  copyFile('black/Favicons_Emblem_only/512x512.png', path.join(brandDir, 'swk-mark-black.png'))
+  // 1. Sync full SWK_OS_Brand_Pack tree into public/brand/swk-os/
+  copyTree(packDir, swkOsDir)
 
-  //    - swk-logo-white.png: Transparent SWK wordmark for dark/charcoal/midnight surfaces
-  //    - swk-logo-ink.png / swk-logo-dark.png: Transparent SWK wordmark for light/ivory/white surfaces & print
-  //    - swk-logo.png: Full Matte Gold SWK OS Lockup (Emblem + SWK + OS)
-  copyFile('transparent_for_black/SWK_only/SWK_OS_SWK_only_1024px.png', path.join(brandDir, 'swk-logo-white.png'))
-  copyFile('transparent_for_white/SWK_only/SWK_OS_SWK_only_1024px.png', path.join(brandDir, 'swk-logo-ink.png'))
-  copyFile('transparent_for_white/SWK_only/SWK_OS_SWK_only_1024px.png', path.join(brandDir, 'swk-logo-dark.png'))
-  copyFile('transparent_for_black/Full_logo/SWK_OS_Full_logo_1024px.png', path.join(brandDir, 'swk-logo.png'))
-  copyFile('transparent_for_black/Full_logo/SWK_OS_Full_logo_1024px.png', path.join(brandDir, 'swk-full-logo-dark.png'))
-  copyFile('transparent_for_white/Full_logo/SWK_OS_Full_logo_1024px.png', path.join(brandDir, 'swk-full-logo-light.png'))
-
-  //    - swk-signage-logo.png & swk-signage-icon.png: Hero / Login / Reception Showcase lockups
-  copyFile('black/Full_logo/SWK_OS_Full_logo_2048px.png', path.join(brandDir, 'swk-signage-logo.png'))
-  copyFile('black/Emblem_only/SWK_OS_Emblem_only_1024px.png', path.join(brandDir, 'swk-signage-icon.png'))
-
-  // 3. Root public/ icons, favicons & PWA icons
-  copyFile('transparent_for_black/Favicons_Emblem_only/favicon.ico', path.join(pubDir, 'favicon.ico'))
-  copyFile('transparent_for_black/Favicons_Emblem_only/32x32.png', path.join(pubDir, 'favicon-32.png'))
-  copyFile('black/Favicons_Emblem_only/180x180.png', path.join(pubDir, 'apple-touch-icon.png'))
-  copyFile('black/Favicons_Emblem_only/192x192.png', path.join(pubDir, 'app-icon-192.png'))
-  copyFile('black/Favicons_Emblem_only/512x512.png', path.join(pubDir, 'app-icon-512.png'))
-  copyFile('black/Favicons_Emblem_only/192x192.png', path.join(pubDir, 'icon-192.png'))
-  copyFile('black/Favicons_Emblem_only/512x512.png', path.join(pubDir, 'icon-512.png'))
-  copyFile('transparent_for_black/Full_logo/SWK_OS_Full_logo_1024px.png', path.join(pubDir, 'swk-logo.png'))
-
-  // 4. public/favicon/* (All sizes 16..512, apple-touch-icon, favicon.ico, favicon.svg)
-  const favSizes = [16, 32, 48, 64, 96, 128, 180, 192, 256, 512]
-  for (const n of favSizes) {
-    copyFile(`transparent_for_black/Favicons_Emblem_only/${n}x${n}.png`, path.join(favDir, `favicon-${n}.png`))
+  // Also update legacy paths inside public/brand/swk-os/ so any direct references stay in sync
+  for (const name of ['SWK_Emblem.svg', 'SWK_Emblem_Transparent.svg']) {
+    copyFromPack('Icon/SWK_OS_Crest_ForDark.svg', path.join(swkOsDir, 'Icon', name))
   }
-  copyFile('black/Favicons_Emblem_only/180x180.png', path.join(favDir, 'apple-touch-icon.png'))
-  copyFile('transparent_for_black/Favicons_Emblem_only/favicon.ico', path.join(favDir, 'favicon.ico'))
-
-  const b64Fav512 = fs.readFileSync(path.join(favDir, 'favicon-512.png')).toString('base64')
-  const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><image href="data:image/png;base64,${b64Fav512}" x="0" y="0" width="512" height="512"/></svg>`
-  fs.writeFileSync(path.join(favDir, 'favicon.svg'), svgContent)
-
-  // 5. public/brand/app-icons/* & public/brand/favicon/* & public/brand/icons/* & public/brand/masters/*
-  copyFile('black/Favicons_Emblem_only/192x192.png', path.join(brandDir, 'app-icons', 'android-chrome-192x192.png'))
-  copyFile('black/Favicons_Emblem_only/512x512.png', path.join(brandDir, 'app-icons', 'android-chrome-512x512.png'))
-  copyFile('black/Favicons_Emblem_only/192x192.png', path.join(brandDir, 'app-icons', 'maskable-192x192.png'))
-  copyFile('black/Favicons_Emblem_only/512x512.png', path.join(brandDir, 'app-icons', 'maskable-512x512.png'))
-  copyFile('black/Favicons_Emblem_only/180x180.png', path.join(brandDir, 'app-icons', 'apple-touch-icon.png'))
-
-  const emblemTransBlack1024 = PNG.sync.read(fs.readFileSync(path.join(matteDir, 'transparent_for_black/Emblem_only/SWK_OS_Emblem_only_1024px.png')))
-  const appStore1024 = composeOnCanvas(emblemTransBlack1024, 1024, 1024, [0, 0, 0], 0.84)
-  fs.writeFileSync(path.join(brandDir, 'app-icons', 'app-store-1024.png'), PNG.sync.write(appStore1024))
-
-  for (const n of [16, 32, 48, 64]) {
-    copyFile(`transparent_for_black/Favicons_Emblem_only/${n}x${n}.png`, path.join(brandDir, 'favicon', `favicon-dark-${n}.png`))
-    copyFile(`transparent_for_white/Favicons_Emblem_only/${n}x${n}.png`, path.join(brandDir, 'favicon', `favicon-light-${n}.png`))
+  for (const sz of ['128', '256', '512', '1024', '2048']) {
+    copyFromPack('Icon/SWK_OS_Crest_ForDark.png', path.join(swkOsDir, 'Icon', `SWK_Emblem_${sz}.png`))
+    copyFromPack('Icon/SWK_OS_Crest_ForDark.png', path.join(swkOsDir, 'Icon', `SWK_Emblem_Transparent_${sz}.png`))
   }
-  copyFile('transparent_for_black/Favicons_Emblem_only/favicon.ico', path.join(brandDir, 'favicon', 'favicon.ico'))
-  copyFile('transparent_for_black/Favicons_Emblem_only/favicon.ico', path.join(brandDir, 'favicon', 'favicon-dark.ico'))
-  copyFile('transparent_for_white/Favicons_Emblem_only/favicon.ico', path.join(brandDir, 'favicon', 'favicon-light.ico'))
-
-  for (const n of favSizes) {
-    copyFile(`transparent_for_black/Favicons_Emblem_only/${n}x${n}.png`, path.join(brandDir, 'icons', 'transparent', `swk-icon-${n}.png`))
+  copyFromPack('Logo/SWK_OS_Horizontal_ForDark.svg', path.join(swkOsDir, 'Logos', 'SWK_OS_Horizontal_Logo.svg'))
+  copyFromPack('Logo/SWK_OS_Horizontal_ForDark.svg', path.join(swkOsDir, 'Logos', 'SWK_OS_Horizontal_Logo_Transparent.svg'))
+  copyFromPack('Logo/SWK_OS_Stacked_ForDark.svg', path.join(swkOsDir, 'Logos', 'SWK_OS_Stacked_Logo.svg'))
+  copyFromPack('Logo/SWK_OS_Stacked_ForDark.svg', path.join(swkOsDir, 'Logos', 'SWK_OS_Stacked_Logo_Transparent.svg'))
+  copyFromPack('Logo/SWK_OS_Wordmark_ForDark.svg', path.join(swkOsDir, 'Logos', 'SWK_OS_Wordmark_Logo.svg'))
+  copyFromPack('Logo/SWK_OS_Wordmark_ForDark.svg', path.join(swkOsDir, 'Logos', 'SWK_OS_Wordmark_Logo_Transparent.svg'))
+  for (const sz of ['512', '1024', '2048', '4096']) {
+    copyFromPack('Logo/SWK_OS_Horizontal_ForDark.png', path.join(swkOsDir, 'Logos', `SWK_OS_Horizontal_Logo_${sz}.png`))
+    copyFromPack('Logo/SWK_OS_Horizontal_ForDark.png', path.join(swkOsDir, 'Logos', `SWK_OS_Horizontal_Logo_Transparent_${sz}.png`))
+    copyFromPack('Logo/SWK_OS_Stacked_ForDark.png', path.join(swkOsDir, 'Logos', `SWK_OS_Stacked_Logo_${sz}.png`))
+    copyFromPack('Logo/SWK_OS_Stacked_ForDark.png', path.join(swkOsDir, 'Logos', `SWK_OS_Stacked_Logo_Transparent_${sz}.png`))
+    copyFromPack('Logo/SWK_OS_Wordmark_ForDark.png', path.join(swkOsDir, 'Logos', `SWK_OS_Wordmark_Logo_${sz}.png`))
+    copyFromPack('Logo/SWK_OS_Wordmark_ForDark.png', path.join(swkOsDir, 'Logos', `SWK_OS_Wordmark_Logo_Transparent_${sz}.png`))
   }
-  copyFile('transparent_for_black/Emblem_only/SWK_OS_Emblem_only_1024px.png', path.join(brandDir, 'icons', 'transparent', 'swk-icon-1024.png'))
-  copyFile('transparent_for_black/Emblem_only/SWK_OS_Emblem_only_2048px.png', path.join(brandDir, 'icons', 'transparent', 'swk-icon-2048.png'))
+  copyFromPack('Master/SWK_OS_Master_Satin_ForDark.svg', path.join(swkOsDir, 'Master', 'SWK_OS_Master.svg'))
+  copyFromPack('Master/SWK_OS_Master_Satin_ForDark.svg', path.join(swkOsDir, 'Master', 'SWK_OS_Master_Transparent.svg'))
+  copyFromPack('Logo/SWK_OS_Horizontal_ForDark.png', path.join(swkOsDir, 'Master', 'SWK_OS_Master_4096.png'))
 
-  copyFile('transparent_for_white/Full_logo/SWK_OS_Full_logo_2048px.png', path.join(brandDir, 'masters', 'swk-primary.png'))
-  copyFile('transparent_for_white/Full_logo/SWK_OS_Full_logo_2048px.png', path.join(brandDir, 'masters', 'swk-primary-approved-original.png'))
-  copyFile('transparent_for_black/Full_logo/SWK_OS_Full_logo_2048px.png', path.join(brandDir, 'masters', 'swk-dark.png'))
-  copyFile('transparent_for_black/Full_logo/SWK_OS_Full_logo_2048px.png', path.join(brandDir, 'masters', 'swk-dark-companion-original.png'))
-  copyFile('transparent_for_black/Emblem_only/SWK_OS_Emblem_only_2048px.png', path.join(brandDir, 'masters', 'swk-icon.png'))
-  copyFile('transparent_for_black/Emblem_only/SWK_OS_Emblem_only_2048px.png', path.join(brandDir, 'masters', 'swk-icon-original.png'))
-  copyFile('white/Emblem_only/SWK_OS_Emblem_only_2048px.png', path.join(brandDir, 'masters', 'swk-icon-approved-white-reference.png'))
-  copyFile('transparent_for_black/SWK_only/SWK_OS_SWK_only_2048px.png', path.join(brandDir, 'masters', 'swk-wordmark.png'))
+  // 2. Top-level /brand/* SVGs and PNGs used across Web, Print, and Reception QR
+  copyFromPack('Icon/SWK_OS_Crest_ForDark.svg', path.join(brandDir, 'swk-os-emblem.svg'))
+  copyFromPack('Icon/SWK_OS_Crest_ForDark.svg', path.join(brandDir, 'swk-os-emblem-dark.svg'))
+  copyFromPack('Icon/SWK_OS_Crest_ForLight.svg', path.join(brandDir, 'swk-os-emblem-light.svg'))
+  copyFromPack('Icon/SWK_OS_Crest_ForDark.svg', path.join(brandDir, 'swk-properties-emblem.svg'))
+  copyFromPack('Icon/SWK_OS_Crest_ForDark.svg', path.join(brandDir, 'swk-mark.svg'))
 
-  // 5b. public/brand/logos/*, wordmark/*, monochrome/*, tagline/*
+  copyFromPack('Logo/SWK_OS_Wordmark_ForDark.svg', path.join(brandDir, 'swk-os-wordmark.svg'))
+  copyFromPack('Logo/SWK_OS_Wordmark_ForDark.svg', path.join(brandDir, 'swk-os-wordmark-dark.svg'))
+  copyFromPack('Logo/SWK_OS_Wordmark_ForLight.svg', path.join(brandDir, 'swk-os-wordmark-light.svg'))
+  copyFromPack('Logo/SWK_OS_Wordmark_ForDark.svg', path.join(brandDir, 'swk-properties-wordmark.svg'))
+
+  copyFromPack('Logo/SWK_OS_Horizontal_ForDark.svg', path.join(brandDir, 'swk-os-horizontal.svg'))
+  copyFromPack('Logo/SWK_OS_Horizontal_ForDark.svg', path.join(brandDir, 'swk-os-horizontal-dark.svg'))
+  copyFromPack('Logo/SWK_OS_Horizontal_ForLight.svg', path.join(brandDir, 'swk-os-horizontal-light.svg'))
+  copyFromPack('Logo/SWK_OS_Horizontal_ForDark.svg', path.join(brandDir, 'swk-properties-horizontal.svg'))
+  copyFromPack('Logo/SWK_OS_Horizontal_ForLight.svg', path.join(brandDir, 'swk-properties-horizontal-dark.svg'))
+  copyFromPack('Logo/SWK_OS_Horizontal_ForDark.svg', path.join(brandDir, 'swk-logo.svg'))
+
+  copyFromPack('Logo/SWK_OS_Stacked_ForDark.svg', path.join(brandDir, 'swk-os-stacked.svg'))
+  copyFromPack('Logo/SWK_OS_Stacked_ForLight.svg', path.join(brandDir, 'swk-os-stacked-light.svg'))
+  copyFromPack('Logo/SWK_OS_Stacked_ForDark.svg', path.join(brandDir, 'swk-properties-stacked.svg'))
+
+  copyFromPack('Master/SWK_OS_Master_Satin_ForDark.svg', path.join(brandDir, 'swk-os-master.svg'))
+  copyFromPack('Master/SWK_OS_Master_Satin_ForLight.svg', path.join(brandDir, 'swk-os-master-light.svg'))
+
+  copyFromPack('Icon/SWK_OS_Crest_ForDark.png', path.join(brandDir, 'swk-mark.png'))
+  copyFromPack('Icon/SWK_OS_Crest_ForLight.png', path.join(brandDir, 'swk-mark-light.png'))
+  copyFromPack('Icon/SWK_OS_Crest_ForLight.png', path.join(brandDir, 'swk-mark-black.png'))
+  copyFromPack('Icon/SWK_OS_Crest_ForDark.png', path.join(brandDir, 'swk-signage-icon.png'))
+
+  copyFromPack('Logo/SWK_OS_Wordmark_ForDark.png', path.join(brandDir, 'swk-logo-white.png'))
+  copyFromPack('Logo/SWK_OS_Wordmark_ForLight.png', path.join(brandDir, 'swk-logo-ink.png'))
+  copyFromPack('Logo/SWK_OS_Wordmark_ForDark.png', path.join(brandDir, 'swk-logo-dark.png'))
+
+  copyFromPack('Logo/SWK_OS_Horizontal_ForDark.png', path.join(brandDir, 'logo-primary.png'))
+  copyFromPack('Logo/SWK_OS_Horizontal_ForDark.png', path.join(brandDir, 'swk-logo-gold.png'))
+  copyFromPack('Logo/SWK_OS_Horizontal_ForDark.png', path.join(brandDir, 'swk-logo.png'))
+  copyFromPack('Logo/SWK_OS_Horizontal_ForDark.png', path.join(brandDir, 'swk-full-logo-dark.png'))
+  copyFromPack('Logo/SWK_OS_Horizontal_ForLight.png', path.join(brandDir, 'swk-full-logo-light.png'))
+  copyFromPack('Logo/SWK_OS_Horizontal_ForDark.png', path.join(brandDir, 'swk-properties-horizontal.png'))
+  copyFromPack('Logo/SWK_OS_Stacked_ForDark.png', path.join(brandDir, 'swk-signage-logo.png'))
+
+  // 3. Favicons & PWA App Icons (exact pixel dimensions verified by tests/pwa.ts)
+  const appDark1024 = PNG.sync.read(fs.readFileSync(path.join(packDir, 'App_Icon/SWK_OS_App_Dark_1024.png')))
+  const png64 = PNG.sync.write(resizeSmooth(appDark1024, 64, 64))
+  const png128 = PNG.sync.write(resizeSmooth(appDark1024, 128, 128))
+  const png256 = PNG.sync.write(resizeSmooth(appDark1024, 256, 256))
+
+  for (const targetFavDir of [pubDir, favDir, path.join(brandDir, 'favicon'), path.join(swkOsDir, 'Favicon')]) {
+    copyFromPack('Favicon/favicon.svg', path.join(targetFavDir, 'favicon.svg'))
+    copyFromPack('Favicon/favicon.svg', path.join(targetFavDir, 'favicon-16.svg'))
+    copyFromPack('Favicon/favicon.ico', path.join(targetFavDir, 'favicon.ico'))
+    copyFromPack('Favicon/apple-touch-icon.png', path.join(targetFavDir, 'apple-touch-icon.png'))
+    copyFromPack('Favicon/apple-touch-icon.png', path.join(targetFavDir, 'favicon-180.png'))
+    copyFromPack('Favicon/favicon-16.png', path.join(targetFavDir, 'favicon-16.png'))
+    copyFromPack('Favicon/favicon-32.png', path.join(targetFavDir, 'favicon-32.png'))
+    copyFromPack('Favicon/favicon-48.png', path.join(targetFavDir, 'favicon-48.png'))
+    copyFromPack('App_Icon/Android/res/mipmap-xhdpi/ic_launcher.png', path.join(targetFavDir, 'favicon-96.png'))
+    copyFromPack('App_Icon/Android/res/mipmap-xxxhdpi/ic_launcher.png', path.join(targetFavDir, 'favicon-192.png'))
+    copyFromPack('App_Icon/Android/Play_Store_512.png', path.join(targetFavDir, 'favicon-512.png'))
+    fs.writeFileSync(path.join(targetFavDir, 'favicon-64.png'), png64)
+    fs.writeFileSync(path.join(targetFavDir, 'favicon-128.png'), png128)
+    fs.writeFileSync(path.join(targetFavDir, 'favicon-256.png'), png256)
+  }
+
+  copyFromPack('App_Icon/Android/res/mipmap-xxxhdpi/ic_launcher.png', path.join(pubDir, 'app-icon-192.png'))
+  copyFromPack('App_Icon/Android/Play_Store_512.png', path.join(pubDir, 'app-icon-512.png'))
+  copyFromPack('App_Icon/Android/res/mipmap-xxxhdpi/ic_launcher.png', path.join(pubDir, 'icon-192.png'))
+  copyFromPack('App_Icon/Android/Play_Store_512.png', path.join(pubDir, 'icon-512.png'))
+  copyFromPack('Logo/SWK_OS_Horizontal_ForDark.png', path.join(pubDir, 'swk-logo.png'))
+
+  // 4. public/brand/app-icons/* & sub-libraries
+  copyFromPack('App_Icon/Android/res/mipmap-xxxhdpi/ic_launcher.png', path.join(brandDir, 'app-icons', 'android-chrome-192x192.png'))
+  copyFromPack('App_Icon/Android/Play_Store_512.png', path.join(brandDir, 'app-icons', 'android-chrome-512x512.png'))
+  copyFromPack('App_Icon/Android/res/mipmap-xxxhdpi/ic_launcher.png', path.join(brandDir, 'app-icons', 'maskable-192x192.png'))
+  copyFromPack('App_Icon/Android/Play_Store_512.png', path.join(brandDir, 'app-icons', 'maskable-512x512.png'))
+  copyFromPack('Favicon/apple-touch-icon.png', path.join(brandDir, 'app-icons', 'apple-touch-icon.png'))
+  copyFromPack('App_Icon/iOS/AppIcon.appiconset/AppIcon-1024.png', path.join(brandDir, 'app-icons', 'app-store-1024.png'))
+
+  for (const variantDir of [
+    path.join(brandDir, 'app-icons', 'Emblem_and_SWK'),
+    path.join(brandDir, 'app-icons', 'SWK_Wordmark'),
+    path.join(swkOsDir, 'App_Icons', 'Emblem_and_SWK'),
+    path.join(swkOsDir, 'App_Icons', 'SWK_Wordmark'),
+  ]) {
+    copyFromPack('App_Icon/SWK_OS_App_Dark.svg', path.join(variantDir, 'App_Icon_Master.svg'))
+    copyFromPack('App_Icon/Android/Play_Store_512.png', path.join(variantDir, 'Android', 'Google-Play-512.png'))
+    copyTree(path.join(packDir, 'App_Icon', 'Android', 'res'), path.join(variantDir, 'Android', 'res'))
+    copyTree(path.join(packDir, 'App_Icon', 'iOS'), path.join(variantDir, 'iOS'))
+  }
+
+  for (const n of [16, 32, 48]) {
+    copyFromPack(`Favicon/favicon-${n}.png`, path.join(brandDir, 'favicon', `favicon-dark-${n}.png`))
+    copyFromPack(`Favicon/favicon-${n}.png`, path.join(brandDir, 'favicon', `favicon-light-${n}.png`))
+  }
+  fs.writeFileSync(path.join(brandDir, 'favicon', 'favicon-dark-64.png'), png64)
+  fs.writeFileSync(path.join(brandDir, 'favicon', 'favicon-light-64.png'), png64)
+  copyFromPack('Favicon/favicon.ico', path.join(brandDir, 'favicon', 'favicon-dark.ico'))
+  copyFromPack('Favicon/favicon.ico', path.join(brandDir, 'favicon', 'favicon-light.ico'))
+
+  // 5. public/brand/masters/*, logos/*, wordmark/*, monochrome/*, tagline/*, icons/*
+  copyFromPack('Logo/SWK_OS_Horizontal_ForLight.png', path.join(brandDir, 'masters', 'swk-primary.png'))
+  copyFromPack('Logo/SWK_OS_Horizontal_ForLight.png', path.join(brandDir, 'masters', 'swk-primary-approved-original.png'))
+  copyFromPack('Logo/SWK_OS_Horizontal_ForDark.png', path.join(brandDir, 'masters', 'swk-dark.png'))
+  copyFromPack('Logo/SWK_OS_Horizontal_ForDark.png', path.join(brandDir, 'masters', 'swk-dark-companion-original.png'))
+  copyFromPack('Icon/SWK_OS_Crest_ForDark.png', path.join(brandDir, 'masters', 'swk-icon.png'))
+  copyFromPack('Icon/SWK_OS_Crest_ForDark.png', path.join(brandDir, 'masters', 'swk-icon-original.png'))
+  copyFromPack('Icon/SWK_OS_Crest_ForLight.png', path.join(brandDir, 'masters', 'swk-icon-approved-white-reference.png'))
+  copyFromPack('Logo/SWK_OS_Wordmark_ForDark.png', path.join(brandDir, 'masters', 'swk-wordmark.png'))
+
   for (const w of ['240', '320', '480', '640', '960', '1280', '1600', '4096-upscaled']) {
-    const srcSize = Number.parseInt(w, 10) <= 256 ? '256px' : Number.parseInt(w, 10) <= 512 ? '512px' : Number.parseInt(w, 10) <= 1024 ? '1024px' : '2048px'
-    copyFile(`transparent_for_black/Full_logo/SWK_OS_Full_logo_${srcSize}.png`, path.join(brandDir, 'logos', 'dark', `swk-properties-${w}.png`))
-    copyFile(`transparent_for_white/Full_logo/SWK_OS_Full_logo_${srcSize}.png`, path.join(brandDir, 'logos', 'light', `swk-properties-${w}.png`))
+    copyFromPack('Logo/SWK_OS_Horizontal_ForDark.png', path.join(brandDir, 'logos', 'dark', `swk-properties-${w}.png`))
+    copyFromPack('Logo/SWK_OS_Horizontal_ForLight.png', path.join(brandDir, 'logos', 'light', `swk-properties-${w}.png`))
   }
   for (const w of ['320', '640', '1280', '1600']) {
-    const srcSize = Number.parseInt(w, 10) <= 512 ? '512px' : Number.parseInt(w, 10) <= 1024 ? '1024px' : '2048px'
-    copyFile(`transparent_for_black/SWK_only/SWK_OS_SWK_only_${srcSize}.png`, path.join(brandDir, 'wordmark', `swk-wordmark-${w}.png`))
+    copyFromPack('Logo/SWK_OS_Wordmark_ForDark.png', path.join(brandDir, 'wordmark', `swk-wordmark-${w}.png`))
   }
-  copyFile('transparent_for_white/SWK_only/SWK_OS_SWK_only_1024px.png', path.join(brandDir, 'wordmark', 'swk-wordmark-black.png'))
-  copyFile('transparent_for_black/SWK_only/SWK_OS_SWK_only_1024px.png', path.join(brandDir, 'wordmark', 'swk-wordmark-flat-gold.png'))
-  copyFile('transparent_for_black/SWK_only/SWK_OS_SWK_only_1024px.png', path.join(brandDir, 'wordmark', 'swk-wordmark-white.png'))
-  copyFile('transparent_for_white/Full_logo/SWK_OS_Full_logo_1024px.png', path.join(brandDir, 'monochrome', 'swk-properties-black.png'))
-  copyFile('transparent_for_black/Full_logo/SWK_OS_Full_logo_1024px.png', path.join(brandDir, 'monochrome', 'swk-properties-flat-gold.png'))
-  copyFile('transparent_for_black/Full_logo/SWK_OS_Full_logo_1024px.png', path.join(brandDir, 'monochrome', 'swk-properties-white.png'))
-  copyFile('transparent_for_white/Emblem_only/SWK_OS_Emblem_only_512px.png', path.join(brandDir, 'icons', 'monochrome', 'swk-icon-black.png'))
-  copyFile('transparent_for_black/Emblem_only/SWK_OS_Emblem_only_512px.png', path.join(brandDir, 'icons', 'monochrome', 'swk-icon-flat-gold.png'))
-  copyFile('transparent_for_black/Emblem_only/SWK_OS_Emblem_only_512px.png', path.join(brandDir, 'icons', 'monochrome', 'swk-icon-white.png'))
-  copyFile('transparent_for_black/Full_logo/SWK_OS_Full_logo_2048px.png', path.join(brandDir, 'tagline', 'swk-with-tagline-dark.png'))
-  copyFile('transparent_for_white/Full_logo/SWK_OS_Full_logo_2048px.png', path.join(brandDir, 'tagline', 'swk-with-tagline-light.png'))
+  copyFromPack('Logo/SWK_OS_Wordmark_ForLight.png', path.join(brandDir, 'wordmark', 'swk-wordmark-black.png'))
+  copyFromPack('Logo/SWK_OS_Wordmark_ForDark.png', path.join(brandDir, 'wordmark', 'swk-wordmark-flat-gold.png'))
+  copyFromPack('Logo/SWK_OS_Wordmark_ForDark.png', path.join(brandDir, 'wordmark', 'swk-wordmark-white.png'))
+  copyFromPack('Logo/SWK_OS_Horizontal_ForLight.png', path.join(brandDir, 'monochrome', 'swk-properties-black.png'))
+  copyFromPack('Logo/SWK_OS_Horizontal_ForDark.png', path.join(brandDir, 'monochrome', 'swk-properties-flat-gold.png'))
+  copyFromPack('Logo/SWK_OS_Horizontal_ForDark.png', path.join(brandDir, 'monochrome', 'swk-properties-white.png'))
+  copyFromPack('Icon/SWK_OS_Crest_ForLight.png', path.join(brandDir, 'icons', 'monochrome', 'swk-icon-black.png'))
+  copyFromPack('Icon/SWK_OS_Crest_ForDark.png', path.join(brandDir, 'icons', 'monochrome', 'swk-icon-flat-gold.png'))
+  copyFromPack('Icon/SWK_OS_Crest_ForDark.png', path.join(brandDir, 'icons', 'monochrome', 'swk-icon-white.png'))
+  copyFromPack('Logo/SWK_OS_Horizontal_ForDark.png', path.join(brandDir, 'tagline', 'swk-with-tagline-dark.png'))
+  copyFromPack('Logo/SWK_OS_Horizontal_ForLight.png', path.join(brandDir, 'tagline', 'swk-with-tagline-light.png'))
 
-  // 6. OpenGraph & Social Cards (1200x630 & 1080x1080)
-  const fullTransBlack1024 = PNG.sync.read(fs.readFileSync(path.join(matteDir, 'transparent_for_black/Full_logo/SWK_OS_Full_logo_1024px.png')))
-  const fullTransWhite1024 = PNG.sync.read(fs.readFileSync(path.join(matteDir, 'transparent_for_white/Full_logo/SWK_OS_Full_logo_1024px.png')))
-  const ogDark = composeOnCanvas(fullTransBlack1024, 1200, 630, [0, 0, 0], 0.78)
-  const ogLight = composeOnCanvas(fullTransWhite1024, 1200, 630, [255, 255, 255], 0.78)
+  const crestDark512 = PNG.sync.read(fs.readFileSync(path.join(packDir, 'Icon/SWK_OS_Crest_ForDark.png')))
+  for (const n of [16, 32, 48, 64, 96, 128, 180, 192, 256, 512, 1024, 2048]) {
+    const out = n === 512 ? crestDark512 : resizeSmooth(crestDark512, n, n)
+    const dest = path.join(brandDir, 'icons', 'transparent', `swk-icon-${n}.png`)
+    fs.mkdirSync(path.dirname(dest), { recursive: true })
+    fs.writeFileSync(dest, PNG.sync.write(out))
+  }
+
+  // 6. OpenGraph & Social Cards (1200x630 & 1080x1080 on official SWK OS #102E29 Dark & #F8F4EC Light surfaces)
+  const horizDark = PNG.sync.read(fs.readFileSync(path.join(packDir, 'Logo/SWK_OS_Horizontal_ForDark.png')))
+  const horizLight = PNG.sync.read(fs.readFileSync(path.join(packDir, 'Logo/SWK_OS_Horizontal_ForLight.png')))
+  const ogDark = composeOnCanvas(horizDark, 1200, 630, [16, 46, 41], 0.78)
+  const ogLight = composeOnCanvas(horizLight, 1200, 630, [248, 244, 236], 0.78)
   const ogDarkBuf = PNG.sync.write(ogDark)
   fs.writeFileSync(path.join(pubDir, 'og.png'), ogDarkBuf)
+  fs.mkdirSync(path.join(brandDir, 'social'), { recursive: true })
   fs.writeFileSync(path.join(brandDir, 'social', 'social-card-charcoal-1200x630.png'), ogDarkBuf)
   fs.writeFileSync(path.join(brandDir, 'social', 'social-card-pearl-1200x630.png'), PNG.sync.write(ogLight))
-  fs.writeFileSync(path.join(brandDir, 'social', 'avatar-charcoal-1080.png'), PNG.sync.write(composeOnCanvas(fullTransBlack1024, 1080, 1080, [0, 0, 0], 0.82)))
-  fs.writeFileSync(path.join(brandDir, 'social', 'avatar-pearl-1080.png'), PNG.sync.write(composeOnCanvas(fullTransWhite1024, 1080, 1080, [255, 255, 255], 0.82)))
+  fs.writeFileSync(path.join(brandDir, 'social', 'avatar-charcoal-1080.png'), PNG.sync.write(composeOnCanvas(appDark1024, 1080, 1080, [16, 46, 41], 1.0)))
+  const appLight1024 = PNG.sync.read(fs.readFileSync(path.join(packDir, 'App_Icon/SWK_OS_App_Light_1024.png')))
+  fs.writeFileSync(path.join(brandDir, 'social', 'avatar-pearl-1080.png'), PNG.sync.write(composeOnCanvas(appLight1024, 1080, 1080, [248, 244, 236], 1.0)))
 
   // 7. assets-src root convenience copies
-  copyFile('transparent_for_black/Emblem_only/SWK_OS_Emblem_only_512px.png', path.join(root, 'assets-src', 'swk-logo.png'))
-  copyFile('transparent_for_black/Favicons_Emblem_only/favicon.ico', path.join(root, 'assets-src', 'SWK_favicon.ico'))
-  copyFile('transparent_for_black/Favicons_Emblem_only/512x512.png', path.join(root, 'assets-src', 'SWK_favicon_512.png'))
-  copyFile('transparent_for_black/Favicons_Emblem_only/512x512.png', path.join(root, 'assets-src', 'favicon.png'))
+  copyFromPack('Icon/SWK_OS_Crest_ForDark.png', path.join(root, 'assets-src', 'swk-logo.png'))
+  copyFromPack('Favicon/favicon.ico', path.join(root, 'assets-src', 'SWK_favicon.ico'))
+  copyFromPack('App_Icon/Android/Play_Store_512.png', path.join(root, 'assets-src', 'SWK_favicon_512.png'))
+  copyFromPack('App_Icon/Android/Play_Store_512.png', path.join(root, 'assets-src', 'favicon.png'))
 
-  // 8. Android App Icons, Adaptive Foreground/Monochrome, Splash Icons & Drawables
-  const androidMain = path.join(root, 'android', 'app', 'src', 'main')
-  const resDir = path.join(androidMain, 'res')
-  if (fs.existsSync(resDir)) {
-    copyFile('black/Favicons_Emblem_only/512x512.png', path.join(androidMain, 'ic_launcher-playstore.png'))
-
-    const emblem512 = PNG.sync.read(fs.readFileSync(path.join(matteDir, 'transparent_for_black/Emblem_only/SWK_OS_Emblem_only_512px.png')))
-    const full512 = PNG.sync.read(fs.readFileSync(path.join(matteDir, 'transparent_for_black/Full_logo/SWK_OS_Full_logo_512px.png')))
-
-    const densities = [
-      { name: 'mdpi', scale: 1.0, launcherFile: 'black/Favicons_Emblem_only/48x48.png' },
-      { name: 'hdpi', scale: 1.5, launcherFile: 'black/Favicons_Emblem_only/128x128.png' },
-      { name: 'xhdpi', scale: 2.0, launcherFile: 'black/Favicons_Emblem_only/192x192.png' },
-      { name: 'xxhdpi', scale: 3.0, launcherFile: 'black/Favicons_Emblem_only/256x256.png' },
-      { name: 'xxxhdpi', scale: 4.0, launcherFile: 'black/Favicons_Emblem_only/512x512.png' },
-    ]
-
-    for (const d of densities) {
-      const mipDir = path.join(resDir, `mipmap-${d.name}`)
-      const drawDir = path.join(resDir, `drawable-${d.name}`)
-      fs.mkdirSync(mipDir, { recursive: true })
-      fs.mkdirSync(drawDir, { recursive: true })
-
-      // Legacy & round launcher icons (solid black background with Matte Gold Emblem)
-      copyFile(d.launcherFile, path.join(mipDir, 'ic_launcher.png'))
-      copyFile(d.launcherFile, path.join(mipDir, 'ic_launcher_round.png'))
-
-      // Adaptive icon foreground & monochrome (108dp canvas, emblem inside 66dp safe zone -> ratio 0.58)
-      const canvas = Math.round(108 * d.scale)
-      const fg = composeOnCanvas(emblem512, canvas, canvas, null, 0.58)
-      const mono = makeWhiteSilhouette(emblem512, canvas, canvas, 0.58)
-      fs.writeFileSync(path.join(mipDir, 'ic_launcher_foreground.png'), PNG.sync.write(fg))
-      fs.writeFileSync(path.join(mipDir, 'ic_launcher_monochrome.png'), PNG.sync.write(mono))
-
-      // Status-bar notification icon (24dp white silhouette)
-      const statSize = Math.round(24 * d.scale)
-      const statIcon = makeWhiteSilhouette(emblem512, statSize, statSize, 0.88)
-      fs.writeFileSync(path.join(drawDir, 'ic_stat_swk.png'), PNG.sync.write(statIcon))
-
-      // Android 12+ splash icon (288dp canvas with Full Matte Gold SWK OS Logo)
-      const splashSize = Math.round(288 * d.scale)
-      const splashIcon = composeOnCanvas(full512, splashSize, splashSize, null, 0.52)
-      fs.writeFileSync(path.join(drawDir, 'splash_icon.png'), PNG.sync.write(splashIcon))
-    }
-
-    const drawableDir = path.join(resDir, 'drawable')
-    fs.mkdirSync(drawableDir, { recursive: true })
-    copyFile('black/Favicons_Emblem_only/512x512.png', path.join(drawableDir, 'swk_app_icon.png'))
-    copyFile('transparent_for_black/Favicons_Emblem_only/512x512.png', path.join(drawableDir, 'swk_logo.png'))
-    copyFile('transparent_for_black/SWK_only/SWK_OS_SWK_only_1024px.png', path.join(drawableDir, 'swk_logo_white.png'))
-    copyFile('transparent_for_white/SWK_only/SWK_OS_SWK_only_1024px.png', path.join(drawableDir, 'swk_logo_ink.png'))
-
-    const bgXmlPath = path.join(resDir, 'values', 'ic_launcher_background.xml')
-    if (fs.existsSync(path.dirname(bgXmlPath))) {
-      fs.writeFileSync(bgXmlPath, `<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">#000000</color>\n</resources>\n`)
-    }
-  }
-
-  console.log('✓ Synced Matte Gold SWK OS logos, emblems, favicons, PWA icons, OpenGraph cards, and Android icons.')
+  console.log('✓ Synced SWK_OS_Brand_Pack logos, crests, favicons, PWA icons, OpenGraph cards, and Android/iOS app icons.')
 }
 
 main()
