@@ -156,7 +156,7 @@ export default function ReceptionQrPage() {
               printColorAdjust: 'exact',
             }}
           >
-            <img src="/brand/swk-properties-horizontal.svg" alt="SWK Properties LLC" className="h-12 w-auto object-contain" />
+            <img src="/brand/swk-os/horizontal-portal-lockup-transparent.png?v=swk-os-navy-2" alt="SWK Properties LLC" className="h-12 w-auto object-contain" />
             <div className="text-[10px] uppercase tracking-[0.2em] text-[#e6c88f] font-bold">
               SWK Properties LLC · Office Attendance QR
             </div>
@@ -216,7 +216,7 @@ export default function ReceptionQrPage() {
         {/* Header */}
         <div className="flex flex-col items-center text-center mb-6">
           <div className="flex items-center justify-center px-4 py-2.5 rounded-2xl bg-[#061022] border border-[#c9a96e]/35 mb-3">
-            <img src="/brand/swk-properties-horizontal.svg" alt="SWK Properties LLC" className="h-10 w-auto object-contain" />
+            <img src="/brand/swk-os/horizontal-portal-lockup-transparent.png?v=swk-os-navy-2" alt="SWK Properties LLC" className="h-10 w-auto object-contain" />
           </div>
           <h1 className="font-display font-bold text-xl text-white m-0">
             {checkInResult ? 'Attendance Confirmed' : 'Office Attendance Sign-In'}

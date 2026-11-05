@@ -32,7 +32,7 @@ export function Letterhead() {
           printColorAdjust: 'exact',
         }}
       >
-        <img src="/brand/swk-properties-horizontal.svg" alt={companyName} style={{ height: 42, width: 'auto', objectFit: 'contain', display: 'block' }} />
+        <img src="/brand/swk-os/horizontal-portal-lockup-transparent.png?v=swk-os-navy-2" alt={companyName} style={{ height: 42, width: 'auto', objectFit: 'contain', display: 'block' }} />
       </div>
       <div style={{ textAlign: 'right', fontSize: 10.5, lineHeight: 1.45 }}>
         <b style={{ fontSize: 12.5, color: '#08142a' }}>{companyName}</b>

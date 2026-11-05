@@ -195,7 +195,7 @@ export default function HandoverPortalPage() {
                 }}
               >
                 <img
-                  src="/brand/swk-properties-horizontal.svg"
+                  src="/brand/swk-os/horizontal-portal-lockup-transparent.png?v=swk-os-navy-2"
                   alt="SWK Properties LLC"
                   style={{ height: 46, width: 'auto', display: 'block', objectFit: 'contain' }}
                 />
