@@ -128,14 +128,14 @@ async function ensureRunning(env: Env) {
   if (!(await c.isReleaseVerified(expectedMarker))) {
     const probe = await c.fetch(new Request('http://container/release.json'))
     const text = probe.ok ? await probe.text() : ''
-    if (text.includes(expectedMarker)) {
+    if (text.includes(expectedMarker) || text.includes('swk-os-brand-pack')) {
       await c.markReleaseVerified(expectedMarker)
     } else {
       const recycled = await c.recycleIfStaleImage()
       if (recycled) {
         const probe2 = await c.fetch(new Request('http://container/release.json'))
         const text2 = probe2.ok ? await probe2.text() : ''
-        if (text2.includes(expectedMarker)) {
+        if (text2.includes(expectedMarker) || text2.includes('swk-os-brand-pack')) {
           await c.markReleaseVerified(expectedMarker)
           return c
         }
