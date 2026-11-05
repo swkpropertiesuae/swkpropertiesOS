@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Cloudflare Containers wrapper for SWK OS – SWKPROPOS",
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "node -e \"if(process.env.GITHUB_SHA)require('fs').writeFileSync('../../public/release.json',JSON.stringify({sha:process.env.GITHUB_SHA,brand:'swk-os-brand-pack'})+'\\n')\" && tsc --noEmit",
     "deploy": "wrangler deploy",
     "logs": "wrangler tail",
     "check": "wrangler deploy --dry-run --outdir .wrangler-dry"
