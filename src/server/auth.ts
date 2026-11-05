@@ -25,7 +25,9 @@ export function verifyPassword(pw: string, stored: string | null | undefined): b
 export function validatePasswordStrength(pw: string) {
   if (pw.length > 200) throw bad('Password must be no more than 200 characters')
   if (pw.length < 10) throw bad('Password must be at least 10 characters')
-  if (!/[a-z]/.test(pw) || !/[A-Z]/.test(pw) || !/\d/.test(pw)) throw bad('Password needs upper-case, lower-case letters and a digit')
+  if (!/[a-z]/.test(pw) || !/[A-Z]/.test(pw) || !(/\d/.test(pw) || /[^a-zA-Z0-9]/.test(pw))) {
+    throw bad('Password needs upper-case, lower-case letters and a digit or symbol')
+  }
 }
 
 // ---------------------------------------------------------------- sessions
@@ -87,10 +89,16 @@ export function newApiKey() {
 const MAX_FAILS = 5
 export function attemptLogin(email: string, password: string, totp: string | undefined, ip?: string, ua?: string): { user: SessionUser; needsTotp?: false } | { needsTotp: true } {
   const e = email.trim().toLowerCase()
+  const staffMatch = SWK_STAFF_ACCOUNTS.find(a => a.email.toLowerCase() === e || a.aliases.some(al => al.toLowerCase() === e))
   let row = q.get(`SELECT * FROM users WHERE lower(email) = ? AND deleted_at IS NULL`, e)
-  if (!row && SWK_STAFF_ACCOUNTS.some(a => a.email === e || a.aliases.includes(e))) {
-    try { ensureHardcodedSwkStaffAccounts() } catch { /* ignore */ }
-    row = q.get(`SELECT * FROM users WHERE lower(email) = ? AND deleted_at IS NULL`, e)
+  if (!row && staffMatch) {
+    row = q.get(`SELECT * FROM users WHERE lower(email) = ? AND deleted_at IS NULL`, staffMatch.email.toLowerCase())
+    if (!row) {
+      try { ensureHardcodedSwkStaffAccounts() } catch { /* ignore */ }
+      row =
+        q.get(`SELECT * FROM users WHERE lower(email) = ? AND deleted_at IS NULL`, e) ??
+        q.get(`SELECT * FROM users WHERE lower(email) = ? AND deleted_at IS NULL`, staffMatch.email.toLowerCase())
+    }
   }
   const log = (success: boolean, reason: string) => q.run(`INSERT INTO login_events(at, email, user_id, success, reason, ip, user_agent) VALUES (?,?,?,?,?,?,?)`, nowIso(), e, row?.id ?? null, success ? 1 : 0, reason, ip ?? null, (ua ?? '').slice(0, 200))
   if (row?.locked_until && row.locked_until > nowIso().slice(0, 16)) { log(false, 'locked'); throw new HttpError(423, 'Account temporarily locked after repeated failures. Try again in 15 minutes.') }

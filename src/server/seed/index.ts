@@ -62,8 +62,8 @@ export async function seedReference(opts: { users?: boolean; demo?: boolean } = 
   if (!done('roles')) {
     const V = ['view'], VE = ['view', 'export'], CRUD = ['view', 'create', 'edit', 'delete', 'export'], CE = ['view', 'create', 'edit', 'export'], ALL_MOD = ['view', 'create', 'edit', 'delete', 'approve', 'export']
     const roles = [
-      { name: 'Admin', description: 'Owner (Shabib Siraj) – Full system control and final administrative approver', system: true, permissions: '*' },
-      { name: 'Owner', description: 'Owner (Shabib Siraj) – Complete control over company operations, approvals and deletions', system: true, permissions: '*' },
+      { name: 'Admin', description: 'Full-Access System & Operations Administrator (admin@swk.properties) – Complete operational, CRM, ERP, finance, HR, portal & system administration access across SWK Properties OS, operating under the direct supervisory control of Owner Shabib Siraj (shabib@swk.properties)', system: true, permissions: '*' },
+      { name: 'Owner', description: 'Company Owner & Managing Director (shabib@swk.properties – Shabib Siraj) – Supreme authority over all company operations, approvals, deletions, and direct supervisory control over admin@swk.properties', system: true, permissions: '*' },
       {
         name: 'Manager',
         description: 'Manager (Mohammad Haseeb) – Majority operational access; administrative decisions and record deletions require Owner approval',
@@ -106,7 +106,7 @@ export async function seedReference(opts: { users?: boolean; demo?: boolean } = 
   }
   if (!done('roles_swk_v2')) {
     const V = ['view'], VE = ['view', 'export'], CRUD = ['view', 'create', 'edit', 'delete', 'export'], CE = ['view', 'create', 'edit', 'export'], ALL_MOD = ['view', 'create', 'edit', 'delete', 'approve', 'export']
-    if (!idOf('roles', 'name', 'Owner')) mk('roles', { name: 'Owner', description: 'Owner (Shabib Siraj) – Complete control over company operations, approvals and deletions', is_system: true, permissions: '*' })
+    if (!idOf('roles', 'name', 'Owner')) mk('roles', { name: 'Owner', description: 'Company Owner & Managing Director (shabib@swk.properties – Shabib Siraj) – Supreme authority over all company operations, approvals, deletions, and direct supervisory control over admin@swk.properties', is_system: true, permissions: '*' })
     if (!idOf('roles', 'name', 'BDM & IT Admin')) mk('roles', { name: 'BDM & IT Admin', description: 'BDM & IT Admin (Talha Shabbir) – CRM, ERP, Digital Marketing, Portal Syndication & IT Admin', is_system: true, permissions: { dashboard: ALL_MOD, crm: ALL_MOD, sales: ALL_MOD, properties: ALL_MOD, mandates: ALL_MOD, transactions: CE, leases: ALL_MOD, finance: VE, assets: CE, hr: V, support: ALL_MOD, projects: ALL_MOD, documents: ALL_MOD, compliance: VE, ai: ALL_MOD, reports: ALL_MOD, masters: ALL_MOD, admin: ['view', 'create', 'edit', 'export'] } })
     if (!idOf('roles', 'name', 'Sales Advisor')) mk('roles', { name: 'Sales Advisor', description: 'Sales Advisor (Company Visa, Zero Basic Salary, 50-50% Commission Split)', is_system: true, permissions: { dashboard: V, crm: CRUD, sales: [...CRUD, 'approve', 'export'], properties: CE, mandates: CE, transactions: CE, leases: CE, hr: CE, documents: CE, support: CE, projects: CRUD, reports: VE, masters: V } })
     mark('roles_swk_v2')
@@ -115,25 +115,25 @@ export async function seedReference(opts: { users?: boolean; demo?: boolean } = 
     const a = config.accounts
     const dxb = idOf('branches', 'code', 'DXB')
     for (const [email, name, pw, role, deptCode, desig] of [
-      [a.adminEmail, a.adminName, a.adminPassword, 'Admin', 'MGT', 'Owner & Managing Director'],
-      ['shabib@swkpropertiesuae.com', 'Shabib Siraj', a.adminPassword, 'Admin', 'MGT', 'Owner & Managing Director'],
+      [a.adminEmail, a.adminName, a.adminPassword, 'Admin', 'MGT', 'Full-Access System & Operations Administrator (Controlled by Owner Shabib Siraj)'],
+      ['shabib@swkpropertiesuae.com', 'Shabib Siraj', a.ownerPassword, 'Owner', 'MGT', 'Owner & Managing Director'],
       [a.managerEmail, a.managerName, a.managerPassword, 'Manager', 'OPS', 'Operations Manager'],
       ['haseeb@swkpropertiesuae.com', 'Mohammad Haseeb', a.managerPassword, 'Manager', 'OPS', 'Operations Manager'],
       [a.bdmEmail, a.bdmName, a.bdmPassword, 'BDM & IT Admin', 'IT', 'BDM, Digital Marketing & IT Admin'],
     ] as const) {
       if (idOf('users', 'lower(email)', email)) continue
       if (role === 'Admin' && email === a.adminEmail && a.adminPasswordGenerated) console.warn(`[first start] ${role} account ${email} created with a generated one-time password: ${pw}\n  Sign in and change it now (set ADMIN_PASSWORD / MANAGER_PASSWORD to choose your own).`)
-      mk('users', { name, email, password: pw, role_id: idOf('roles', 'name', role), branch_id: dxb, department_id: idOf('departments', 'code', deptCode) ?? idOf('departments', 'code', 'MGT'), designation: desig, active: true, must_change_password: true })
+      mk('users', { name, email, password: pw, role_id: idOf('roles', 'name', role) ?? idOf('roles', 'name', 'Admin'), branch_id: dxb, department_id: idOf('departments', 'code', deptCode) ?? idOf('departments', 'code', 'MGT'), designation: desig, active: true, must_change_password: true })
     }
     mark('users')
   }
   if (withUsers && !done('users_swk_hierarchy_v2')) {
     const a = config.accounts
     const dxb = idOf('branches', 'code', 'DXB')
-    q.run(`UPDATE users SET name = 'Shabib Siraj', designation = 'Owner & Managing Director' WHERE lower(email) = ?`, a.adminEmail)
+    q.run(`UPDATE users SET name = ?, designation = 'Full-Access System & Operations Administrator (Controlled by Owner Shabib Siraj)' WHERE lower(email) = ?`, a.adminName, a.adminEmail)
     q.run(`UPDATE users SET name = 'Mohammad Haseeb', designation = 'Operations Manager' WHERE lower(email) = ?`, a.managerEmail)
     for (const [email, name, pw, role, deptCode, desig] of [
-      ['shabib@swkpropertiesuae.com', 'Shabib Siraj', a.adminPassword, 'Admin', 'MGT', 'Owner & Managing Director'],
+      ['shabib@swkpropertiesuae.com', 'Shabib Siraj', a.ownerPassword, 'Owner', 'MGT', 'Owner & Managing Director'],
       ['haseeb@swkpropertiesuae.com', 'Mohammad Haseeb', a.managerPassword, 'Manager', 'OPS', 'Operations Manager'],
       [a.bdmEmail, a.bdmName, a.bdmPassword, 'BDM & IT Admin', 'IT', 'BDM, Digital Marketing & IT Admin'],
     ] as const) {
@@ -390,15 +390,47 @@ export async function seedReference(opts: { users?: boolean; demo?: boolean } = 
 }
 
 /**
- * Ensures the 6 official @swk.property staff accounts (Talha, Haseeb, Fareed, Shahid, Umar, Saifullah)
- * and Admin (Shabib Siraj) exist with their hardcoded credentials, roles, and employee profiles.
+ * Ensures:
+ * 1. The former Shabib Siraj Admin account is converted into the dedicated Full-Access Admin account
+ *    (admin@swk.properties / Password: Admin@swk.properties) under Owner control.
+ * 2. A fresh Owner account with full access (shabib@swk.properties / Password: Shabib@swk.properties)
+ *    exists for Shabib Siraj with direct supervisory control over admin@swk.properties.
+ * 3. The 6 official @swk.property staff accounts (Haseeb, Talha, Fareed, Shahid, Umar, Saifullah)
+ *    exist with their hardcoded credentials, roles, and employee profiles.
  */
 export function ensureHardcodedSwkStaffAccounts() {
   const mk = (key: string, payload: Record<string, any>) => createRecord(getDef(key), payload, SYSTEM_CTX)
   const dxb = idOf('branches', 'code', 'DXB') ?? 1
   const dept = (code: string) => idOf('departments', 'code', code) ?? idOf('departments', 'code', 'MGT') ?? 1
 
-  // 1. Ensure the restricted 'Staff (Attendance & General)' role exists with hardcoded restricted permissions
+  // 1. Ensure Owner, Admin, and restricted 'Staff (Attendance & General)' roles exist with clear descriptions
+  const ownerDesc = 'Company Owner & Managing Director (shabib@swk.properties – Shabib Siraj) – Supreme authority over all company operations, approvals, deletions, and direct supervisory control over admin@swk.properties'
+  const adminDesc = 'Full-Access System & Operations Administrator (admin@swk.properties) – Complete operational, CRM, ERP, finance, HR, portal & system administration access across SWK Properties OS, operating under the direct supervisory control of Owner Shabib Siraj (shabib@swk.properties)'
+
+  let ownerRoleId = idOf('roles', 'name', 'Owner')
+  if (!ownerRoleId) {
+    ownerRoleId = mk('roles', {
+      name: 'Owner',
+      description: ownerDesc,
+      is_system: true,
+      permissions: '*',
+    }).id
+  } else {
+    q.run(`UPDATE roles SET description = ?, is_system = 1, permissions = '"*"', updated_at = ? WHERE id = ?`, ownerDesc, nowIso(), ownerRoleId)
+  }
+
+  let adminRoleId = idOf('roles', 'name', 'Admin')
+  if (!adminRoleId) {
+    adminRoleId = mk('roles', {
+      name: 'Admin',
+      description: adminDesc,
+      is_system: true,
+      permissions: '*',
+    }).id
+  } else {
+    q.run(`UPDATE roles SET description = ?, is_system = 1, permissions = '"*"', updated_at = ? WHERE id = ?`, adminDesc, nowIso(), adminRoleId)
+  }
+
   let staffRoleId = idOf('roles', 'name', 'Staff (Attendance & General)')
   if (!staffRoleId) {
     staffRoleId = mk('roles', {
@@ -416,36 +448,50 @@ export function ensureHardcodedSwkStaffAccounts() {
     )
   }
 
-  const adminRoleId = idOf('roles', 'name', 'Admin') ?? 1
   const managerRoleId = idOf('roles', 'name', 'Manager') ?? adminRoleId
 
-  // Ensure Shabib@swk.property also exists for Admin (Shabib Siraj)
-  const shabibSwkEmail = 'shabib@swk.property'
-  if (!idOf('users', 'lower(email)', shabibSwkEmail)) {
-    mk('users', {
-      name: 'Shabib Siraj',
-      email: 'Shabib@swk.property',
-      password: config.accounts.adminPassword,
-      role_id: adminRoleId,
-      branch_id: dxb,
-      department_id: dept('MGT'),
-      designation: 'Owner & Managing Director',
-      active: true,
-      must_change_password: false,
-    })
+  // Convert legacy Shabib@swk.property Admin account into admin@swk.properties (if admin@swk.properties does not exist yet)
+  const legacyShabibAdminId = q.val<number>(`SELECT id FROM users WHERE lower(email) = 'shabib@swk.property' AND deleted_at IS NULL LIMIT 1`)
+  const existingAdminPropsId = q.val<number>(`SELECT id FROM users WHERE lower(email) = 'admin@swk.properties' AND deleted_at IS NULL LIMIT 1`)
+  if (legacyShabibAdminId && !existingAdminPropsId) {
+    q.run(
+      `UPDATE users SET email = 'admin@swk.properties', name = 'SWK Admin', role_id = ?, designation = 'Full-Access System & Operations Administrator (Controlled by Owner Shabib Siraj)', password_hash = ?, must_change_password = 0, active = 1, updated_at = ? WHERE id = ?`,
+      adminRoleId,
+      hashPassword('Admin@swk.properties'),
+      nowIso(),
+      legacyShabibAdminId,
+    )
+  } else if (legacyShabibAdminId && existingAdminPropsId && legacyShabibAdminId !== existingAdminPropsId) {
+    q.run(`DELETE FROM users WHERE id = ?`, legacyShabibAdminId)
   }
 
-  const shabibEmpId =
+  // Also ensure legacy admin@swkpropertiesuae.com reflects the converted Admin role (not Shabib Siraj)
+  q.run(
+    `UPDATE users SET name = 'SWK Admin', role_id = ?, designation = 'Full-Access System & Operations Administrator (Controlled by Owner Shabib Siraj)', updated_at = ? WHERE lower(email) = 'admin@swkpropertiesuae.com' AND deleted_at IS NULL`,
+    adminRoleId,
+    nowIso(),
+  )
+  // Ensure legacy shabib@swkpropertiesuae.com is assigned the Owner role
+  q.run(
+    `UPDATE users SET name = 'Shabib Siraj', role_id = ?, designation = 'Owner & Managing Director (Controls Admin & All Accounts)', password_hash = ?, must_change_password = 0, active = 1, updated_at = ? WHERE lower(email) = 'shabib@swkpropertiesuae.com' AND deleted_at IS NULL`,
+    ownerRoleId,
+    hashPassword('Shabib@swk.properties'),
+    nowIso(),
+  )
+
+  let shabibEmpId =
     q.val<number>(`SELECT id FROM employees WHERE lower(name) LIKE '%shabib%' AND deleted_at IS NULL ORDER BY id ASC LIMIT 1`) ?? null
 
-  // 2. Sync each of the 6 hardcoded @swk.property staff accounts + employee records
+  // 2. Sync Owner (shabib@swk.properties), Admin (admin@swk.properties), and the 6 @swk.property staff accounts
   for (const acc of SWK_STAFF_ACCOUNTS) {
     const targetRoleId =
-      acc.roleName === 'Admin'
-        ? adminRoleId
-        : acc.roleName === 'Manager'
-          ? managerRoleId
-          : staffRoleId
+      acc.roleName === 'Owner'
+        ? ownerRoleId
+        : acc.roleName === 'Admin'
+          ? adminRoleId
+          : acc.roleName === 'Manager'
+            ? managerRoleId
+            : staffRoleId
 
     const initialRoleSeedDone = Boolean(q.val(`SELECT 1 FROM settings WHERE key = 'seed:swk_staff_roles_v3'`))
     let userId = q.val<number>(`SELECT id FROM users WHERE lower(email) = ? AND deleted_at IS NULL LIMIT 1`, acc.email.toLowerCase())
@@ -472,8 +518,9 @@ export function ensureHardcodedSwkStaffAccounts() {
       )
     } else if (!initialRoleSeedDone || acc.fullAccess) {
       q.run(
-        `UPDATE users SET name = ?, password_hash = ?, role_id = ?, department_id = ?, designation = ?, active = 1, must_change_password = 0, failed_logins = 0, locked_until = NULL, updated_at = ? WHERE id = ?`,
+        `UPDATE users SET name = ?, email = ?, password_hash = ?, role_id = ?, department_id = ?, designation = ?, active = 1, must_change_password = 0, failed_logins = 0, locked_until = NULL, updated_at = ? WHERE id = ?`,
         acc.name,
+        acc.displayEmail,
         pwHash,
         targetRoleId,
         dept(acc.departmentCode),
@@ -515,9 +562,11 @@ export function ensureHardcodedSwkStaffAccounts() {
       }
     }
 
-    // Ensure matching Employee profile exists and is linked to this userId for Reception QR Attendance
+    // Ensure matching Employee profile exists and is linked to this userId (with Owner Shabib Siraj as manager of Admin & Staff)
+    const managerForEmp = acc.roleName === 'Owner' ? null : shabibEmpId
     let emp = q.get(
-      `SELECT * FROM employees WHERE (user_id = ? OR lower(email) = ? OR lower(name) = ?) AND deleted_at IS NULL ORDER BY id ASC LIMIT 1`,
+      `SELECT * FROM employees WHERE (emp_no = ? OR user_id = ? OR lower(email) = ? OR lower(name) = ?) AND deleted_at IS NULL ORDER BY id ASC LIMIT 1`,
+      acc.empNo,
       userId,
       acc.email.toLowerCase(),
       acc.name.toLowerCase(),
@@ -530,9 +579,9 @@ export function ensureHardcodedSwkStaffAccounts() {
         department_id: dept(acc.departmentCode),
         designation: acc.designation,
         branch_id: dxb,
-        manager_id: shabibEmpId,
+        manager_id: managerForEmp,
         status: 'Active',
-        join_date: '2024-01-15',
+        join_date: acc.roleName === 'Owner' ? '2020-01-01' : acc.roleName === 'Admin' ? '2020-01-15' : '2024-01-15',
         contract_type: 'Unlimited',
         phone: acc.phone,
         email: acc.displayEmail,
@@ -544,14 +593,28 @@ export function ensureHardcodedSwkStaffAccounts() {
       })
     } else {
       q.run(
-        `UPDATE employees SET user_id = ?, email = ?, status = 'Active', designation = ?, updated_at = ? WHERE id = ?`,
+        `UPDATE employees SET user_id = ?, email = ?, name = ?, status = 'Active', designation = ?, manager_id = ?, updated_at = ? WHERE id = ?`,
         userId,
         acc.displayEmail,
+        acc.name,
         acc.designation,
+        managerForEmp,
         nowIso(),
         emp.id,
       )
     }
+    if (acc.roleName === 'Owner' && emp?.id) {
+      shabibEmpId = emp.id
+    }
+  }
+
+  // Ensure Admin (admin@swk.properties) employee record always has manager_id = shabibEmpId (Owner control)
+  if (shabibEmpId) {
+    q.run(
+      `UPDATE employees SET manager_id = ? WHERE lower(email) = 'admin@swk.properties' AND id <> ?`,
+      shabibEmpId,
+      shabibEmpId,
+    )
   }
   q.run(
     `INSERT INTO settings(key, value, updated_at) VALUES ('seed:swk_staff_roles_v3', '1', ?) ON CONFLICT(key) DO UPDATE SET value = '1', updated_at = excluded.updated_at`,

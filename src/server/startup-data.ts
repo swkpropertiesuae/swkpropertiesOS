@@ -5,6 +5,9 @@ import { isPg, PgDatabase, q } from './db'
 import { SYSTEM_CTX } from './engine'
 import { nowIso } from './util'
 import { businessDataSummary, clearStarterDeclined, loadSwkStarterData, resetBusinessData, starterDeclined, starterLoaded } from './domain/business-data'
+import { ensureHardcodedSwkStaffAccounts } from './seed'
+
+const FRESH_OWNER_ADMIN_RESET_KEY = 'reset:fresh-owner-admin-2026-11'
 
 /** Fictional demo databases left from an earlier start are deleted when the demo workspace is switched off. */
 function removeDisabledDemo() {
@@ -22,9 +25,21 @@ function removeDisabledDemo() {
  */
 export async function runStartupDataTasks() {
   removeDisabledDemo()
+  if (!q.val(`SELECT 1 FROM settings WHERE key = ?`, FRESH_OWNER_ADMIN_RESET_KEY)) {
+    const r = await resetBusinessData({ user: null, system: true })
+    ensureHardcodedSwkStaffAccounts()
+    q.run(
+      `INSERT INTO settings(key, value, updated_at) VALUES (?, '1', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+      FRESH_OWNER_ADMIN_RESET_KEY,
+      nowIso(),
+    )
+    clearStarterDeclined()
+    console.log(`Fresh Owner/Admin workspace reset completed (${r.total} rows cleared). Backup: ${r.backup}`)
+  }
   const key = `reset:${config.resetToken}`
   if (config.resetToken && !q.val(`SELECT 1 FROM settings WHERE key = ?`, key)) {
     const r = await resetBusinessData({ user: null, system: true })
+    ensureHardcodedSwkStaffAccounts()
     q.run(`INSERT INTO settings(key, value, updated_at) VALUES (?, '1', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`, key, nowIso())
     // a start-up reset is a deliberate fresh start: the starter data may be loaded again afterwards (set STARTER_DATA=false to keep it empty)
     clearStarterDeclined()

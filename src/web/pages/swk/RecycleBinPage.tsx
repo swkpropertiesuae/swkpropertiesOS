@@ -12,7 +12,7 @@ export default function RecycleBinPage() {
   const toast = useToast()
   const qc = useQueryClient()
   const isOwner = me?.permissions === '*'
-  const [tab, setTab] = useState<'bin' | 'decisions'>('bin')
+  const [tab, setTab] = useState<'bin' | 'decisions' | 'admin_control'>('bin')
   const [ownerNote, setOwnerNote] = useState('')
   const [decidingItem, setDecidingItem] = useState<{ item: any; decision: 'approve' | 'reject' } | null>(null)
   const [newDecisionOpen, setNewDecisionOpen] = useState(false)
@@ -28,9 +28,25 @@ export default function RecycleBinPage() {
     queryFn: () => get<{ items: any[] }>('/api/swk-ops/admin-decisions'),
   })
 
+  const ctrlQ = useQuery({
+    queryKey: ['swk-owner-admin-control'],
+    queryFn: () => get<any>('/api/swk-ops/owner-admin-control'),
+  })
+
   const reload = () => {
     void qc.invalidateQueries({ queryKey: ['swk-recycle-bin'] })
     void qc.invalidateQueries({ queryKey: ['swk-admin-decisions'] })
+    void qc.invalidateQueries({ queryKey: ['swk-owner-admin-control'] })
+  }
+
+  const runOwnerAdminAction = async (action: 'suspend' | 'activate' | 'force_signout' | 'reset_password' | 'unlock', label: string) => {
+    try {
+      await post('/api/swk-ops/owner-admin-control/action', { action, notes: `Owner Shabib Siraj executed ${label} on admin@swk.properties` })
+      toast.ok(`Owner Action Executed: ${label} on admin@swk.properties`)
+      reload()
+    } catch (e: any) {
+      toast.error(e.message)
+    }
   }
 
   const executeBinDecision = async () => {
@@ -134,7 +150,7 @@ export default function RecycleBinPage() {
         </div>
       </div>
 
-      <div className="flex gap-2 border-b border-line pb-2">
+      <div className="flex gap-2 border-b border-line pb-2 flex-wrap">
         <button
           className={`btn ${tab === 'bin' ? 'green' : 'outline'}`}
           onClick={() => setTab('bin')}
@@ -147,9 +163,75 @@ export default function RecycleBinPage() {
         >
           <Gavel size={15} /> Manager Admin Decisions ({decisions.length})
         </button>
+        <button
+          className={`btn ${tab === 'admin_control' ? 'green' : 'outline'}`}
+          onClick={() => setTab('admin_control')}
+        >
+          <ShieldCheck size={15} /> Owner Control: admin@swk.properties
+        </button>
       </div>
 
-      {tab === 'bin' ? (
+      {tab === 'admin_control' ? (
+        <div className="card overflow-hidden">
+          <div className="p-4 border-b border-line flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <div className="font-display font-extrabold text-base text-ink">
+                Owner Supervisory Control Over Admin Account (<code>admin@swk.properties</code>)
+              </div>
+              <div className="text-xs text-muted">
+                Supreme Owner <strong>Shabib Siraj (shabib@swk.properties)</strong> holds full supervisory authority and control over the Full-Access Admin account (<strong>admin@swk.properties</strong>).
+              </div>
+            </div>
+            <Badge
+              value={ctrlQ.data?.can_control ? 'Signed in as Supreme Owner (shabib@swk.properties)' : 'Controlled by Owner Shabib Siraj (shabib@swk.properties)'}
+              tone={ctrlQ.data?.can_control ? 'green' : 'blue'}
+            />
+          </div>
+          <div className="p-5 grid gap-4 md:grid-cols-2">
+            <div className="p-4 rounded-xl bg-soft border border-line space-y-2">
+              <div className="text-xs font-bold uppercase tracking-wider text-muted">Tier 1 — Supreme Company Owner</div>
+              <div className="text-lg font-display font-extrabold text-ink">{ctrlQ.data?.owner?.name || 'Shabib Siraj'}</div>
+              <div className="text-xs font-mono text-ink">shabib@swk.properties · Role: Owner (Full Authority)</div>
+              <div className="text-xs text-muted leading-relaxed">
+                Complete authority over all company operations, Recycle Bin deletions, Deal Withdrawals, Manager decisions, and direct control over <code>admin@swk.properties</code>. Cannot be modified, locked, or deactivated by any other account.
+              </div>
+            </div>
+            <div className="p-4 rounded-xl bg-soft border border-line space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-xs font-bold uppercase tracking-wider text-muted">Tier 2 — Controlled Full-Access Admin</div>
+                <Badge value={ctrlQ.data?.admin?.active ? 'Active (Full Access)' : 'Suspended by Owner'} tone={ctrlQ.data?.admin?.active ? 'green' : 'red'} />
+              </div>
+              <div className="text-lg font-display font-extrabold text-ink">{ctrlQ.data?.admin?.name || 'SWK Admin'}</div>
+              <div className="text-xs font-mono text-ink">admin@swk.properties · Role: Admin (Under Owner Control)</div>
+              <div className="text-xs text-muted leading-relaxed">
+                Full operational &amp; system administration access across all 18+ SWK OS modules (CRM, Off-Plan, Secondary, Leasing, Properties, Finance, HR, Attendance, Studio, Compliance, AI &amp; Admin). Operates under the direct oversight of Owner <code>shabib@swk.properties</code> ({ctrlQ.data?.active_sessions_count ?? 0} active session(s)).
+              </div>
+              {ctrlQ.data?.can_control && (
+                <div className="pt-2 flex flex-wrap gap-2">
+                  {ctrlQ.data?.admin?.active ? (
+                    <button className="btn red sm" onClick={() => void runOwnerAdminAction('suspend', 'Suspend Admin Account')}>
+                      <XCircle size={13} /> Suspend Admin
+                    </button>
+                  ) : (
+                    <button className="btn green sm" onClick={() => void runOwnerAdminAction('activate', 'Re-Activate Admin Account')}>
+                      <CheckCircle2 size={13} /> Activate Admin
+                    </button>
+                  )}
+                  <button className="btn outline sm" onClick={() => void runOwnerAdminAction('force_signout', 'Force Sign-Out All Admin Sessions')}>
+                    Sign Out Admin Sessions
+                  </button>
+                  <button className="btn outline sm" onClick={() => void runOwnerAdminAction('unlock', 'Unlock Admin Account')}>
+                    Unlock Admin
+                  </button>
+                  <button className="btn outline sm" onClick={() => void runOwnerAdminAction('reset_password', 'Reset Admin Password to Admin@swk.properties')}>
+                    Reset Password to Default
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : tab === 'bin' ? (
         <div className="card overflow-hidden">
           <div className="p-4 border-b border-line flex items-center justify-between flex-wrap gap-2">
             <div>

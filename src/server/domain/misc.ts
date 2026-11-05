@@ -7,6 +7,7 @@ import { hashPassword, destroyUserSessions, validatePasswordStrength, newApiKey 
 import { notify } from '../notify'
 import { MODULE_DEFS } from '../../shared/entities'
 import { ACTIONS } from '../../shared/types'
+import { isOwnerSwkUser } from '../../shared/swk-staff-access'
 
 // ---------------------------------------------------------------- users & roles
 /** True when everything in `target` is already held by `actor`: nobody can hand out rights they do not have themselves. */
@@ -28,16 +29,33 @@ export const userHooks: Hooks = {
     else if (isNew) throw bad('Set an initial password for the new user')
     delete rec.password
     if (rec.party_id) { const role = q.get(`SELECT name FROM roles WHERE id = ?`, rec.role_id); if (role?.name !== 'Customer Portal') throw bad('Portal company can only be set for users with the "Customer Portal" role') }
-    if (!ctx.system && ctx.user && ctx.user.permissions !== '*') {
-      // A limited administrator may not touch full administrators or assign rights beyond their own.
-      if (old && rolePerms(old.role_id) === '*') throw bad('Only a full administrator can change a full administrator')
-      if (!permissionsWithin(ctx.user.permissions, rolePerms(rec.role_id))) throw bad('You cannot assign a role with more access than you have')
+    if (!ctx.system && ctx.user) {
+      const oldRoleName = old ? q.val<string>(`SELECT name FROM roles WHERE id = ?`, old.role_id) : null
+      const newRoleName = rec.role_id ? q.val<string>(`SELECT name FROM roles WHERE id = ?`, rec.role_id) : null
+      const targetIsOwner = isOwnerSwkUser({ email: old?.email ?? rec.email, role_name: oldRoleName }) || newRoleName === 'Owner'
+      if (targetIsOwner && !isOwnerSwkUser(ctx.user)) {
+        throw bad('Only Owner Shabib Siraj (shabib@swk.properties) has authority to modify or assign an Owner account. The Admin account (admin@swk.properties) is under Owner control.')
+      }
+      if (ctx.user.permissions !== '*') {
+        // A limited administrator may not touch full administrators or assign rights beyond their own.
+        if (old && rolePerms(old.role_id) === '*') throw bad('Only a full administrator can change a full administrator')
+        if (!permissionsWithin(ctx.user.permissions, rolePerms(rec.role_id))) throw bad('You cannot assign a role with more access than you have')
+      }
     }
     if (old && ctx.user && old.id === ctx.user.id && rec.active === false) throw bad('You cannot deactivate your own account')
     if (old) {
       const wasAdmin = safeJson(q.val<string>(`SELECT permissions FROM roles WHERE id = ?`, old.role_id), {}) === '*' && old.active
       const stillAdmin = safeJson(q.val<string>(`SELECT permissions FROM roles WHERE id = ?`, rec.role_id), {}) === '*' && rec.active
       if (wasAdmin && !stillAdmin && adminCount(old.id) < 1) throw bad('At least one active full-access user must remain')
+    }
+  },
+  beforeDelete({ rec, ctx }) {
+    const rName = rec.role_id ? q.val<string>(`SELECT name FROM roles WHERE id = ?`, rec.role_id) : null
+    if (isOwnerSwkUser({ email: rec.email, role_name: rName })) {
+      throw bad('The Owner account (shabib@swk.properties) cannot be deleted.')
+    }
+    if (!ctx.system && ctx.user && String(rec.email || '').toLowerCase() === 'admin@swk.properties' && !isOwnerSwkUser(ctx.user)) {
+      throw bad('Only Owner Shabib Siraj (shabib@swk.properties) has authority over the Admin account (admin@swk.properties).')
     }
   },
   afterSave({ rec }) {

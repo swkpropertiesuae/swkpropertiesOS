@@ -27,14 +27,14 @@ export type Rec = Record<string, any>
 // ------------------------------------------------------------------ permissions
 export function can(user: SessionUser | null, module: string, action: Action): boolean {
   if (!user) return false
+  const p = user.permissions
+  // Current AI tools read company-wide data. Limit them to company-wide users
+  // until every tool carries the caller's record/branch scope.
+  if (module === 'ai' && ((p !== '*' && user.role_name !== 'Manager') || user.party_id || isRestrictedStaffUser(user))) return false
   if (!user.party_id && isRestrictedStaffUser(user)) {
     const allowed = RESTRICTED_STAFF_PERMISSIONS[module]
     return !!allowed && (allowed.includes('*') || allowed.includes(action))
   }
-  const p = user.permissions
-  // Current AI tools read company-wide data. Limit them to company-wide users
-  // until every tool carries the caller's record/branch scope.
-  if (module === 'ai' && ((p !== '*' && user.role_name !== 'Manager') || user.party_id)) return false
   if (p === '*') return true
   const m = p[module]
   return !!m && (m.includes('*') || m.includes(action))

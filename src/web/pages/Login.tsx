@@ -309,7 +309,7 @@ export function Login() {
           <form onSubmit={submit} className="mt-7 grid gap-4" aria-label="Sign in" noValidate={false}>
             <motion.div variants={item}>
               <label htmlFor="email" className="block text-[12.5px] font-medium text-[#b8c3d7] mb-2">
-                Email address (@swk.property or @swkpropertiesuae.com)
+                Email address (@swk.properties, @swk.property or @swkpropertiesuae.com)
               </label>
               <div className="swk-login-input">
                 <Mail size={18} />
@@ -321,7 +321,7 @@ export function Login() {
                   autoFocus={!email}
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder="Talha@swk.property or admin@swkpropertiesuae.com"
+                  placeholder="admin@swk.properties or shabib@swk.properties"
                 />
               </div>
             </motion.div>

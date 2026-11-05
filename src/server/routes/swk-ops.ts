@@ -5,10 +5,10 @@ import { HttpError, fromCents, nowIso, nowLocal, toCents, todayStr } from '../ut
 import { notify, notifyLeadership } from '../notify'
 import { sendWhatsApp, ownerNumbers } from '../integrations/whatsapp'
 import { getSetting, setSettings } from '../settings'
-import { attemptLogin, createSession } from '../auth'
+import { attemptLogin, createSession, destroyUserSessions, hashPassword } from '../auth'
 import { COOKIE } from '../app'
 import { config } from '../config'
-import { canAccessSwkAdminLogic, canPrintReceptionQr } from '../../shared/swk-staff-access'
+import { canAccessSwkAdminLogic, canPrintReceptionQr, isOwnerSwkUser } from '../../shared/swk-staff-access'
 
 export function computeDubaiShiftInfo(now = new Date(), clientVariableHours = false) {
   const parts = new Intl.DateTimeFormat('en-GB', {
@@ -1371,7 +1371,7 @@ export default async function swkOpsRoutes(app: FastifyInstance) {
     const gatewayIp = String(getSetting('office_wifi_gateway_ip') || '192.168.1.1').trim()
     const strictIp = Boolean(getSetting('office_wifi_strict_ip'))
     const cleanClientIp = String(clientIp || '').replace(/^::ffff:/, '').trim()
-    const isLocalIp = !cleanClientIp || cleanClientIp === '127.0.0.1' || cleanClientIp === '::1' || cleanClientIp.startsWith('192.168.') || cleanClientIp.startsWith('10.') || cleanClientIp.startsWith('172.')
+    const isLocalIp = !cleanClientIp || cleanClientIp === '127.0.0.1' || cleanClientIp.startsWith('127.') || cleanClientIp === '::1' || cleanClientIp.startsWith('192.168.') || cleanClientIp.startsWith('10.') || cleanClientIp.startsWith('172.')
     const ipMatchesConfigured = allowedPublicIps.length === 0 || isLocalIp || allowedPublicIps.some(ip => cleanClientIp === ip || cleanClientIp.startsWith(ip))
     return {
       ssid: allowedSsids[0] || 'SWK-Properties-Office',
@@ -1524,4 +1524,101 @@ export default async function swkOpsRoutes(app: FastifyInstance) {
   app.post('/api/public/reception-qr/check-in', handlePublicQrCheckIn)
   app.post('/api/public/reception-qr/scan-login-checkin', handlePublicQrCheckIn)
   app.post('/api/public/qr-checkin', handlePublicQrCheckIn)
+
+  // ------------------------------------------------------------------ 8. Owner (shabib@swk.properties) Direct Control Over Admin (admin@swk.properties)
+  app.get('/api/swk-ops/owner-admin-control', async (req) => {
+    const ownerUser = q.get<any>(
+      `SELECT u.id, u.name, u.email, u.designation, u.active, u.last_login_at, r.name AS role_name
+       FROM users u LEFT JOIN roles r ON r.id = u.role_id
+       WHERE lower(u.email) = 'shabib@swk.properties' AND u.deleted_at IS NULL LIMIT 1`,
+    )
+    const adminUser = q.get<any>(
+      `SELECT u.id, u.name, u.email, u.designation, u.active, u.failed_logins, u.locked_until, u.last_login_at, r.name AS role_name, r.description AS role_description
+       FROM users u LEFT JOIN roles r ON r.id = u.role_id
+       WHERE lower(u.email) = 'admin@swk.properties' AND u.deleted_at IS NULL LIMIT 1`,
+    )
+    const adminSessions = adminUser
+      ? q.all<any>(
+          `SELECT id, created_at, last_seen, ip, user_agent FROM sessions WHERE user_id = ? ORDER BY last_seen DESC LIMIT 10`,
+          adminUser.id,
+        )
+      : []
+    const adminAuditTrail = adminUser
+      ? q.all<any>(
+          `SELECT id, at, action, entity, record_id, record_label FROM audit_log WHERE user_id = ? OR lower(user_name) LIKE '%admin%' ORDER BY id DESC LIMIT 15`,
+          adminUser.id,
+        )
+      : []
+    return {
+      owner: ownerUser,
+      admin: adminUser,
+      active_sessions_count: adminSessions.length,
+      active_sessions: adminSessions.map((s: any) => ({ ...s, id: String(s.id).slice(0, 12) })),
+      recent_audit_trail: adminAuditTrail,
+      can_control: isOwnerSwkUser(req.user),
+      hierarchy_policy: {
+        owner_account: 'shabib@swk.properties',
+        controlled_admin_account: 'admin@swk.properties',
+        rule: 'Owner Shabib Siraj (shabib@swk.properties) holds supreme supervisory control over Admin (admin@swk.properties). Admin has full operational & system access across all 18+ SWK OS modules under Owner oversight and cannot alter or deactivate the Owner account.',
+      },
+    }
+  })
+
+  app.post('/api/swk-ops/owner-admin-control/action', async (req) => {
+    if (!isOwnerSwkUser(req.user)) {
+      throw new HttpError(403, 'Only Owner Shabib Siraj (shabib@swk.properties) has supervisory control over admin@swk.properties.')
+    }
+    const body = (req.body ?? {}) as {
+      action?: 'suspend' | 'activate' | 'force_signout' | 'reset_password' | 'unlock'
+      new_password?: string
+      notes?: string
+    }
+    const adminUser = q.get<any>(`SELECT * FROM users WHERE lower(email) = 'admin@swk.properties' AND deleted_at IS NULL LIMIT 1`)
+    if (!adminUser) throw new HttpError(404, 'Admin account (admin@swk.properties) not found')
+
+    const act = body.action
+    if (!act || !['suspend', 'activate', 'force_signout', 'reset_password', 'unlock'].includes(act)) {
+      throw new HttpError(400, 'Specify a valid Owner control action: suspend, activate, force_signout, reset_password, or unlock.')
+    }
+
+    if (act === 'suspend') {
+      q.run(`UPDATE users SET active = 0, updated_at = ? WHERE id = ?`, nowIso(), adminUser.id)
+      destroyUserSessions(adminUser.id)
+    } else if (act === 'activate') {
+      q.run(`UPDATE users SET active = 1, failed_logins = 0, locked_until = NULL, updated_at = ? WHERE id = ?`, nowIso(), adminUser.id)
+    } else if (act === 'force_signout') {
+      destroyUserSessions(adminUser.id)
+    } else if (act === 'unlock') {
+      q.run(`UPDATE users SET failed_logins = 0, locked_until = NULL, updated_at = ? WHERE id = ?`, nowIso(), adminUser.id)
+    } else if (act === 'reset_password') {
+      const nextPw = String(body.new_password || 'Admin@swk.properties').trim()
+      q.run(
+        `UPDATE users SET password_hash = ?, must_change_password = 0, failed_logins = 0, locked_until = NULL, active = 1, updated_at = ? WHERE id = ?`,
+        hashPassword(nextPw),
+        nowIso(),
+        adminUser.id,
+      )
+      destroyUserSessions(adminUser.id)
+    }
+
+    q.run(
+      `INSERT INTO audit_log(at, user_id, user_name, entity, record_id, record_label, action, changes, ip) VALUES (?,?,?,?,?,?,?,?,?)`,
+      nowIso(),
+      req.user!.id,
+      req.user!.name,
+      'users',
+      adminUser.id,
+      'admin@swk.properties',
+      `owner-control:${act}`,
+      JSON.stringify({ _reason: body.notes || `Owner Shabib Siraj executed ${act} on admin@swk.properties` }),
+      req.ip ?? null,
+    )
+
+    return {
+      ok: true,
+      action: act,
+      controlled_account: 'admin@swk.properties',
+      executed_by: req.user!.email,
+    }
+  })
 }

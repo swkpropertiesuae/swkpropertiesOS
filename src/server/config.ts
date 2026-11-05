@@ -13,7 +13,9 @@ if (process.env.REQUIRE_DATABASE_URL === 'true' && !process.env.DATABASE_URL) {
 /** In production the well-known default passwords are never used: without an explicit env value a random one is generated and printed once at first start. */
 const production = (env.NODE_ENV ?? 'development') === 'production'
 const initialPassword = (value: string | undefined, fallback: string) => value ? { password: value, generated: false } : production ? { password: crypto.randomBytes(12).toString('base64url') + 'aA1', generated: true } : { password: fallback, generated: false }
+const ownerInit = initialPassword(env.OWNER_PASSWORD, 'Shabib@swk.properties')
 const adminInit = initialPassword(env.ADMIN_PASSWORD, 'SWK@Admin2026')
+const adminSwkInit = initialPassword(env.ADMIN_SWK_PASSWORD, 'Admin@swk.properties')
 const managerInit = initialPassword(env.MANAGER_PASSWORD, 'SWK@Manager2026')
 const bdmInit = initialPassword(env.BDM_PASSWORD, 'SWK@Talha2026')
 const advisorInit = initialPassword(env.ADVISOR_PASSWORD, 'SWK@Advisor2026')
@@ -40,8 +42,15 @@ export const config = {
   maxUploadMb: Number(env.MAX_UPLOAD_MB ?? 25),
   demo: { enabled: bool(env.DEMO_ENABLED, false), email: (env.DEMO_EMAIL ?? 'demo@swkpropertiesuae.com').toLowerCase(), password: env.DEMO_PASSWORD ?? 'Demo@SWK2026' },
   accounts: {
+    ownerEmail: (env.OWNER_EMAIL ?? 'shabib@swk.properties').toLowerCase(),
+    ownerName: env.OWNER_NAME ?? 'Shabib Siraj',
+    ownerPassword: ownerInit.password,
+    ownerPasswordGenerated: ownerInit.generated,
+    adminSwkEmail: (env.ADMIN_SWK_EMAIL ?? 'admin@swk.properties').toLowerCase(),
+    adminSwkName: env.ADMIN_SWK_NAME ?? 'SWK Admin',
+    adminSwkPassword: adminSwkInit.password,
     adminEmail: (env.ADMIN_EMAIL ?? 'admin@swkpropertiesuae.com').toLowerCase(),
-    adminName: env.ADMIN_NAME ?? 'Shabib Siraj',
+    adminName: env.ADMIN_NAME ?? 'SWK Admin',
     adminPassword: adminInit.password,
     adminPasswordGenerated: adminInit.generated,
     managerEmail: (env.MANAGER_EMAIL ?? 'manager@swkpropertiesuae.com').toLowerCase(),

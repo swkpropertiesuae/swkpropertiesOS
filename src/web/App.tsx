@@ -103,7 +103,7 @@ export default function App() {
                   </div>
                   <h2 className="text-xl font-bold mb-2">Restricted Module — Attendance, Manual, Market Pulse &amp; General Only</h2>
                   <p className="text-sm text-slate-300 leading-relaxed mb-6">
-                    Signed in as <b>{me.name}</b> (<code className="text-[#e6c98f]">{me.email}</code>). Per company security policy, full OS operational modules are restricted exclusively to <b>Admin (Shabib Siraj)</b> and <b>Mohammad Haseeb (Haseeb@swk.property)</b>. Your account is authorised for <b>Attendance &amp; QR Check-In</b>, <b>Company Manual</b>, <b>Market Pulse</b>, and <b>General Workspace</b>.
+                    Signed in as <b>{me.name}</b> (<code className="text-[#e6c98f]">{me.email}</code>). Per company security policy, full OS operational modules are restricted exclusively to <b>Owner Shabib Siraj (shabib@swk.properties)</b>, <b>Full-Access Admin (admin@swk.properties)</b>, and <b>Mohammad Haseeb (Haseeb@swk.property)</b>. Your account is authorised for <b>Attendance &amp; QR Check-In</b>, <b>Company Manual</b>, <b>Market Pulse</b>, and <b>General Workspace</b>.
                   </p>
                   <div className="flex flex-wrap gap-3">
                     <Link to="/reception-qr?scan=1" className="px-4 py-2.5 rounded-xl bg-[#c9a96e] text-[#08142a] font-bold text-xs no-underline">

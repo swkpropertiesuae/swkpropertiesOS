@@ -13,6 +13,7 @@ import { retryOutbox, verifySmtp, smtpConfigured } from '../mailer'
 import { generatePayroll, lastIssued } from '../domain/misc'
 import { destroyUserSessions, loadUser } from '../auth'
 import { ENTITY_LIST } from '../../shared/entities'
+import { isOwnerSwkUser } from '../../shared/swk-staff-access'
 
 export default async function (app: FastifyInstance) {
   app.post('/api/workflow-runs/:id/retry',async req=>{
@@ -98,6 +99,9 @@ export default async function (app: FastifyInstance) {
     need(req, 'admin', 'edit')
     const id = idOf(req.params.id)
     const target = loadUser(id)
+    if (isOwnerSwkUser(target) && !isOwnerSwkUser(req.user)) {
+      throw bad('Only Owner Shabib Siraj (shabib@swk.properties) has control over the Owner account. Admin (admin@swk.properties) cannot modify or sign out the Owner.')
+    }
     if (target?.permissions === '*' && req.user.permissions !== '*') throw bad('Only a full administrator can change another full administrator')
     return id
   }
