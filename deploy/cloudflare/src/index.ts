@@ -48,6 +48,7 @@ export class SwkOs extends Container<Env> {
     const runningRelease = await this.ctx.storage.get<string>('running_release_id')
     if (runningRelease && runningRelease !== releaseId) {
       await this.ctx.storage.put('running_release_id', releaseId)
+      await this.ctx.storage.put('last_recycle_at', Date.now())
       try {
         await this.destroy()
       } catch {
@@ -62,8 +63,34 @@ export class SwkOs extends Container<Env> {
     }
     const state = await this.getState()
     if (state.status !== 'healthy') {
+      await this.ctx.storage.put('last_recycle_at', Date.now())
       await this.startAndWaitForPorts({ ports: 8080, cancellationOptions: { portReadyTimeoutMS: 240_000 } })
     }
+  }
+
+  async isReleaseVerified(expectedSha: string): Promise<boolean> {
+    const verified = await this.ctx.storage.get<string>('verified_image_sha')
+    return verified === expectedSha
+  }
+
+  async markReleaseVerified(expectedSha: string): Promise<void> {
+    await this.ctx.storage.put('verified_image_sha', expectedSha)
+  }
+
+  async recycleIfStaleImage(): Promise<boolean> {
+    const lastRecycle = (await this.ctx.storage.get<number>('last_recycle_at')) ?? 0
+    if (Date.now() - lastRecycle < 20_000) {
+      return false
+    }
+    await this.ctx.storage.put('last_recycle_at', Date.now())
+    try {
+      await this.destroy()
+    } catch {
+      // ignore if already stopped
+    }
+    await new Promise(r => setTimeout(r, 2000))
+    await this.startAndWaitForPorts({ ports: 8080, cancellationOptions: { portReadyTimeoutMS: 240_000 } })
+    return true
   }
 }
 
@@ -75,7 +102,7 @@ async function ensureRunning(env: Env) {
   if (missing.length) throw new Error(`Missing secret(s): ${missing.join(', ')}. Set them with "npx wrangler secret put <NAME>".`)
   if (!legacyCleaned) {
     legacyCleaned = true
-    for (const staleId of ['main', 'swk-2026-11-05-s', 'swk-2026-11-04-o']) {
+    for (const staleId of ['main', 'swk-2026-11-05-s', 'swk-2026-11-04-o', 'os-os-f47f311983ed', 'os-os-59cdae12e663']) {
       try {
         await getContainer(env.SWK_OS, staleId).destroy()
       } catch {
@@ -87,6 +114,25 @@ async function ensureRunning(env: Env) {
   const releaseKey = rawRelease.slice(0, 24)
   const c = getContainer(env.SWK_OS, `os-${releaseKey}`)
   await c.ensureReleaseRunning(rawRelease)
+  const expectedMarker = env.RELEASE_SHA || 'swk-os-brand-pack'
+  if (!(await c.isReleaseVerified(expectedMarker))) {
+    const probe = await c.fetch(new Request('http://container/release.json'))
+    const text = probe.ok ? await probe.text() : ''
+    if (text.includes(expectedMarker)) {
+      await c.markReleaseVerified(expectedMarker)
+    } else {
+      const recycled = await c.recycleIfStaleImage()
+      if (recycled) {
+        const probe2 = await c.fetch(new Request('http://container/release.json'))
+        const text2 = probe2.ok ? await probe2.text() : ''
+        if (text2.includes(expectedMarker)) {
+          await c.markReleaseVerified(expectedMarker)
+          return c
+        }
+      }
+      throw new Error(`Container image rollout in progress (waiting for ${expectedMarker.slice(0, 12)})`)
+    }
+  }
   return c
 }
 
