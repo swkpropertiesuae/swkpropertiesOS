@@ -31,7 +31,7 @@ export function SidePanel({ entity, id, onChanged }: { entity: string; id: numbe
         {ITEMS.map(i => <button key={i.key} className={cls(active === i.key && 'active')} onClick={() => setActive(a => (a === i.key ? null : i.key))}>{i.icon}<span className="cnt">{c[i.key] ?? 0}</span><span>- {i.label}</span></button>)}
       </nav>
       {active && createPortal(
-        <div className="fixed inset-0 z-[190] bg-[#0b1a3355] flex justify-end" onMouseDown={e => { if (e.target === e.currentTarget) setActive(null) }}>
+        <div className="fixed inset-0 z-[190] bg-[#041615]/55 flex justify-end" onMouseDown={e => { if (e.target === e.currentTarget) setActive(null) }}>
           <div className="h-full w-[min(480px,100vw)] bg-card border-l border-line shadow-2xl flex flex-col fade-in" role="dialog" aria-label={ITEMS.find(i => i.key === active)?.label}>
             <div className="flex items-center gap-2 px-4 py-3 border-b border-line bg-emerald text-white"><span className="font-display font-extrabold flex-1">{ITEMS.find(i => i.key === active)?.label} <span className="font-normal opacity-80 text-sm">· {c.title}</span></span><button className="btn ghost icon sm text-white" onClick={() => setActive(null)} aria-label="Close panel"><X /></button></div>
             <div className="flex-1 overflow-auto p-4">

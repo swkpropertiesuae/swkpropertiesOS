@@ -109,8 +109,8 @@ function MarketMoments() {
   return (
     <div className="swk-glass p-4 w-full">
       <div className="flex items-center justify-between gap-3 mb-2">
-        <span className="text-[10px] font-semibold tracking-[.22em] uppercase text-[#dcc8a2]">DLD Live Market Pulse · {m.name}</span>
-        <span className="flex gap-1">{moments.map((_, k) => <span key={k} className="h-1 rounded-full transition-all duration-500" style={{ width: k === i ? 16 : 5, background: k === i ? '#c9a96e' : 'rgba(255,255,255,.25)' }} />)}</span>
+        <span className="text-[10px] font-semibold tracking-[.22em] uppercase text-[#E0C1A3]">DLD Live Market Pulse · {m.name}</span>
+        <span className="flex gap-1">{moments.map((_, k) => <span key={k} className="h-1 rounded-full transition-all duration-500" style={{ width: k === i ? 16 : 5, background: k === i ? '#E0C1A3' : 'rgba(255,255,255,.25)' }} />)}</span>
       </div>
       <div className="grid grid-cols-3 gap-3">
         <div><div className="text-[10px] text-white/60 uppercase tracking-wider">Price / sq ft</div><div className="font-display text-white text-[16px] font-semibold mt-0.5">AED {m.ppsf.toLocaleString()}</div></div>
@@ -163,26 +163,25 @@ export function Login() {
         <img src="/brand/skyline-front.svg" alt="" aria-hidden className="absolute left-0 right-0 bottom-0 w-full h-[120px] opacity-[.07] pointer-events-none" />
 
         <motion.header
-          className="relative flex items-center gap-3.5 rounded-2xl px-4 py-3 border border-[#c9a96e]/35 bg-[#050d1c]/95 shadow-[0_12px_32px_rgba(0,0,0,.45)] w-fit"
+          className="relative flex items-center gap-3.5 rounded-2xl px-4 py-3 border border-[#E0C1A3]/40 bg-[#041615]/95 shadow-[0_12px_32px_rgba(0,0,0,.5)] w-fit"
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease }}
         >
-          <img src="/brand/swk-os-emblem.svg" alt="SWK Tower Monogram" className="h-[46px] w-[46px] object-contain drop-shadow-[0_2px_8px_rgba(201,169,110,.35)]" />
-          <img src="/brand/swk-os-wordmark.svg" alt="SWK OS" className="h-[44px] w-auto drop-shadow-[0_2px_8px_rgba(201,169,110,.25)]" />
-          <div className="h-8 w-px bg-[#c9a96e]/30 mx-0.5" />
+          <img src="/brand/swk-os/horizontal-portal-lockup-transparent.png" alt="SWK OS" className="h-[46px] w-auto object-contain drop-shadow-[0_2px_8px_rgba(224,193,163,.32)]" />
+          <div className="h-8 w-px bg-[#E0C1A3]/30 mx-0.5" />
           <div>
             <div className="font-display text-white text-[15.5px] font-semibold leading-none tracking-tight">SWK Properties LLC</div>
-            <div className="text-[10px] tracking-[.2em] uppercase text-[#e6c88f] mt-1.5 font-semibold">Operating System · Dubai</div>
+            <div className="text-[10px] tracking-[.2em] uppercase text-[#E0C1A3] mt-1.5 font-semibold">Operating System · Dubai</div>
           </div>
         </motion.header>
 
         <motion.div className="relative w-full max-w-[430px] mx-auto lg:mx-0 py-10" variants={{ show: { transition: { staggerChildren: 0.08, delayChildren: 0.15 } } }} initial="hidden" animate="show">
-          <motion.div variants={item} className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-[.26em] uppercase text-[#c9a96e]"><span className="w-6 h-px bg-[#c9a96e]" />SWK Properties LLC · Dubai</motion.div>
+          <motion.div variants={item} className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-[.26em] uppercase text-[#E0C1A3]"><span className="w-6 h-px bg-[#E0C1A3]" />SWK Properties LLC · Dubai</motion.div>
           <motion.h1 variants={item} className="mt-4 mb-0 text-white font-display font-medium leading-[1.04] text-[44px] sm:text-[52px]">
             Welcome <span className="swk-shimmer-text font-semibold">back</span>
           </motion.h1>
-          <motion.p variants={item} className="mt-3 text-[15.5px] text-[#a9b6cd]">Sign in to continue to your SWK Properties OS workspace.</motion.p>
+          <motion.p variants={item} className="mt-3 text-[15.5px] text-[#b4c8c4]">Sign in to continue to your SWK Properties OS workspace.</motion.p>
 
           <AnimatePresence>{err && (
             <motion.div role="alert" initial={{ opacity: 0, height: 0, marginTop: 0 }} animate={{ opacity: 1, height: 'auto', marginTop: 22 }} exit={{ opacity: 0, height: 0, marginTop: 0 }} className="overflow-hidden">
@@ -191,30 +190,30 @@ export function Login() {
 
           <form onSubmit={submit} className="mt-7 grid gap-4" aria-label="Sign in" noValidate={false}>
             <motion.div variants={item}>
-              <label htmlFor="email" className="block text-[12.5px] font-medium text-[#a9b6cd] mb-2">Email address (@swk.property or @swkpropertiesuae.com)</label>
+              <label htmlFor="email" className="block text-[12.5px] font-medium text-[#b4c8c4] mb-2">Email address (@swk.property or @swkpropertiesuae.com)</label>
               <div className="swk-login-input"><Mail size={18} /><input id="email" type="email" autoComplete="username" required autoFocus={!email} value={email} onChange={e => setEmail(e.target.value)} placeholder="Talha@swk.property or admin@swkpropertiesuae.com" /></div>
             </motion.div>
             <motion.div variants={item}>
-              <div className="flex items-center justify-between mb-2"><label htmlFor="pw" className="text-[12.5px] font-medium text-[#a9b6cd]">Password</label><button type="button" onClick={() => setHelp(h => !h)} className="text-[12.5px] font-medium text-[#c9a96e] hover:text-[#e6d3a9] bg-transparent border-0 cursor-pointer p-0">Forgot password?</button></div>
+              <div className="flex items-center justify-between mb-2"><label htmlFor="pw" className="text-[12.5px] font-medium text-[#b4c8c4]">Password</label><button type="button" onClick={() => setHelp(h => !h)} className="text-[12.5px] font-medium text-[#E0C1A3] hover:text-[#ffffff] bg-transparent border-0 cursor-pointer p-0">Forgot password?</button></div>
               <div className="swk-login-input"><Lock size={18} />
                 <input id="pw" type={show ? 'text' : 'password'} autoComplete="current-password" required autoFocus={!!email} value={pw} onChange={e => setPw(e.target.value)} onKeyUp={e => setCaps(e.getModifierState?.('CapsLock'))} placeholder="••••••••••" />
-                <button type="button" className="bg-transparent border-0 cursor-pointer p-1 text-[#8a9ab5] hover:text-white" onClick={() => setShow(s => !s)} aria-label={show ? 'Hide password' : 'Show password'}>{show ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                <button type="button" className="bg-transparent border-0 cursor-pointer p-1 text-[#8da6a1] hover:text-white" onClick={() => setShow(s => !s)} aria-label={show ? 'Hide password' : 'Show password'}>{show ? <EyeOff size={18} /> : <Eye size={18} />}</button>
               </div>
-              <AnimatePresence>{caps && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-[12px] text-[#e6c88f] mt-2">Caps Lock is on</motion.div>}</AnimatePresence>
+              <AnimatePresence>{caps && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-[12px] text-[#E0C1A3] mt-2">Caps Lock is on</motion.div>}</AnimatePresence>
               <AnimatePresence>{help && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-                  <div className="mt-3 text-[12.5px] leading-relaxed text-[#b9c4d8] rounded-xl px-3.5 py-3 bg-white/[.04] border border-white/10">Password resets are handled by the SWK IT desk. Email <a className="text-[#dcc8a2] underline underline-offset-2" href="mailto:info@swkpropertiesuae.com?subject=SWK%20OS%20password%20reset">info@swkpropertiesuae.com</a> or call +971 56 433 0448.</div>
+                  <div className="mt-3 text-[12.5px] leading-relaxed text-[#c6d6d3] rounded-xl px-3.5 py-3 bg-white/[.04] border border-white/10">Password resets are handled by the SWK IT desk. Email <a className="text-[#E0C1A3] underline underline-offset-2" href="mailto:info@swkpropertiesuae.com?subject=SWK%20OS%20password%20reset">info@swkpropertiesuae.com</a> or call +971 56 433 0448.</div>
                 </motion.div>)}</AnimatePresence>
             </motion.div>
 
             <AnimatePresence>{needTotp && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-                <label htmlFor="totp" className="block text-[12.5px] font-medium text-[#a9b6cd] mb-2">Authenticator code</label>
+                <label htmlFor="totp" className="block text-[12.5px] font-medium text-[#b4c8c4] mb-2">Authenticator code</label>
                 <div className="swk-login-input"><KeyRound size={18} /><input id="totp" inputMode="numeric" autoComplete="one-time-code" maxLength={6} autoFocus required value={totp} onChange={e => setTotp(e.target.value.replace(/\D/g, ''))} placeholder="6-digit code" className="tracking-[.5em] text-[17px]" /></div>
-                <p className="text-[12px] text-[#8a9ab5] mt-2 mb-0">Open your authenticator app and enter the code for SWK OS.</p>
+                <p className="text-[12px] text-[#8da6a1] mt-2 mb-0">Open your authenticator app and enter the code for SWK OS.</p>
               </motion.div>)}</AnimatePresence>
 
-            <motion.label variants={item} className="flex items-center gap-3 text-[13.5px] text-[#c3cde0] cursor-pointer select-none w-fit">
+            <motion.label variants={item} className="flex items-center gap-3 text-[13.5px] text-[#d1dfdc] cursor-pointer select-none w-fit">
               <input type="checkbox" className="swk-check" checked={remember} onChange={e => setRemember(e.target.checked)} />Keep me signed in on this device
             </motion.label>
 
@@ -232,19 +231,19 @@ export function Login() {
 
             {demo?.enabled && (
               <motion.div variants={item}>
-                <button type="button" className="w-full h-[50px] rounded-2xl border border-white/12 bg-white/[.03] text-[#dfe5f0] font-semibold text-[14px] cursor-pointer hover:border-[#c9a96e]/60 hover:bg-white/[.06] transition-colors" disabled={busy} onClick={() => void signIn(demo.email, demo.password)}>Explore the demo workspace</button>
-                <p className="text-[12px] text-[#7f90ad] mt-2 mb-0 text-center">Fictional company and sample records — never touches live data.</p>
+                <button type="button" className="w-full h-[50px] rounded-2xl border border-white/12 bg-white/[.03] text-[#F3EFE6] font-semibold text-[14px] cursor-pointer hover:border-[#E0C1A3]/60 hover:bg-white/[.06] transition-colors" disabled={busy} onClick={() => void signIn(demo.email, demo.password)}>Explore the demo workspace</button>
+                <p className="text-[12px] text-[#8da6a1] mt-2 mb-0 text-center">Fictional company and sample records — never touches live data.</p>
               </motion.div>
             )}
           </form>
         </motion.div>
 
-        <motion.footer className="relative flex flex-col gap-1.5 text-[11.5px] text-[#8a9ab5]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9, duration: 0.6 }}>
+        <motion.footer className="relative flex flex-col gap-1.5 text-[11.5px] text-[#8da6a1]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9, duration: 0.6 }}>
           <div className="flex items-center justify-between gap-4 flex-wrap">
-            <span className="inline-flex items-center gap-2"><ShieldCheck size={15} className="text-[#c9a96e]" />Encrypted session · activity is audited</span>
-            <span className="font-semibold text-[#dcc8a2]">© {new Date().getFullYear()} SWK Properties LLC</span>
+            <span className="inline-flex items-center gap-2"><ShieldCheck size={15} className="text-[#E0C1A3]" />Encrypted session · activity is audited</span>
+            <span className="font-semibold text-[#E0C1A3]">© {new Date().getFullYear()} SWK Properties LLC</span>
           </div>
-          <div className="text-[11px] text-[#9eb0cc]">www.swk.properties · www.swkpropertiesuae.com · www.swk.rent</div>
+          <div className="text-[11px] text-[#9eb9b5]">www.swk.properties · www.swkpropertiesuae.com · www.swk.rent</div>
         </motion.footer>
       </section>
 
@@ -270,13 +269,13 @@ export function Login() {
           className="swk-login-hero-shade"
           style={{
             background:
-              'linear-gradient(180deg, rgba(6,13,26,.62) 0%, rgba(6,13,26,.22) 38%, rgba(6,13,26,.82) 78%, rgba(6,13,26,.96) 100%)',
+              'linear-gradient(180deg, rgba(4,22,21,.64) 0%, rgba(4,22,21,.22) 38%, rgba(4,22,21,.84) 78%, rgba(4,22,21,.96) 100%)',
           }}
         />
 
         <motion.div className="absolute top-8 left-10 swk-glass px-4 py-2.5 flex items-center gap-3 text-[12.5px] text-white" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.5, ease }}>
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#c9a96e]/25 border border-[#c9a96e]/50 text-[#f5e3be] text-[10.5px] font-bold uppercase tracking-wider">
-            <Flame size={13} className="text-[#f5c77e]" /> Developer Hot Projects
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#B68F70]/25 border border-[#E0C1A3]/50 text-[#E0C1A3] text-[10.5px] font-bold uppercase tracking-wider">
+            <Flame size={13} className="text-[#E0C1A3]" /> Developer Hot Projects
           </span>
           <span className="text-white/85 font-medium">SWK Properties LLC · Dubai</span>
         </motion.div>
@@ -289,20 +288,23 @@ export function Login() {
           <AnimatePresence mode="wait">
             <motion.div
               key={activeProject.id}
-              className="swk-glass p-6 border border-[#c9a96e]/35"
+              className="swk-glass p-6 border border-[#E0C1A3]/35"
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.5, ease }}
             >
               <div className="flex items-center justify-between gap-3 flex-wrap mb-2.5">
-                <div className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[.18em] text-[#f3dfb8]">
-                  <Building2 size={14} className="text-[#c9a96e]" />
+                <div className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[.18em] text-[#E0C1A3]">
+                  <Building2 size={14} className="text-[#E0C1A3]" />
                   <span>{activeProject.developer}</span>
                   <span className="text-white/35">·</span>
-                  <span className="inline-flex items-center gap-1 text-[#8fe3bd]"><MapPin size={12} /> {activeProject.community}</span>
+                  <span className="inline-flex items-center gap-1.5 text-[#8fe3bd]">
+                    <img src="/brand/swk-os/portal-map-pin-transparent.png" alt="" aria-hidden className="w-4 h-4 object-contain" />
+                    {activeProject.community}
+                  </span>
                 </div>
-                <span className="px-2.5 py-1 rounded-full text-[10.5px] font-bold uppercase tracking-wider bg-[#c9a96e] text-[#08142a]">
+                <span className="px-2.5 py-1 rounded-full text-[10.5px] font-bold uppercase tracking-wider bg-gradient-to-r from-[#E0C1A3] to-[#B68F70] text-[#041615]">
                   {activeProject.tag}
                 </span>
               </div>
@@ -314,7 +316,7 @@ export function Login() {
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3.5 border-t border-white/12">
                 <div>
                   <div className="text-[10.5px] text-white/60 uppercase tracking-wider">Starting From</div>
-                  <div className="font-display text-[#f3dfb8] text-[20px] font-semibold mt-0.5">{activeProject.priceFrom}</div>
+                  <div className="font-display text-[#E0C1A3] text-[20px] font-semibold mt-0.5">{activeProject.priceFrom}</div>
                 </div>
                 <div>
                   <div className="text-[10.5px] text-white/60 uppercase tracking-wider">Payment Structure</div>
@@ -351,7 +353,7 @@ export function Login() {
                     style={{
                       width: idx === slideIdx ? 58 : 42,
                       height: 40,
-                      borderColor: idx === slideIdx ? '#c9a96e' : 'rgba(255,255,255,.2)',
+                      borderColor: idx === slideIdx ? '#E0C1A3' : 'rgba(255,255,255,.2)',
                       opacity: idx === slideIdx ? 1 : 0.65,
                     }}
                   >

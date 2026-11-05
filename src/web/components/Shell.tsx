@@ -37,8 +37,8 @@ function NotificationBell() {
           <div className="flex items-center px-4 py-3 border-b border-line"><b className="font-display text-[15px] text-ink">Notifications</b><div className="flex-1" />{unread > 0 && <button className="swk-btn swk-btn-ghost" style={{ height: 30, padding: '0 10px', fontSize: 12 }} onClick={() => void read()}><Check size={14} /> Mark all read</button>}</div>
           <div className="max-h-[60vh] overflow-auto">
             {!q.data?.rows.length ? <div className="p-8 text-center text-muted text-sm">You're all caught up.</div> : q.data.rows.map(n => (
-              <button key={n.id} className={cls('w-full text-start px-4 py-3 border-0 border-b border-line bg-transparent cursor-pointer hover:bg-[#faf6ec]', !n.read_at && 'bg-[#fbf6e9]')} onClick={() => { void read([n.id]); setOpen(false); if (n.link) nav(n.link) }}>
-                <div className="flex gap-2 items-start">{!n.read_at && <span className="w-2 h-2 rounded-full bg-[#c9a96e] mt-1.5 flex-none" />}<div className="min-w-0"><div className="text-[13.5px] font-semibold text-ink">{n.title}</div>{n.body && <div className="text-xs text-muted line-clamp-2">{n.body}</div>}<div className="text-[11px] text-muted mt-0.5">{fmtIsoStamp(n.created_at)}</div></div></div>
+              <button key={n.id} className={cls('w-full text-start px-4 py-3 border-0 border-b border-line bg-transparent cursor-pointer hover:bg-[#faf6ef]', !n.read_at && 'bg-[#f8f1e6]')} onClick={() => { void read([n.id]); setOpen(false); if (n.link) nav(n.link) }}>
+                <div className="flex gap-2 items-start">{!n.read_at && <span className="w-2 h-2 rounded-full bg-[#B68F70] mt-1.5 flex-none" />}<div className="min-w-0"><div className="text-[13.5px] font-semibold text-ink">{n.title}</div>{n.body && <div className="text-xs text-muted line-clamp-2">{n.body}</div>}<div className="text-[11px] text-muted mt-0.5">{fmtIsoStamp(n.created_at)}</div></div></div>
               </button>))}
           </div>
         </motion.div>)}</AnimatePresence>
@@ -96,7 +96,7 @@ function AppSidebar({ pathname, collapsed, onToggle }: { pathname: string; colla
         <div className="swk-sidebar-head">
           <div className="swk-sidebar-toprow">
             <Link to="/home" className="swk-sidebar-monogram" title="All apps · SWK Properties OS">
-              <img src="/brand/swk-os-emblem.svg" alt="SWK" width={28} height={28} />
+              <img src="/brand/swk-os/portal-arch-emblem-transparent.png" alt="SWK OS" width={28} height={28} />
               {!collapsed && (
                 <span className="swk-sidebar-back-lbl">
                   <ArrowLeft size={12} />
@@ -184,8 +184,8 @@ export function Shell() {
       <div className="swk-main-col">
         <header className="swk-top no-print">
           <Link to="/home" className="swk-brand" aria-label="SWK Properties LLC Business Workspace home">
-            <img src="/brand/swk-os-emblem.svg" alt="SWK Properties Monogram" className="swk-brand-monogram" />
-            <img src="/brand/swk-os-wordmark.svg" alt="SWK OS" className="swk-brand-wordmark" />
+            <img src="/brand/swk-os/portal-arch-emblem-transparent.png" alt="SWK OS Portal Arch Emblem" className="swk-brand-monogram" />
+            <img src="/brand/swk-os/primary-logo-transparent.png" alt="SWK OS" className="swk-brand-wordmark" />
             <span className="swk-os-tag">
               <b>OS</b>
               <small className="swk-hide-md">SWK Properties LLC</small>
@@ -222,7 +222,7 @@ export function Shell() {
               </motion.div>)}</AnimatePresence>
           </div>
         </header>
-        {pwa.updateReady && <div className="no-print" role="status" style={{ position: 'fixed', left: 16, right: 16, bottom: 16, zIndex: 80, maxWidth: 440, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 12, background: '#0b1a33', color: '#f6f2ea', boxShadow: '0 8px 30px rgba(0,0,0,.3)' }}><RefreshCw size={16} /><span style={{ flex: 1, fontSize: 13.5 }}>A new version of SWK OS is ready.</span><button className="btn sm" onClick={applyUpdate}>Reload</button></div>}
+        {pwa.updateReady && <div className="no-print" role="status" style={{ position: 'fixed', left: 16, right: 16, bottom: 16, zIndex: 80, maxWidth: 440, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 12, background: '#041615', color: '#F3EFE6', border: '1px solid rgba(224,193,163,.35)', boxShadow: '0 8px 30px rgba(0,0,0,.35)' }}><RefreshCw size={16} /><span style={{ flex: 1, fontSize: 13.5 }}>A new version of SWK OS is ready.</span><button className="btn sm" onClick={applyUpdate}>Reload</button></div>}
         {me?.demo && <div className="demo-notice no-print"><span><strong>Demo workspace</strong> · sample data · external messages switched off</span><details><summary>Details</summary><p>Safe practice environment. Resets every night. External email and WhatsApp messages are disabled.</p><button className="btn outline sm" onClick={async () => { if (confirm('Restore the demo to its original state and sign out?')) { await post('/api/demo/reset'); window.location.href = '/login' } }}>Reset demo</button></details></div>}
         {me?.defaultPassword && !me?.demo && <div className="no-print bg-[#f3e6c4] text-[#6b4a00] px-5 py-2 text-sm font-semibold flex items-center gap-3 flex-wrap">You are signed in with the default password. <Link to="/profile" className="underline">Change it now</Link></div>}
         <div className={cls('swk-body', !isHome && !!here && 'has-sidebar', !isHome && !!here && collapsed && 'is-collapsed')}>

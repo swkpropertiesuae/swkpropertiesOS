@@ -270,13 +270,13 @@ export default function Owner360() {
                     onClick={() => setSelectedId(p.id)}
                     className="text-start p-4 rounded-2xl border transition-all cursor-pointer"
                     style={{
-                      background: active ? 'linear-gradient(145deg,#14305c,#0b1a33)' : '#fff',
-                      borderColor: active ? '#1d3a66' : 'var(--line)',
+                      background: active ? 'linear-gradient(145deg,#0b3532,#041615)' : '#fff',
+                      borderColor: active ? '#B68F70' : 'var(--line)',
                       color: active ? '#fff' : 'var(--ink)',
                     }}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[11px] uppercase tracking-wider" style={{ color: active ? '#dcc8a2' : 'var(--muted)' }}>{p.nationality} · {p.units.length} units</span>
+                      <span className="text-[11px] uppercase tracking-wider" style={{ color: active ? '#E0C1A3' : 'var(--muted)' }}>{p.nationality} · {p.units.length} units</span>
                       <Pill tone={active ? 'champ' : 'navy'}>{aed(val, { compact: true })}</Pill>
                     </div>
                     <div className="font-display text-[17px] font-semibold mt-1">{p.name}</div>

@@ -78,21 +78,21 @@ export function Dashboard() {
   return (
     <div className="grid gap-5 max-w-[1680px] mx-auto">
       {/* ------------------------------------------------------------ hero */}
-      <motion.section className="relative overflow-hidden rounded-[26px] text-white" style={{ background: 'linear-gradient(120deg, #0b1a33 0%, #14305c 55%, #1d4f86 120%)' }}
+      <motion.section className="relative overflow-hidden rounded-[26px] text-white" style={{ background: 'linear-gradient(120deg, #041615 0%, #072220 55%, #0b3532 120%)' }}
         initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}>
         <div className="absolute inset-0 opacity-[.22] bg-cover bg-center mix-blend-luminosity" style={{ backgroundImage: 'url(/media/hero/dubai-skyline-hero.webp)', backgroundPosition: 'center 40%' }} />
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgba(11,26,51,.96) 0%, rgba(11,26,51,.78) 45%, rgba(11,26,51,.25) 100%)' }} />
-        {!reduce && <motion.div className="absolute -top-24 right-[12%] w-[420px] h-[420px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(201,169,110,.28), transparent 65%)' }} animate={{ x: [0, -30, 0], y: [0, 20, 0] }} transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }} />}
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgba(4,22,21,.96) 0%, rgba(4,22,21,.8) 45%, rgba(4,22,21,.28) 100%)' }} />
+        {!reduce && <motion.div className="absolute -top-24 right-[12%] w-[420px] h-[420px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(224,193,163,.26), transparent 65%)' }} animate={{ x: [0, -30, 0], y: [0, 20, 0] }} transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }} />}
         <img src="/brand/skyline-front.svg" alt="" aria-hidden className="absolute bottom-0 left-0 w-full h-[70px] opacity-[.18] pointer-events-none" />
         <div className="relative grid gap-6 lg:grid-cols-[1.4fr_1fr] items-end p-6 sm:p-8">
           <div>
-            <div className="text-[11px] font-semibold tracking-[.26em] uppercase text-[#dcc8a2]">{new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Dubai', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date())}</div>
+            <div className="text-[11px] font-semibold tracking-[.26em] uppercase text-[#E0C1A3]">{new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Dubai', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date())}</div>
             <h1 className="m-0 mt-2 font-display font-medium text-white text-[30px] sm:text-[40px] leading-[1.05]">{greeting()}, <span className="swk-shimmer-text font-semibold">{firstName}</span></h1>
-            <p className="mt-3 mb-0 text-[15px] text-[#c3cde0] max-w-[620px]">{summary || 'Here is what is happening across your listings, deals and leases today.'}</p>
+            <p className="mt-3 mb-0 text-[15px] text-[#c7d8d5] max-w-[620px]">{summary || 'Here is what is happening across your listings, deals and leases today.'}</p>
             <div className="flex flex-wrap gap-2 mt-5">
               {can('crm', 'create') && <Link to="/e/leads?new=1" className="swk-btn swk-btn-gold"><UserPlus size={16} />New lead</Link>}
-              {can('mandates', 'create') && <Link to="/e/viewings?new=1" className="swk-btn" style={{ color: '#fff', background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.18)' }}><CalendarCheck size={16} />Book viewing</Link>}
-              <Link to="/toolkit" className="swk-btn" style={{ color: '#fff', background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.18)' }}><Calculator size={16} />Deal toolkit</Link>
+              {can('mandates', 'create') && <Link to="/e/viewings?new=1" className="swk-btn" style={{ color: '#fff', background: 'rgba(255,255,255,.1)', border: '1px solid rgba(224,193,163,.28)' }}><CalendarCheck size={16} />Book viewing</Link>}
+              <Link to="/toolkit" className="swk-btn" style={{ color: '#fff', background: 'rgba(255,255,255,.1)', border: '1px solid rgba(224,193,163,.28)' }}><Calculator size={16} />Deal toolkit</Link>
             </div>
           </div>
           <div className="grid grid-cols-3 gap-3">
@@ -102,7 +102,7 @@ export function Dashboard() {
               { l: 'Occupancy', v: occupancy, f: (x: number) => `${x.toFixed(0)}%` },
             ].map((s, i) => (
               <motion.div key={s.l} className="swk-glass px-4 py-3.5" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 + i * 0.08, duration: 0.6 }}>
-                <div className="text-[10.5px] uppercase tracking-[.16em] text-[#a9b8d2]">{s.l}</div>
+                <div className="text-[10.5px] uppercase tracking-[.16em] text-[#E0C1A3]">{s.l}</div>
                 <div className="font-display text-[20px] sm:text-[24px] font-semibold text-white mt-1"><AnimatedNumber value={s.v} format={s.f} /></div>
               </motion.div>))}
           </div>
@@ -118,7 +118,7 @@ export function Dashboard() {
               title: '1. Sales of Off-Plan Projects',
               sub: 'Developer launches → Bayut/Dubizzle/Campaigns → Leads → Site Visit → EOI/SPA → DLD Oqood → 50/50 Commission Split',
               to: '/pipeline?dept=offplan',
-              accent: '#BE984C',
+              accent: '#B68F70',
               Icon: Rocket,
             },
             {
@@ -126,7 +126,7 @@ export function Dashboard() {
               title: '2. Secondary Projects (Ready Transfers)',
               sub: 'Seller / 3rd-Party A2A → Detailed Seller Req → Cash / Mortgaged / Pre-Approved → Form F (MOU) → NOC → DLD Title Deed',
               to: '/pipeline?dept=secondary',
-              accent: '#174B3B',
+              accent: '#0b3532',
               Icon: Building2,
             },
             {
@@ -134,7 +134,7 @@ export function Dashboard() {
               title: '3. Leasing & Tenancy Department',
               sub: 'Connected Bayut & Dubizzle Ads → 3rd-Party A2A Match (Form I) → PDC Cheques → Ejari Registration → 50/50 Split after A2A',
               to: '/pipeline?dept=leasing',
-              accent: '#7E3039',
+              accent: '#6F513B',
               Icon: KeyRound,
             },
           ].map(dept => (
@@ -154,7 +154,7 @@ export function Dashboard() {
                 <div className="font-display font-bold text-lg text-ink mt-2.5">{dept.title}</div>
                 <p className="text-xs text-muted mt-1 leading-relaxed">{dept.sub}</p>
               </div>
-              <div className="mt-3 pt-2.5 border-t border-[#efe9dc] flex items-center justify-between text-xs font-bold text-[#0B1A33]">
+              <div className="mt-3 pt-2.5 border-t border-[#efe9dc] flex items-center justify-between text-xs font-bold text-[#041615]">
                 <span>Open Department Pipeline</span>
                 <ArrowRight size={14} />
               </div>
@@ -167,7 +167,7 @@ export function Dashboard() {
       <Reveal className="card p-5 border border-[#efe9dc] bg-white">
         <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
           <div>
-            <span className="text-[10.5px] font-extrabold uppercase tracking-widest text-[#9a7a42]">STEP-BY-STEP COMPANY OPERATIONS</span>
+            <span className="text-[10.5px] font-extrabold uppercase tracking-widest text-[#6F513B]">STEP-BY-STEP COMPANY OPERATIONS</span>
             <h2 className="font-display font-bold text-base text-ink m-0 mt-0.5">Sequential UAE Real Estate Execution Buttons (Click Any Step)</h2>
           </div>
           <Link to="/home" className="btn outline sm">
@@ -192,11 +192,11 @@ export function Dashboard() {
               <Link
                 key={st.step}
                 to={st.to}
-                className="p-3 rounded-xl border border-[#e7e1d4] bg-[#fbf9f5] hover:bg-[#f4efe3] hover:border-[#c9a96e] transition flex flex-col justify-between group"
+                className="p-3 rounded-xl border border-[#e4ded1] bg-[#fbf9f5] hover:bg-[#f5ebe0] hover:border-[#B68F70] transition flex flex-col justify-between group"
               >
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-[#0B1A33] text-[#e8d4a2]">{st.step}</span>
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-[#041615] text-[#E0C1A3]">{st.step}</span>
                     <ArrowUpRight size={14} className="text-muted group-hover:text-ink" />
                   </div>
                   <div className="font-bold text-[13px] text-ink mt-2 leading-snug">{st.title}</div>
@@ -290,13 +290,13 @@ export function Dashboard() {
         <Card className="xl:col-span-4" title="Today & upcoming" subtitle="Viewings, target closes and renewals" to="/calendar">
           {agenda.length === 0 ? <EmptyState title="Nothing scheduled" hint="Viewings, transfer dates and renewals will appear here." /> : (
             <ol className="relative m-0 p-0 list-none">
-              <span className="absolute left-[18px] top-2 bottom-2 w-px bg-gradient-to-b from-[#c9a96e] to-transparent" />
+              <span className="absolute left-[18px] top-2 bottom-2 w-px bg-gradient-to-b from-[#B68F70] to-transparent" />
               {agenda.map((a, i) => (
                 <motion.li key={a.id} className="relative" initial={{ opacity: 0, x: -8 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.06 }}>
                   <Link to={a.to} className="flex items-start gap-3 py-2.5 group">
-                    <span className="relative z-[1] w-9 h-9 rounded-xl grid place-items-center flex-none bg-white border border-[#e7e1d4] text-[#14305c] group-hover:border-[#c9a96e] transition-colors"><a.Icon size={16} /></span>
+                    <span className="relative z-[1] w-9 h-9 rounded-xl grid place-items-center flex-none bg-white border border-[#e4ded1] text-[#0b3532] group-hover:border-[#B68F70] transition-colors"><a.Icon size={16} /></span>
                     <span className="min-w-0 flex-1">
-                      <span className="flex items-center gap-2"><span className="text-[11px] font-semibold uppercase tracking-wider text-[#9a7a42]">{a.kind}</span><span className="text-[11.5px] text-muted">{a.kind === 'Viewing' ? fmtDateTime(a.at) : fmtDate(a.at)}</span></span>
+                      <span className="flex items-center gap-2"><span className="text-[11px] font-semibold uppercase tracking-wider text-[#6F513B]">{a.kind}</span><span className="text-[11.5px] text-muted">{a.kind === 'Viewing' ? fmtDateTime(a.at) : fmtDate(a.at)}</span></span>
                       <span className="block text-[13.5px] font-semibold text-ink truncate">{a.title}</span>
                       {a.sub && <span className="block text-[12px] text-muted truncate">{a.sub}</span>}
                     </span>
@@ -371,7 +371,7 @@ export function Dashboard() {
                 <Link to={`/e/properties/${p.id}`} className="block swk-card group">
                   <div className="relative h-[170px] overflow-hidden">
                     <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-[1.06]" style={{ backgroundImage: `url(${photoFor(p.id)})` }} />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0b1a33]/70 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#041615]/75 to-transparent" />
                     <div className="absolute top-3 left-3 flex gap-1.5">{p.is_off_plan ? <Pill tone="champ">Off-plan</Pill> : <Pill tone="navy">Ready</Pill>}{p.is_exclusive && <Pill tone="oasis">Exclusive</Pill>}</div>
                     <div className="absolute bottom-3 left-3 right-3 text-white font-display text-[19px] font-semibold">{p.price ? aed(p.price) : p.rent_annual ? `${aed(p.rent_annual)}/yr` : 'Price on request'}</div>
                   </div>
@@ -451,8 +451,8 @@ export function Dashboard() {
             { l: 'Activity', s: 'Calls & follow-ups', to: '/e/activities', I: Clock },
           ].map(m => (
             <motion.div key={m.to} variants={rise} whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 320, damping: 22 }}>
-              <Link to={m.to} className="group flex flex-col gap-3 h-full p-4 rounded-[18px] bg-white border border-[#e7e1d4] hover:border-[#dccaa6] hover:shadow-[0_18px_36px_-24px_rgba(11,26,51,.45)] transition-all">
-                <span className="w-10 h-10 rounded-xl grid place-items-center text-[#c9a96e] transition-transform group-hover:rotate-[-6deg] group-hover:scale-110" style={{ background: 'linear-gradient(145deg,#1b3a6b,#0b1a33)' }}><m.I size={18} /></span>
+              <Link to={m.to} className="group flex flex-col gap-3 h-full p-4 rounded-[18px] bg-white border border-[#e4ded1] hover:border-[#B68F70] hover:shadow-[0_18px_36px_-24px_rgba(4,22,21,.45)] transition-all">
+                <span className="w-10 h-10 rounded-xl grid place-items-center text-[#E0C1A3] transition-transform group-hover:rotate-[-6deg] group-hover:scale-110" style={{ background: 'linear-gradient(145deg,#0b3532,#041615)' }}><m.I size={18} /></span>
                 <span><span className="block text-[14px] font-semibold text-ink">{m.l}</span><span className="block text-[12px] text-muted">{m.s}</span></span>
               </Link>
             </motion.div>))}
@@ -465,9 +465,9 @@ export function Dashboard() {
 function DashboardSkeleton() {
   return (
     <div className="grid gap-5 max-w-[1680px] mx-auto" aria-busy="true" aria-label="Loading dashboard">
-      <div className="h-[230px] rounded-[26px] animate-pulse" style={{ background: 'linear-gradient(120deg,#0b1a33,#14305c)' }} />
-      <div className="grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">{Array.from({ length: 6 }, (_, i) => <div key={i} className="h-[118px] rounded-[18px] bg-white border border-[#e7e1d4] animate-pulse" />)}</div>
-      <div className="grid gap-4 xl:grid-cols-12"><div className="xl:col-span-8 h-[320px] rounded-[20px] bg-white border border-[#e7e1d4] animate-pulse" /><div className="xl:col-span-4 h-[320px] rounded-[20px] bg-white border border-[#e7e1d4] animate-pulse" /></div>
+      <div className="h-[230px] rounded-[26px] animate-pulse" style={{ background: 'linear-gradient(120deg,#041615,#0b3532)' }} />
+      <div className="grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">{Array.from({ length: 6 }, (_, i) => <div key={i} className="h-[118px] rounded-[18px] bg-white border border-[#e4ded1] animate-pulse" />)}</div>
+      <div className="grid gap-4 xl:grid-cols-12"><div className="xl:col-span-8 h-[320px] rounded-[20px] bg-white border border-[#e4ded1] animate-pulse" /><div className="xl:col-span-4 h-[320px] rounded-[20px] bg-white border border-[#e4ded1] animate-pulse" /></div>
     </div>
   )
 }

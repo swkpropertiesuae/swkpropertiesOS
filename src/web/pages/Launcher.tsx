@@ -38,8 +38,9 @@ export function Launcher() {
     <div className="swk-launch">
       <motion.header className="swk-launch-hero" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease }}>
         <div className="swk-launch-identity">
-          <img src="/brand/swk-os-emblem.svg" alt="SWK Properties LLC" width={38} height={38} />
-          <span className="swk-eyebrow" style={{ margin: 0, color: '#f5e3be' }}>SWK Properties LLC · Business Workspace · {today()}</span>
+          <img src="/brand/swk-os/portal-arch-emblem-transparent.png" alt="SWK Properties LLC" width={34} height={34} />
+          <img src="/brand/swk-os/script-logo-compact-transparent.png" alt="" aria-hidden style={{ width: 'auto', height: 22 }} />
+          <span className="swk-eyebrow" style={{ margin: 0, color: '#E0C1A3' }}>SWK Properties LLC · Business Workspace · {today()}</span>
         </div>
         <h1>{greeting()}{firstName ? `, ${firstName}` : ''}.</h1>
         <form className="swk-launch-search" role="search" onSubmit={e => { e.preventDefault(); openFirst() }}>

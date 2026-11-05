@@ -1,5 +1,5 @@
 /**
- * SWK OS design primitives — "Midnight & Champagne".
+ * SWK OS design primitives — "Deep Emerald & Champagne Gold".
  * Animated building blocks shared by the dashboard and every real-estate module.
  * All motion respects prefers-reduced-motion through motion's useReducedMotion.
  */
@@ -10,11 +10,11 @@ import { ArrowUpRight, TrendingDown, TrendingUp } from 'lucide-react'
 import { cls } from '../lib/format'
 
 export const SWK = {
-  navy: '#14305c', midnight: '#0b1a33', ocean: '#1d4f86', sky: '#5b86c4', champ: '#c9a96e', champDeep: '#9a7a42',
-  champSoft: '#f3ead8', sand: '#f6f2ea', oasis: '#1f7a7a', dune: '#c4492f', ink: '#0b1a33', muted: '#6b7488', line: '#e7e1d4',
+  navy: '#0b3532', midnight: '#041615', ocean: '#134e48', sky: '#2a7c73', champ: '#B68F70', champHighlight: '#E0C1A3', champDeep: '#6F513B',
+  champSoft: '#f5ebe0', sand: '#F3EFE6', oasis: '#1f7a7a', dune: '#c4492f', ink: '#041615', muted: '#5e6d6a', line: '#e4ded1',
 }
-/** Ordered chart palette — navy → champagne → oasis → ocean → dune → sky → deep gold */
-export const CHART = [SWK.navy, SWK.champ, SWK.oasis, SWK.ocean, SWK.dune, SWK.sky, SWK.champDeep, '#8e9ab3']
+/** Ordered chart palette — deep emerald → brushed bronze → oasis → ocean → dune → sky → deep bronze */
+export const CHART = [SWK.navy, SWK.champ, SWK.oasis, SWK.ocean, SWK.dune, SWK.sky, SWK.champDeep, '#7e918d']
 
 export const aed = (n: number | null | undefined, opts: { compact?: boolean; decimals?: number } = {}) => {
   const v = Number(n ?? 0)
@@ -195,7 +195,7 @@ export function Field({ label, value, onChange, suffix, prefix, step = 1, min = 
 
 /** Empty / placeholder state with brand mark. */
 export function EmptyState({ title, hint, action }: { title: string; hint?: ReactNode; action?: ReactNode }) {
-  return <div className="swk-empty"><img src="/brand/swk-full-logo-light.png" alt="" aria-hidden /><b>{title}</b>{hint && <p>{hint}</p>}{action}</div>
+  return <div className="swk-empty"><img src="/brand/swk-os/portal-arch-wordmark-transparent.png" alt="" aria-hidden /><b>{title}</b>{hint && <p>{hint}</p>}{action}</div>
 }
 
 /** Parallax-free tilt-on-hover photo card for properties/communities. */

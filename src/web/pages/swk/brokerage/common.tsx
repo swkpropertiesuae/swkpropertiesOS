@@ -46,7 +46,7 @@ export function Avatar({ name, size = 30, ring }: { name?: string | null; size?:
   const n = cleanLabel(name) || 'Unassigned'
   return (
     <span title={n} aria-label={n} className="inline-grid place-items-center rounded-full font-semibold text-white flex-none select-none"
-      style={{ width: size, height: size, fontSize: size * 0.38, background: `linear-gradient(140deg, ${colorFor(n)}, #0b1a33)`, boxShadow: ring ? `0 0 0 2px #fff, 0 0 0 4px ${ring}` : '0 0 0 2px #fff' }}>
+      style={{ width: size, height: size, fontSize: size * 0.38, background: `linear-gradient(140deg, ${colorFor(n)}, #041615)`, boxShadow: ring ? `0 0 0 2px #fff, 0 0 0 4px ${ring}` : '0 0 0 2px #fff' }}>
       {initials(n)}
     </span>
   )
@@ -69,12 +69,12 @@ export function Drawer({ open, onClose, title, subtitle, children, width = 460 }
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0 z-[80]" role="dialog" aria-modal="true">
-          <motion.div className="absolute inset-0" style={{ background: 'rgba(11,26,51,.42)', backdropFilter: 'blur(3px)' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
+          <motion.div className="absolute inset-0" style={{ background: 'rgba(4,22,21,.52)', backdropFilter: 'blur(3px)' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
           <motion.aside ref={ref} tabIndex={-1} className="absolute right-0 top-0 bottom-0 flex flex-col outline-none"
-            style={{ width: `min(${width}px, 100vw)`, background: '#fbf9f4', borderLeft: '1px solid #e7e1d4', boxShadow: '-30px 0 60px -30px rgba(11,26,51,.45)' }}
+            style={{ width: `min(${width}px, 100vw)`, background: '#F3EFE6', borderLeft: '1px solid #e7e1d4', boxShadow: '-30px 0 60px -30px rgba(4,22,21,.55)' }}
             initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', stiffness: 320, damping: 34 }}>
             <header className="flex items-start justify-between gap-3 px-5 pt-5 pb-4" style={{ borderBottom: '1px solid #ece5d6' }}>
-              <div className="min-w-0"><div className="font-display font-semibold text-[19px] leading-tight" style={{ color: '#0b1a33' }}>{title}</div>{subtitle && <div className="text-[12.5px] mt-1" style={{ color: '#6b7488' }}>{subtitle}</div>}</div>
+              <div className="min-w-0"><div className="font-display font-semibold text-[19px] leading-tight" style={{ color: '#041615' }}>{title}</div>{subtitle && <div className="text-[12.5px] mt-1" style={{ color: '#6b7488' }}>{subtitle}</div>}</div>
               <button className="swk-btn swk-btn-ghost" style={{ width: 38, height: 38, padding: 0 }} onClick={onClose} aria-label="Close panel"><X size={16} /></button>
             </header>
             <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
@@ -94,4 +94,4 @@ export function SearchBox({ value, onChange, placeholder = 'Search…', label = 
   )
 }
 
-export const INK = '#0b1a33', MUTED = '#6b7488'
+export const INK = '#041615', MUTED = '#6b7488'
