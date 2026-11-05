@@ -269,12 +269,15 @@ export function isAllowedPathForRestrictedStaff(pathname: string): boolean {
     '/ai',
     '/profile',
     '/workspace-tools',
+    '/handover',
+    '/handover-portal',
   ])
   if (exactAllowed.has(clean)) return true
   if (
     clean.startsWith('/reception-qr/') ||
     clean.startsWith('/swk/reception-qr/') ||
     clean.startsWith('/qr-reception/') ||
+    clean.startsWith('/handover/') ||
     clean.startsWith('/print/')
   ) {
     return true

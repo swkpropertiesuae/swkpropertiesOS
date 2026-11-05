@@ -115,6 +115,7 @@ export const SWK_NAV: NavSection[] = [
     { label: 'Daily Reports', to: '/e/daily_reports', icon: ClipboardCheck, module: 'hr', desc: 'Step 4 · End-of-day summary' },
   ] },
   { key: 'tools', label: 'Documents & Manual', items: [
+    { label: 'Handover & Staff Guide', to: '/handover', icon: BookOpen, desc: 'Engineering dossier, staff user guide & explanatory video' },
     { label: 'Company Manual', to: '/competency', icon: BookOpen, desc: 'Official SOPs, rules & knowledge base' },
     { label: 'Manual Articles', to: '/e/knowledge_articles', icon: ScrollText, desc: 'RERA, Wi-Fi & company guidelines' },
     { label: 'Calculators', to: '/toolkit', icon: Calculator, desc: 'DLD fee, ROI & mortgage tools' },
@@ -196,6 +197,7 @@ export const RESTRICTED_STAFF_LAUNCHER_APPS: LauncherApp[] = [
     tone: 'navy',
     landing: '/competency',
     items: [
+      { label: 'Handover & Staff Guide', to: '/handover', icon: BookOpen, desc: 'All-staff quick-start guide & walkthrough video' },
       { label: 'Company Manual & SOPs', to: '/competency', icon: BookOpen, desc: 'Official staff handbook & knowledge test' },
       { label: 'SOP Articles', to: '/e/knowledge_articles', icon: ScrollText, desc: 'Company policies & procedures' },
       { label: 'Deal Calculators', to: '/toolkit', icon: Calculator, desc: 'DLD fee, ROI & mortgage calculator' },

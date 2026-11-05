@@ -8,9 +8,9 @@ export function ProductBrand({ compact = false }: { compact?: boolean }) {
         gap: compact ? 8 : 10,
         padding: compact ? '4px 10px 4px 6px' : '6px 14px 6px 8px',
         borderRadius: 10,
-        background: 'linear-gradient(135deg, #041615 0%, #072220 100%)',
-        border: '1px solid rgba(224,193,163,.42)',
-        color: '#F3EFE6',
+        background: 'linear-gradient(135deg, #061022 0%, #0b1a33 100%)',
+        border: '1px solid rgba(201,169,110,.42)',
+        color: '#f6f2ea',
         textDecoration: 'none',
       }}
       aria-label="SWK Properties LLC · Business Workspace">

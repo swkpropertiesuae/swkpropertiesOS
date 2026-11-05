@@ -43,6 +43,7 @@ const EnterpriseMasterOsPage = lazy(() => import('./pages/swk/EnterpriseMasterOs
 const ReceptionQrPage = lazy(() => import('./pages/swk/ReceptionQrPage'))
 const RecycleBinPage = lazy(() => import('./pages/swk/RecycleBinPage'))
 const WithdrawalsPage = lazy(() => import('./pages/swk/WithdrawalsPage'))
+const HandoverPortalPage = lazy(() => import('./pages/swk/HandoverPortalPage'))
 
 function Guard({ module, children }: { module: string; children: ReactNode }) {
   const { can, me } = useMeta()
@@ -69,8 +70,19 @@ export default function App() {
     loc.pathname.startsWith('/qr-reception/')
   if (isStandaloneReceptionQr) {
     return (
-      <Suspense fallback={<div className="h-full grid place-items-center bg-[#041615] text-white"><Loading label="Starting Standalone Reception QR Terminal…" /></div>}>
+      <Suspense fallback={<div className="h-full grid place-items-center bg-[#08142a] text-white"><Loading label="Starting Standalone Reception QR Terminal…" /></div>}>
         <ReceptionQrPage />
+      </Suspense>
+    )
+  }
+  const isStandaloneHandover =
+    loc.pathname === '/handover' ||
+    loc.pathname.startsWith('/handover/') ||
+    loc.pathname === '/handover-portal'
+  if (isStandaloneHandover && !me) {
+    return (
+      <Suspense fallback={<div className="h-full grid place-items-center bg-[#08142a] text-white"><Loading label="Loading SWK OS Handover Dossier & Staff Guide…" /></div>}>
+        <HandoverPortalPage />
       </Suspense>
     )
   }
@@ -85,16 +97,16 @@ export default function App() {
             <Route
               path="*"
               element={
-                <div className="max-w-2xl mx-auto my-12 p-8 rounded-2xl border border-[#E0C1A3]/40 bg-[#041615] text-white shadow-xl">
-                  <div className="text-xs font-extrabold uppercase tracking-widest text-[#E0C1A3] mb-2">
+                <div className="max-w-2xl mx-auto my-12 p-8 rounded-2xl border border-[#c9a96e]/40 bg-[#0d1f3c] text-white shadow-xl">
+                  <div className="text-xs font-extrabold uppercase tracking-widest text-[#e6c98f] mb-2">
                     Staff Access Policy · SWK Properties OS
                   </div>
                   <h2 className="text-xl font-bold mb-2">Restricted Module — Attendance, Manual, Market Pulse &amp; General Only</h2>
-                  <p className="text-sm text-[#c7d8d5] leading-relaxed mb-6">
-                    Signed in as <b>{me.name}</b> (<code className="text-[#E0C1A3]">{me.email}</code>). Per company security policy, full OS operational modules are restricted exclusively to <b>Admin (Shabib Siraj)</b> and <b>Mohammad Haseeb (Haseeb@swk.property)</b>. Your account is authorised for <b>Attendance &amp; QR Check-In</b>, <b>Company Manual</b>, <b>Market Pulse</b>, and <b>General Workspace</b>.
+                  <p className="text-sm text-slate-300 leading-relaxed mb-6">
+                    Signed in as <b>{me.name}</b> (<code className="text-[#e6c98f]">{me.email}</code>). Per company security policy, full OS operational modules are restricted exclusively to <b>Admin (Shabib Siraj)</b> and <b>Mohammad Haseeb (Haseeb@swk.property)</b>. Your account is authorised for <b>Attendance &amp; QR Check-In</b>, <b>Company Manual</b>, <b>Market Pulse</b>, and <b>General Workspace</b>.
                   </p>
                   <div className="flex flex-wrap gap-3">
-                    <Link to="/reception-qr?scan=1" className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#E0C1A3] to-[#B68F70] text-[#041615] font-bold text-xs no-underline">
+                    <Link to="/reception-qr?scan=1" className="px-4 py-2.5 rounded-xl bg-[#c9a96e] text-[#08142a] font-bold text-xs no-underline">
                       Scan &amp; Check In Attendance
                     </Link>
                     <Link to="/competency" className="px-4 py-2.5 rounded-xl bg-white/10 text-white font-bold text-xs no-underline border border-white/15">
@@ -125,6 +137,8 @@ export default function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/enterprise/master-os" element={<Guard module="admin"><EnterpriseMasterOsPage /></Guard>} />
           <Route path="/reception-qr" element={<ReceptionQrPage />} />
+          <Route path="/handover" element={<HandoverPortalPage />} />
+          <Route path="/handover-portal" element={<HandoverPortalPage />} />
           <Route path="/recycle-bin" element={<Guard module="admin"><RecycleBinPage /></Guard>} />
           <Route path="/withdrawals" element={<Guard module="admin"><WithdrawalsPage /></Guard>} />
           <Route path="/workspaces" element={<Workspaces />} />

@@ -102,7 +102,17 @@ async function ensureRunning(env: Env) {
   if (missing.length) throw new Error(`Missing secret(s): ${missing.join(', ')}. Set them with "npx wrangler secret put <NAME>".`)
   if (!legacyCleaned) {
     legacyCleaned = true
-    for (const staleId of ['main', 'swk-2026-11-05-s', 'swk-2026-11-04-o', 'os-os-f47f311983ed', 'os-os-59cdae12e663']) {
+    for (const staleId of [
+      'main',
+      'swk-2026-11-05-s',
+      'swk-2026-11-04-o',
+      'os-os-f47f311983ed',
+      'os-os-59cdae12e663',
+      'os-os-14df7550ff72',
+      'swk-one-blue-v3',
+      'swk-one-blue-v4',
+      'swk-one-blue-v5',
+    ]) {
       try {
         await getContainer(env.SWK_OS, staleId).destroy()
       } catch {

@@ -10,11 +10,11 @@ import { ArrowUpRight, TrendingDown, TrendingUp } from 'lucide-react'
 import { cls } from '../lib/format'
 
 export const SWK = {
-  navy: '#0b3532', midnight: '#041615', ocean: '#134e48', sky: '#2a7c73', champ: '#B68F70', champHighlight: '#E0C1A3', champDeep: '#6F513B',
-  champSoft: '#f5ebe0', sand: '#F3EFE6', oasis: '#1f7a7a', dune: '#c4492f', ink: '#041615', muted: '#5e6d6a', line: '#e4ded1',
+  navy: '#14305c', midnight: '#0b1a33', ocean: '#1f4b8e', sky: '#3c71b8', champ: '#c9a96e', champDeep: '#9a7a42',
+  champSoft: '#f3ead8', sand: '#f6f2ea', oasis: '#1f7a7a', dune: '#c4492f', ink: '#0b1a33', muted: '#6b7488', line: '#e7e1d4',
 }
-/** Ordered chart palette — deep emerald → brushed bronze → oasis → ocean → dune → sky → deep bronze */
-export const CHART = [SWK.navy, SWK.champ, SWK.oasis, SWK.ocean, SWK.dune, SWK.sky, SWK.champDeep, '#7e918d']
+/** Ordered chart palette — navy → champagne → oasis → ocean → dune → sky → gold */
+export const CHART = [SWK.navy, SWK.champ, SWK.oasis, SWK.ocean, SWK.dune, SWK.sky, SWK.champDeep, '#8391ad']
 
 export const aed = (n: number | null | undefined, opts: { compact?: boolean; decimals?: number } = {}) => {
   const v = Number(n ?? 0)

@@ -251,10 +251,10 @@ export default function PipelinePage() {
               key={tab.key}
               type="button"
               onClick={() => switchDept(tab.key)}
-              className={`text-left p-4 rounded-2xl border transition-all ${active ? 'bg-[#041615] text-white border-[#B68F70] shadow-lg' : 'bg-white text-ink border-[#efe9dc] hover:border-[#B68F70]'}`}
+              className={`text-left p-4 rounded-2xl border transition-all ${active ? 'bg-[#0B1A33] text-white border-[#BE984C] shadow-lg' : 'bg-white text-ink border-[#efe9dc] hover:border-[#BE984C]'}`}
             >
               <div className="flex items-center justify-between">
-                <span className={`text-[11px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded ${active ? 'bg-[#E0C1A3] text-[#041615]' : 'bg-[#fbf9f5] text-muted'}`}>
+                <span className={`text-[11px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded ${active ? 'bg-[#BE984C] text-[#0B1A33]' : 'bg-[#fbf9f5] text-muted'}`}>
                   {tab.badge}
                 </span>
                 <span className="font-mono font-extrabold text-lg">{tab.count} deals</span>
@@ -423,7 +423,7 @@ export default function PipelinePage() {
                         </td>
                         <td className="num font-mono text-xs">{aed(item.commissionPreview?.grossCommissionAed)}</td>
                         <td className="num font-mono text-xs text-[#7E3039]">-{aed(item.commissionPreview?.thirdPartyAgentPayoutAed)} ({item.commissionPreview?.a2aPartnerSharePct}%)</td>
-                        <td className="num font-mono font-bold text-xs text-[#041615]">{aed(item.commissionPreview?.swkCompany50PctAed)}</td>
+                        <td className="num font-mono font-bold text-xs text-[#0B1A33]">{aed(item.commissionPreview?.swkCompany50PctAed)}</td>
                         <td className="num font-mono font-bold text-xs text-[#174B3B]">{aed(item.commissionPreview?.salesAdvisor50PctAed)}</td>
                       </tr>
                     ))}
@@ -510,10 +510,10 @@ function TransferDrawer({ deal, onClose, onMove }: { deal: Deal | null; onClose:
       title={deal?.name ?? ''} subtitle={deal && <>{deptLabel(deal.type)} · {deal.client} · {deal.property}</>}>
       {deal && sp && (
         <div className="flex flex-col gap-5">
-          <div className="flex items-center gap-4 rounded-2xl p-4 border border-[#E0C1A3]/25" style={{ background: 'linear-gradient(150deg,#0b3532,#041615)', color: '#d9e8e5' }}>
+          <div className="flex items-center gap-4 rounded-2xl p-4" style={{ background: 'linear-gradient(150deg,#14305c,#0b1a33)', color: '#d9e1ee' }}>
             <ProgressRing value={progress} size={86} color={SWK.champ} track="rgba(255,255,255,.12)" label={<span style={{ color: '#fff' }}>{Math.round(progress)}%</span>} />
             <div className="min-w-0 flex-1">
-              <div className="text-[11px] uppercase tracking-[.18em]" style={{ color: '#E0C1A3' }}>{deptLabel(deal.type)}</div>
+              <div className="text-[11px] uppercase tracking-[.18em]" style={{ color: SWK.champ }}>{deptLabel(deal.type)}</div>
               <div className="font-display text-[20px] font-semibold text-white">{aed(deal.value)}</div>
               <div className="text-[12px]">Gross Commission {aed(commission(deal))} incl. VAT · {deal.agent}</div>
             </div>
@@ -532,7 +532,7 @@ function TransferDrawer({ deal, onClose, onMove }: { deal: Deal | null; onClose:
                 <strong>-{aed(sp.a2aAmount)}</strong>
               </div>
             )}
-            <div className="flex justify-between pt-1 border-t border-[#efe9dc] font-bold text-[#041615]">
+            <div className="flex justify-between pt-1 border-t border-[#efe9dc] font-bold text-[#0B1A33]">
               <span>SWK Company Share (50% of Net Pool):</span>
               <span>{aed(sp.company50)}</span>
             </div>
