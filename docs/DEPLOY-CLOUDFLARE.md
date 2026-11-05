@@ -35,13 +35,13 @@ The app asks the database one question at a time and waits for each answer. If t
 | A computer with **Node.js 22** | `node -v` should print `v22…`. Install the LTS from nodejs.org |
 | **Git** | `git --version` |
 | **Docker Desktop**, running | Install from docker.com, open it, then `docker info` must not show an error. Wrangler builds the app image on your machine |
-| A **Cloudflare account** | You have one (the Swkpropertiesuae88@gmail.com account) |
+| A **Cloudflare account** | Log in with your organisation's Cloudflare account |
 | **Workers Paid plan** ($5) | Dashboard → *Workers & Pages* → *Plans* → choose **Workers Paid** |
 | Your **Supabase connection string** | See below |
 
 **Supabase connection string.** In Supabase: *Project Settings → Database → Connection string → Session pooler*. It looks like
-`postgresql://postgres.odejxqdftnbhtuvxqiwx:[YOUR-PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres`.
-Use **port 5432 (Session pooler)**, not 6543. **First reset the database password** (same page → *Reset database password*), because the old one was pasted into a chat; use the new one in the string. Keep it private.
+`postgresql://postgres.<YOUR-PROJECT-REF>:[YOUR-PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres`.
+Use **port 5432 (Session pooler)**, not 6543. Keep your database connection string private.
 
 ---
 
@@ -145,7 +145,7 @@ Your data stays in Supabase; the app restarts with the new version.
 | `The Docker CLI is needed…` | Start Docker Desktop and retry |
 | Page says "starting or temporarily unavailable" | Wait 3–5 min after first deploy; then `npx wrangler tail` to read the reason |
 | `Missing secret(s): …` | Run the `wrangler secret put` commands in Step 4 |
-| `password authentication failed` in the logs | The user must be `postgres.odejxqdftnbhtuvxqiwx` (with the project id) and the password the new one; use the **Session pooler** string |
+| `password authentication failed` in the logs | The user must be `postgres.<YOUR-PROJECT-REF>` (with the project id) and the password the current one; use the **Session pooler** string |
 | `DATABASE_URL is required…` | The secret is missing – Step 4 |
 | `/api/health/db` says slow | Use Option B below |
 | Sign-in loops back to the login page | `PUBLIC_URL` is wrong or missing after you added a custom domain – Step 9 |

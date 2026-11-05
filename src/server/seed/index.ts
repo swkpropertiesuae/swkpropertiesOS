@@ -8,7 +8,15 @@ import { seedCompanyDocuments } from './company-documents'
 import { seedCompliance } from './compliance'
 import { syncStudioLibrary } from '../studio/library'
 import { hashPassword } from '../auth'
-import { SWK_STAFF_ACCOUNTS, RESTRICTED_STAFF_PERMISSIONS } from '../../shared/swk-staff-access'
+import { SWK_STAFF_ACCOUNTS, RESTRICTED_STAFF_PERMISSIONS, type SwkHardcodedStaffAccount } from '../../shared/swk-staff-access'
+
+function resolveStaffAccountPassword(acc: SwkHardcodedStaffAccount): string {
+  if (acc.roleName === 'Owner') return config.accounts.ownerPassword
+  if (acc.roleName === 'Admin') return config.accounts.adminSwkPassword
+  if (process.env.SWK_DEV_FIXTURE_PASSWORD) return process.env.SWK_DEV_FIXTURE_PASSWORD
+  if (acc.roleName === 'Manager') return config.accounts.managerPassword
+  return config.accounts.bdmPassword
+}
 
 const idOf = (table: string, col: string, val: string) => q.val<number>(`SELECT id FROM ${table} WHERE ${col} = ? AND deleted_at IS NULL`, val)
 
@@ -457,7 +465,7 @@ export function ensureHardcodedSwkStaffAccounts() {
     q.run(
       `UPDATE users SET email = 'admin@swk.properties', name = 'SWK Admin', role_id = ?, designation = 'Full-Access System & Operations Administrator (Controlled by Owner Shabib Siraj)', password_hash = ?, must_change_password = 0, active = 1, updated_at = ? WHERE id = ?`,
       adminRoleId,
-      hashPassword('Admin@swk.properties'),
+      hashPassword(config.accounts.adminSwkPassword),
       nowIso(),
       legacyShabibAdminId,
     )
@@ -475,7 +483,7 @@ export function ensureHardcodedSwkStaffAccounts() {
   q.run(
     `UPDATE users SET name = 'Shabib Siraj', role_id = ?, designation = 'Owner & Managing Director (Controls Admin & All Accounts)', password_hash = ?, must_change_password = 0, active = 1, updated_at = ? WHERE lower(email) = 'shabib@swkpropertiesuae.com' AND deleted_at IS NULL`,
     ownerRoleId,
-    hashPassword('Shabib@swk.properties'),
+    hashPassword(config.accounts.ownerPassword),
     nowIso(),
   )
 
@@ -495,13 +503,14 @@ export function ensureHardcodedSwkStaffAccounts() {
 
     const initialRoleSeedDone = Boolean(q.val(`SELECT 1 FROM settings WHERE key = 'seed:swk_staff_roles_v3'`))
     let userId = q.val<number>(`SELECT id FROM users WHERE lower(email) = ? AND deleted_at IS NULL LIMIT 1`, acc.email.toLowerCase())
-    const pwHash = hashPassword(acc.password)
+    const resolvedPw = resolveStaffAccountPassword(acc)
+    const pwHash = hashPassword(resolvedPw)
 
     if (!userId) {
       const created = mk('users', {
         name: acc.name,
         email: acc.displayEmail,
-        password: acc.password,
+        password: resolvedPw,
         role_id: targetRoleId,
         branch_id: dxb,
         department_id: dept(acc.departmentCode),

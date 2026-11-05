@@ -1,31 +1,30 @@
 /**
- * Hardcoded SWK Properties Staff Accounts & Role-Based Access Policy
+ * SWK Properties Staff Accounts & Role-Based Access Policy
  *
  * Official Governance & Access Hierarchy:
  * - Tier 1 — Supreme Company Owner (Controls Admin & All Accounts):
- *   1. Shabib Siraj (Owner & Managing Director — shabib@swk.properties / Password: Shabib@swk.properties)
+ *   1. Shabib Siraj (Owner & Managing Director — shabib@swk.properties)
  *      - Role: Owner (Full System Access, Final Approver for Recycle Bin Deletions, Deal Withdrawals & Admin Decisions)
  *      - Holds direct supervisory control over admin@swk.properties (can inspect, unlock, reset password, force sign-out, suspend or re-activate admin@swk.properties).
  * - Tier 2 — Full-Access System & Operations Administrator (Controlled by Owner shabib@swk.properties):
- *   2. SWK Admin (Full-Access Administrator — admin@swk.properties / Password: Admin@swk.properties)
- *      - Role: Admin (Converted from the former Shabib Siraj Admin account into your dedicated Full-Access Admin account)
+ *   2. SWK Admin (Full-Access Administrator — admin@swk.properties)
+ *      - Role: Admin (Dedicated Full-Access Admin account under Owner supervision)
  *      - Full access across all 18+ SWK OS modules (CRM, Sales, Off-Plan, Secondary, Leasing, Properties, Mandates, Finance, HR, Attendance, Studio, Compliance, AI, Reports & System Admin), operating under the direct authority and audit oversight of Owner shabib@swk.properties.
  * - Tier 3 — Operations Manager (Full Operational Access):
- *   3. Mohammad Haseeb (Operations Manager — Haseeb@swk.property / Password: Haseeb123)
+ *   3. Mohammad Haseeb (Operations Manager — Haseeb@swk.property)
  * - Tier 4 — Restricted Staff Access (Attendance, Company Manual, Market Pulse & General Only):
- *   - Talha@swk.property (Talha123)
- *   - Fareed@swk.property (Fareed123)
- *   - Shahid@swk.property (Shahid123)
- *   - Umar@swk.property (Umar123)
- *   - Saifullah@swk.property (Saifullah123)
- *   - Any other staff account that is not Owner (shabib@swk.properties), Admin (admin@swk.properties), or Manager (Haseeb@swk.property).
+ *   - Talha@swk.property
+ *   - Fareed@swk.property
+ *   - Shahid@swk.property
+ *   - Umar@swk.property
+ *   - Saifullah@swk.property
+ *   - Any other staff account assigned the 'Staff (Attendance & General)' role.
  */
 
 export interface SwkHardcodedStaffAccount {
   email: string
   displayEmail: string
   aliases: string[]
-  password: string
   name: string
   empNo: string
   roleName: 'Owner' | 'Admin' | 'Manager' | 'Staff (Attendance & General)'
@@ -40,7 +39,6 @@ export const SWK_OWNER_ACCOUNT: SwkHardcodedStaffAccount = {
   email: 'shabib@swk.properties',
   displayEmail: 'shabib@swk.properties',
   aliases: ['shabib@swk.property', 'shabib@swkpropertiesuae.com'],
-  password: 'Shabib@swk.properties',
   name: 'Shabib Siraj',
   empNo: 'EMP-OWNER',
   roleName: 'Owner',
@@ -54,7 +52,6 @@ export const SWK_ADMIN_ACCOUNT: SwkHardcodedStaffAccount = {
   email: 'admin@swk.properties',
   displayEmail: 'admin@swk.properties',
   aliases: ['admin@swk.property'],
-  password: 'Admin@swk.properties',
   name: 'SWK Admin',
   empNo: 'EMP-ADMIN',
   roleName: 'Admin',
@@ -72,7 +69,6 @@ export const SWK_STAFF_ACCOUNTS: readonly SwkHardcodedStaffAccount[] = [
     email: 'haseeb@swk.property',
     displayEmail: 'Haseeb@swk.property',
     aliases: ['haseeb@swk.properties', 'haseeb@swkpropertiesuae.com', 'manager@swkpropertiesuae.com'],
-    password: 'Haseeb123',
     name: 'Mohammad Haseeb',
     empNo: 'EMP-HASEEB',
     roleName: 'Manager',
@@ -86,7 +82,6 @@ export const SWK_STAFF_ACCOUNTS: readonly SwkHardcodedStaffAccount[] = [
     email: 'talha@swk.property',
     displayEmail: 'Talha@swk.property',
     aliases: ['talha@swk.properties', 'talha@swkpropertiesuae.com'],
-    password: 'Talha123',
     name: 'Talha Shabbir',
     empNo: 'EMP-TALHA',
     roleName: 'Staff (Attendance & General)',
@@ -100,7 +95,6 @@ export const SWK_STAFF_ACCOUNTS: readonly SwkHardcodedStaffAccount[] = [
     email: 'fareed@swk.property',
     displayEmail: 'Fareed@swk.property',
     aliases: ['fareed@swk.properties', 'fareed@swkpropertiesuae.com'],
-    password: 'Fareed123',
     name: 'Fareed',
     empNo: 'EMP-FAREED',
     roleName: 'Staff (Attendance & General)',
@@ -114,7 +108,6 @@ export const SWK_STAFF_ACCOUNTS: readonly SwkHardcodedStaffAccount[] = [
     email: 'shahid@swk.property',
     displayEmail: 'Shahid@swk.property',
     aliases: ['shahid@swk.properties', 'shahid@swkpropertiesuae.com'],
-    password: 'Shahid123',
     name: 'Shahid',
     empNo: 'EMP-SHAHID',
     roleName: 'Staff (Attendance & General)',
@@ -128,7 +121,6 @@ export const SWK_STAFF_ACCOUNTS: readonly SwkHardcodedStaffAccount[] = [
     email: 'umar@swk.property',
     displayEmail: 'Umar@swk.property',
     aliases: ['umar@swk.properties', 'umar@swkpropertiesuae.com'],
-    password: 'Umar123',
     name: 'Umar',
     empNo: 'EMP-UMAR',
     roleName: 'Staff (Attendance & General)',
@@ -142,7 +134,6 @@ export const SWK_STAFF_ACCOUNTS: readonly SwkHardcodedStaffAccount[] = [
     email: 'saifullah@swk.property',
     displayEmail: 'Saifullah@swk.property',
     aliases: ['saifullah@swk.properties', 'saifullah@swkpropertiesuae.com'],
-    password: 'Saifullah123',
     name: 'Saifullah',
     empNo: 'EMP-SAIFULLAH',
     roleName: 'Staff (Attendance & General)',
@@ -189,11 +180,11 @@ export function canPrintReceptionQr(
 ): boolean {
   if (!user || user.party_id) return false
   const email = String(user.email || '').trim().toLowerCase()
-  if (RESTRICTED_STAFF_EMAILS.has(email)) return false
-  if (QR_PRINT_ALLOWED_EMAILS.has(email)) return true
   const role = String(user.role_name || user.role || '').trim().toLowerCase()
   const name = String(user.name || '').trim().toLowerCase()
   if (role === 'owner' || role === 'admin') return true
+  if (RESTRICTED_STAFF_EMAILS.has(email)) return false
+  if (QR_PRINT_ALLOWED_EMAILS.has(email)) return true
   if (name === 'shabib siraj' || name === 'mohammad haseeb') return true
   if (role === 'manager' && (name.includes('haseeb') || email.includes('haseeb') || email.includes('manager'))) return true
   return false
@@ -301,19 +292,19 @@ export function isAdminSwkUser(
 }
 
 /**
- * Hardcoded check: ONLY Owner (shabib@swk.properties), Admin (admin@swk.properties), and Manager (Haseeb@swk.property)
- * have full operational access. Every other staff account is strictly limited to Attendance, Company Manual, Market Pulse, and General features.
+ * Checks whether the user has full operational access (Owner, Admin, Operations Manager Haseeb, or explicitly promoted role).
  */
 export function isFullAccessSwkUser(
   user: { email?: string | null; role?: string | null; role_name?: string | null; name?: string | null } | null | undefined,
 ): boolean {
   if (!user) return false
   const email = String(user.email || '').trim().toLowerCase()
-  if (RESTRICTED_STAFF_EMAILS.has(email)) return false
-  if (FULL_ACCESS_EMAILS.has(email)) return true
   const role = String(user.role_name || user.role || '').trim().toLowerCase()
   const name = String(user.name || '').trim().toLowerCase()
   if (role === 'admin' || role === 'owner') return true
+  if (role === 'staff (attendance & general)') return false
+  if (FULL_ACCESS_EMAILS.has(email)) return true
+  if (RESTRICTED_STAFF_EMAILS.has(email) && !role) return false
   if (role === 'manager' && (name.includes('haseeb') || email.includes('haseeb') || email.includes('manager'))) return true
   return false
 }
@@ -338,6 +329,7 @@ export function isAllowedPathForRestrictedStaff(pathname: string): boolean {
     '/',
     '/home',
     '/login',
+    '/swk-one',
     '/qr-checkin',
     '/reception-qr',
     '/swk/reception-qr',

@@ -1527,6 +1527,7 @@ export default async function swkOpsRoutes(app: FastifyInstance) {
 
   // ------------------------------------------------------------------ 8. Owner (shabib@swk.properties) Direct Control Over Admin (admin@swk.properties)
   app.get('/api/swk-ops/owner-admin-control', async (req) => {
+    requireAdminOrHaseeb(req)
     const ownerUser = q.get<any>(
       `SELECT u.id, u.name, u.email, u.designation, u.active, u.last_login_at, r.name AS role_name
        FROM users u LEFT JOIN roles r ON r.id = u.role_id
@@ -1591,7 +1592,7 @@ export default async function swkOpsRoutes(app: FastifyInstance) {
     } else if (act === 'unlock') {
       q.run(`UPDATE users SET failed_logins = 0, locked_until = NULL, updated_at = ? WHERE id = ?`, nowIso(), adminUser.id)
     } else if (act === 'reset_password') {
-      const nextPw = String(body.new_password || 'Admin@swk.properties').trim()
+      const nextPw = String(body.new_password || config.accounts.adminSwkPassword).trim()
       q.run(
         `UPDATE users SET password_hash = ?, must_change_password = 0, failed_logins = 0, locked_until = NULL, active = 1, updated_at = ? WHERE id = ?`,
         hashPassword(nextPw),

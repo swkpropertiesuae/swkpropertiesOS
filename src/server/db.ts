@@ -43,7 +43,7 @@ const cache = new Map<string, string>()
 const tr = (sql: string) => { let t = cache.get(sql); if (t === undefined) { t = toPg(sql); if (cache.size < 5000) cache.set(sql, t) } return t }
 
 let sharedConn: PgConn | null = null
-const conn = () => (sharedConn ??= new PgConn(config.databaseUrl))
+const conn = () => (!sharedConn || sharedConn.isClosed ? (sharedConn = new PgConn(config.databaseUrl)) : sharedConn)
 const ident = (s: string) => '"' + s.replace(/"/g, '""') + '"'
 
 /** A workspace (production or demo) is a PostgreSQL schema on one shared connection. Exposes the better-sqlite3 subset the app uses. */

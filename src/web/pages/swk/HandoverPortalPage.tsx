@@ -88,13 +88,6 @@ export default function HandoverPortalPage() {
                 <QrCode size={14} /> Attendance QR &amp; Method PDF
               </a>
               <a
-                href="/handover/00_SWK_OS_Staff_Login_Credentials_And_Access_Policy.pdf"
-                download
-                className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-[#c9a96e]/50 text-[#f3dfb8] text-xs font-bold no-underline inline-flex items-center gap-1.5"
-              >
-                <FileCheck2 size={14} /> Staff Credentials PDF
-              </a>
-              <a
                 href="/handover/SWK_OS_Complete_Software_Handover_And_Staff_Credentials_By_Shameem_Harfath.pdf"
                 download
                 className="px-4 py-2.5 rounded-xl font-bold text-xs text-[#08142a] no-underline inline-flex items-center gap-2 shadow-lg"

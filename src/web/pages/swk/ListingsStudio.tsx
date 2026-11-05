@@ -11,9 +11,9 @@ import { AnimatePresence, motion } from 'motion/react'
 import { Bar as RBar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import {
   AlertTriangle, ArrowUpRight, BadgeCheck, Bath, BedDouble, Camera, CheckCircle2, Clock, Copy, FileSignature, Globe2, LayoutGrid,
-  ListChecks, Maximize2, QrCode, Rows3, ShieldAlert, ShieldCheck, Sparkles, Wand2, XCircle,
+  ListChecks, Maximize2, MessageCircle, QrCode, Rows3, Send, ShieldAlert, ShieldCheck, Sparkles, Wand2, XCircle,
 } from 'lucide-react'
-import { get } from '../../lib/api'
+import { get, post } from '../../lib/api'
 import { useMeta } from '../../lib/meta'
 import { Card, CHART, EmptyState, ModuleHeader, Pill, ProgressRing, Reveal, RevealItem, Segmented, StatTile, SWK, aed, num } from '../../swk/ui'
 import { communityByName, type Community } from '../../swk/uae'
@@ -337,7 +337,7 @@ function ListingCard({ l, i, onQuality, onCopy }: { l: Listing; i: number; onQua
         </div>
         <div className="mt-auto pt-2 flex gap-2">
           <button className="swk-btn swk-btn-ghost !h-9 flex-1 text-[12.5px]" onClick={onQuality}><ListChecks size={15} /> {l.checks.filter(c => c.earned < c.weight).length} fixes</button>
-          <button className="swk-btn swk-btn-gold !h-9 flex-1 text-[12.5px]" onClick={onCopy}><Sparkles size={15} /> AI copy</button>
+          <button className="swk-btn swk-btn-gold !h-9 flex-1 text-[12.5px]" onClick={onCopy}><MessageCircle size={15} /> WhatsApp / Copy</button>
           <Link to={`/e/properties/${p.id}`} className="swk-btn swk-btn-ghost !h-9 !w-9 !p-0" aria-label={`Open ${p.title}`}><ArrowUpRight size={16} /></Link>
         </div>
       </div>
@@ -408,10 +408,96 @@ function QualityPanel({ l }: { l: Listing }) {
 
 function CopyPanel({ l, onCopied }: { l: Listing; onCopied: (m: string) => void }) {
   const [tone, setTone] = useState<Tone>('luxury')
+  const [waPhone, setWaPhone] = useState('')
+  const [waLang, setWaLang] = useState<'en' | 'ar' | 'both'>('en')
+  const [sendingWa, setSendingWa] = useState(false)
   const copy = useMemo(() => buildCopy(l, tone), [l, tone])
   const doCopy = async (t: string, what: string) => { if (await copyText(t)) onCopied(`${what} copied to clipboard`) }
+
+  const selectedText = waLang === 'en' ? copy.en : waLang === 'ar' ? copy.ar : `${copy.en}\n\n---\n\n${copy.ar}`
+  const normalizeWaDigits = (raw: string) => {
+    let d = String(raw || '').replace(/[^\d+]/g, '')
+    if (!d) return ''
+    if (d.startsWith('+')) d = d.slice(1)
+    d = d.replace(/^00/, '')
+    if (d.startsWith('0')) d = '971' + d.slice(1)
+    else if (d.length <= 9) d = '971' + d
+    return d
+  }
+
+  const openWaDirect = () => {
+    const digits = normalizeWaDigits(waPhone)
+    const encoded = encodeURIComponent(selectedText)
+    const url = digits ? `https://wa.me/${digits}?text=${encoded}` : `https://wa.me/?text=${encoded}`
+    window.open(url, '_blank', 'noopener,noreferrer')
+    onCopied(digits ? `Opened WhatsApp chat for +${digits}` : 'Opened WhatsApp share chooser')
+  }
+
+  const sendViaOsApi = async () => {
+    const digits = normalizeWaDigits(waPhone)
+    if (digits.length < 9) {
+      onCopied('Enter a valid WhatsApp number (e.g. 0501234567 or +971501234567)')
+      return
+    }
+    setSendingWa(true)
+    try {
+      await post('/api/whatsapp/send', { to: digits, text: selectedText })
+      onCopied(`Listing sent via SWK OS WhatsApp API to +${digits}`)
+    } catch {
+      openWaDirect()
+    } finally {
+      setSendingWa(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
+      <div className="rounded-2xl bg-[#08142a] text-white p-4 border border-[#c9a96e]/40 flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <MessageCircle size={17} className="text-[#4fd39a]" />
+            <span className="font-display font-semibold text-[14.5px]">Send Listing Directly to WhatsApp</span>
+          </div>
+          <Segmented
+            layoutId="ls-wa-lang"
+            value={waLang}
+            onChange={setWaLang}
+            options={[
+              { value: 'en', label: 'EN' },
+              { value: 'ar', label: 'AR' },
+              { value: 'both', label: 'EN + AR' },
+            ]}
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <input
+            type="tel"
+            value={waPhone}
+            onChange={e => setWaPhone(e.target.value)}
+            placeholder="Recipient WhatsApp (e.g. 0501234567 or +971501234567)"
+            className="flex-1 min-w-[210px] h-10 rounded-xl px-3.5 text-[13px] bg-white/10 border border-white/20 text-white placeholder:text-white/50 focus:outline-none focus:border-[#c9a96e]"
+          />
+          <button
+            type="button"
+            onClick={openWaDirect}
+            className="swk-btn swk-btn-gold !h-10 text-[12.5px]"
+          >
+            <MessageCircle size={15} /> Open WhatsApp
+          </button>
+          <button
+            type="button"
+            disabled={sendingWa || !waPhone.trim()}
+            onClick={() => void sendViaOsApi()}
+            className="swk-btn swk-btn-primary !h-10 text-[12.5px]"
+          >
+            <Send size={14} /> {sendingWa ? 'Sending…' : 'Send via OS API'}
+          </button>
+        </div>
+        <div className="text-[11px] text-white/70">
+          <b>Open WhatsApp</b> launches WhatsApp Web/App with the full property brochure pre-filled (works immediately). <b>Send via OS API</b> dispatches directly through your connected Meta WhatsApp Business API (`Integrations → WhatsApp`) and logs the thread in `/whatsapp`.
+        </div>
+      </div>
+
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <Segmented layoutId="ls-tone" value={tone} onChange={setTone} options={[{ value: 'luxury', label: 'Luxury' }, { value: 'investor', label: 'Investor' }, { value: 'family', label: 'Family' }]} />
         <Pill tone="champ">Bilingual EN + AR</Pill>

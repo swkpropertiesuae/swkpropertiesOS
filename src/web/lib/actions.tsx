@@ -112,6 +112,60 @@ export const ACTIONS: Record<string, ActionDef[]> = {
     { key: 'quote', label: 'New quotation', tone: 'outline', show: (r, h) => r.is_customer && h.can('sales', 'create'), run: h => h.nav(`/e/quotations?new=1&customer_id=${h.rec.id}`) },
     { key: 'stmt', label: 'Statement of account', tone: 'outline', show: (_r, h) => h.can('finance', 'view'), run: h => h.nav(`/print/statement/${h.rec.id}`) },
   ],
+  properties: [
+    {
+      key: 'whatsapp',
+      label: 'Send to WhatsApp',
+      tone: 'green',
+      show: () => true,
+      run: async h => {
+        const p = h.rec
+        const phoneInput = await h.dlg.prompt({
+          title: `Send "${p.title}" to WhatsApp`,
+          label: 'Recipient WhatsApp number (e.g. 0501234567 or +971501234567)',
+          initial: '',
+          ok: 'Send Property via WhatsApp',
+          message: 'Sends a formatted RERA/Trakheesi property listing card via your connected SWK OS WhatsApp API, or opens WhatsApp directly with the listing pre-filled.',
+        })
+        if (phoneInput === null) return
+        let digits = String(phoneInput || '').replace(/[^\d+]/g, '')
+        if (digits.startsWith('+')) digits = digits.slice(1)
+        digits = digits.replace(/^00/, '')
+        if (digits.startsWith('0')) digits = '971' + digits.slice(1)
+        else if (digits && digits.length <= 9) digits = '971' + digits
+
+        const priceTxt = p.price
+          ? `AED ${Number(p.price).toLocaleString('en-US')}`
+          : p.rent_annual
+            ? `AED ${Number(p.rent_annual).toLocaleString('en-US')} / year`
+            : 'Price on Request'
+        const text = [
+          `*${p.title}* (${p.property_no || `Ref #${p.id}`})`,
+          `${p.property_type || 'Property'} · ${p._labels?.community_id || p.sub_community || p.address || 'Dubai'}`,
+          `• *Price*: ${priceTxt}`,
+          p.bedrooms !== null && p.bedrooms !== undefined ? `• *Bedrooms*: ${p.bedrooms} B/R${p.bathrooms ? ` · ${p.bathrooms} Bath` : ''}` : '',
+          p.area_sqft ? `• *Built-up Area*: ${Number(p.area_sqft).toLocaleString('en-US')} sq ft` : '',
+          p.is_off_plan && p.payment_plan ? `• *Payment Plan*: ${p.payment_plan}${p.completion_year ? ` (Handover ${p.completion_year})` : ''}` : '',
+          p.rera_permit_no ? `• *Trakheesi Permit*: ${p.rera_permit_no}` : '',
+          p.description ? `\n${String(p.description).slice(0, 600)}` : '',
+          `\n*SWK Properties LLC* · RERA ORN 51517 · www.swk.properties`,
+        ].filter(Boolean).join('\n')
+
+        if (digits.length >= 9) {
+          try {
+            await post('/api/whatsapp/send', { to: digits, text })
+            h.toast.ok(`Property sent via SWK OS WhatsApp API to +${digits}`)
+            return
+          } catch {
+            // Fall back to direct wa.me launch if Meta WABA token is not configured yet
+          }
+        }
+        const url = digits ? `https://wa.me/${digits}?text=${encodeURIComponent(text)}` : `https://wa.me/?text=${encodeURIComponent(text)}`
+        window.open(url, '_blank', 'noopener,noreferrer')
+        h.toast.ok(digits ? `Opened WhatsApp chat for +${digits}` : 'Opened WhatsApp share')
+      },
+    },
+  ],
 }
 
 export const PRINTABLE = new Set(['invoices', 'quotations', 'receipts', 'payments', 'payslips', 'purchase_orders', 'parties', 'studio_documents'])

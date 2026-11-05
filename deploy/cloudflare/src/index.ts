@@ -6,6 +6,8 @@ interface Env {
   DATABASE_URL: string
   APP_SECRET: string
   PG_CA_CERT?: string
+  OWNER_PASSWORD?: string
+  ADMIN_SWK_PASSWORD?: string
   ADMIN_PASSWORD: string
   MANAGER_PASSWORD: string
   BDM_PASSWORD?: string
@@ -37,6 +39,8 @@ export class SwkOs extends Container<Env> {
       DATABASE_URL: env.DATABASE_URL,
       APP_SECRET: env.APP_SECRET,
       ...(env.PG_CA_CERT ? { PG_CA_CERT: env.PG_CA_CERT } : {}), // trusted CA for the database (Supabase uses a private CA)
+      ...(env.OWNER_PASSWORD ? { OWNER_PASSWORD: env.OWNER_PASSWORD } : {}),
+      ...(env.ADMIN_SWK_PASSWORD ? { ADMIN_SWK_PASSWORD: env.ADMIN_SWK_PASSWORD } : {}),
       ADMIN_PASSWORD: env.ADMIN_PASSWORD,
       MANAGER_PASSWORD: env.MANAGER_PASSWORD,
       ...(env.BDM_PASSWORD ? { BDM_PASSWORD: env.BDM_PASSWORD } : {}),

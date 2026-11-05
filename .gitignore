@@ -19,3 +19,4 @@ android/.gradle/
 *.keystore
 
 cloudflared.exe
+.wrangler/

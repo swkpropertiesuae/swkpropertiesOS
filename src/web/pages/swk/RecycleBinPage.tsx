@@ -223,7 +223,7 @@ export default function RecycleBinPage() {
                   <button className="btn outline sm" onClick={() => void runOwnerAdminAction('unlock', 'Unlock Admin Account')}>
                     Unlock Admin
                   </button>
-                  <button className="btn outline sm" onClick={() => void runOwnerAdminAction('reset_password', 'Reset Admin Password to Admin@swk.properties')}>
+                  <button className="btn outline sm" onClick={() => void runOwnerAdminAction('reset_password', 'Reset Admin Password to Default')}>
                     Reset Password to Default
                   </button>
                 </div>

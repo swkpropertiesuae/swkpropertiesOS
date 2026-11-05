@@ -47,7 +47,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   })
 
   await app.register(helmet, {
-    contentSecurityPolicy: { directives: { defaultSrc: ["'self'"], imgSrc: ["'self'", 'data:', 'blob:'], styleSrc: ["'self'", "'unsafe-inline'"], scriptSrc: ["'self'"], fontSrc: ["'self'", 'data:'], connectSrc: ["'self'", 'https:', 'http:'], objectSrc: ["'self'"], frameSrc: ["'self'"], frameAncestors: ["'self'"], baseUri: ["'self'"], formAction: ["'self'"] } },
+    contentSecurityPolicy: { directives: { defaultSrc: ["'self'"], imgSrc: ["'self'", 'data:', 'blob:'], mediaSrc: ["'self'", 'blob:'], styleSrc: ["'self'", "'unsafe-inline'"], scriptSrc: ["'self'"], fontSrc: ["'self'", 'data:'], connectSrc: ["'self'", 'https:', 'http:'], objectSrc: ["'self'"], frameSrc: ["'self'"], frameAncestors: ["'self'"], baseUri: ["'self'"], formAction: ["'self'"] } },
     crossOriginEmbedderPolicy: false, hsts: config.isProd ? { maxAge: 15552000 } : false,
   })
   await app.register(cookie)
@@ -60,7 +60,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   // Demo sessions (cookie prefix "demo.") and demo tracking links run against the isolated demo database.
   app.addHook('onRequest', (req: FastifyRequest, reply, done) => {
     const origin = req.headers.origin
-    if (origin && (/^https?:\/\/localhost(:\d+)?$/i.test(origin) || /^https?:\/\/([a-z0-9-]+\.)?swkpropertiesuae\.com$/i.test(origin) || req.url.startsWith('/api/public/reception-qr'))) {
+    if (origin && (/^https?:\/\/localhost(:\d+)?$/i.test(origin) || /^https?:\/\/([a-z0-9-]+\.)?(swkpropertiesuae\.com|swk\.properties|swk\.property)$/i.test(origin) || req.url.startsWith('/api/public/reception-qr'))) {
       reply.header('Access-Control-Allow-Origin', origin)
       reply.header('Access-Control-Allow-Credentials', 'true')
       reply.header('Access-Control-Allow-Methods', 'GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS')
@@ -105,6 +105,10 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   app.addHook('preHandler', async (req) => {
     const url = req.url.split('?')[0]
+    if (url.startsWith('/handover/') && /\.(pdf|webm)$/i.test(url)) {
+      if (!req.user || req.user.party_id) throw new HttpError(401, 'Please sign in as company staff to access handover documents')
+      return
+    }
     if (!url.startsWith('/api/')) return
     if (PUBLIC.some(r => r.test(url))) return
     if (!req.user) throw new HttpError(401, 'Please sign in')

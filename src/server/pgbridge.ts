@@ -81,6 +81,7 @@ export class PgConn {
   activeSchema = ''
   depth = 0
   txSchema = ''
+  get isClosed(): boolean { return this.closed }
   constructor(url: string, private timeoutMs = 120_000) {
     const sab = new SharedArrayBuffer(4)
     this.sig = new Int32Array(sab)
@@ -90,7 +91,8 @@ export class PgConn {
     const pgPath = createRequire(import.meta.url).resolve('pg')
     this.worker = new Worker(WORKER_SOURCE, { eval: true, workerData: { port: port2, sig: sab, options, pgPath }, transferList: [port2] })
     this.worker.unref()
-    this.worker.on('error', e => console.error('[pg worker]', e))
+    this.worker.on('error', e => { this.closed = true; console.error('[pg worker]', e) })
+    this.worker.on('exit', () => { this.closed = true })
   }
   /** Run one statement and wait for the answer. Throws an Error carrying the Postgres error code. */
   call(sql: string, params: any[] = [], simple = false): PgResult {
