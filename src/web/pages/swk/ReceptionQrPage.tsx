@@ -88,7 +88,7 @@ export default function ReceptionQrPage() {
 
   useEffect(() => {
     if (!isPrintMode) return
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ae.swkpropertiesuae.com'
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://os.swkpropertiesuae.com'
     const scanUrl = `${origin}/reception-qr?scan=1&stand=${PRINTED_QR_CODE}`
     void QRCode.toDataURL(scanUrl, {
       width: 420,
@@ -142,7 +142,7 @@ export default function ReceptionQrPage() {
 
   // Printable single QR sheet mode (?print=1) — Strictly restricted to Owner & Haseeb
   if (isPrintMode) {
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ae.swkpropertiesuae.com'
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://os.swkpropertiesuae.com'
     const scanUrl = `${origin}/reception-qr?scan=1&stand=${PRINTED_QR_CODE}`
     return (
       <div className="min-h-screen bg-[#08142a] text-white flex flex-col items-center justify-center p-6">
