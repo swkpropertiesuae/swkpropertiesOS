@@ -54,16 +54,19 @@ jobs:
         working-directory: deploy/cloudflare
         run: |
           node -e "const fs=require('fs');fs.writeFileSync('../../public/release.json', JSON.stringify({sha: process.env.GITHUB_SHA, brand: 'swk-os-brand-pack'}) + '\n');"
-          node -e "const fs=require('fs');const f='wrangler.jsonc';fs.writeFileSync(f,fs.readFileSync(f,'utf8').replace('\"os-navy-pulse-v6\"','\"os-' + process.env.GITHUB_SHA.slice(0,12) + '\"'));"
+          node -e "const fs=require('fs');const f='wrangler.jsonc';fs.writeFileSync(f,fs.readFileSync(f,'utf8').replace('\"swkproperties-os-v4\"','\"os-' + process.env.GITHUB_SHA.slice(0,12) + '\"'));"
           npx wrangler deploy --var RELEASE_SHA:${GITHUB_SHA} --var RELEASE_ID:os-${GITHUB_SHA:0:12}
       - name: Wait for the app and Standalone Reception QR to answer
         # The container cold-starts after a new image; allow up to 15 minutes.
         run: |
           for i in $(seq 1 45); do
+            rel=$(curl -s -m 30 https://os.swkpropertiesuae.com/release.json || true)
             code=$(curl -s -o /dev/null -m 30 -w '%{http_code}' https://os.swkpropertiesuae.com/api/public/reception-qr/current || true)
-            echo "attempt $i: HTTP $code"
-            [ "$code" = "200" ] && exit 0
+            echo "attempt $i: HTTP $code | release=$rel"
+            if [ "$code" = "200" ] && echo "$rel" | grep -q "${GITHUB_SHA}"; then
+              exit 0
+            fi
             sleep 20
           done
-          echo "::error::App did not return 200 from /api/public/reception-qr/current within 15 minutes"
+          echo "::error::App did not return 200 with release ${GITHUB_SHA} within 15 minutes"
           exit 1

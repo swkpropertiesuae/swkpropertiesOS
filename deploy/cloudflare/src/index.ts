@@ -116,6 +116,12 @@ async function ensureRunning(env: Env) {
       'os-os-81e3094eec55',
       'os-os-navy-pulse-v6',
       'os-os-a37dcf426af1',
+      'os-os-305a9aa72579',
+      'os-os-53eb504c2c5b',
+      'os-os-24e610ef43bc',
+      'os-os-1ce011d8a9f2',
+      'os-os-0b20f10c7491',
+      'os-os-0e64abbdce08',
       'swk-one-brand-v2',
       'swk-one-blue-v3',
       'swk-one-blue-v4',
@@ -138,7 +144,7 @@ async function ensureRunning(env: Env) {
       const probe = await c.fetch(new Request('http://container/release.json'))
       if (probe.ok) {
         const text = await probe.text()
-        if (text.includes(expectedMarker) || text.includes('swk-os-brand-pack')) {
+        if (text.includes(expectedMarker)) {
           await c.markReleaseVerified(expectedMarker)
         } else if (text.trim().startsWith('{')) {
           await c.recycleIfStaleImage()
