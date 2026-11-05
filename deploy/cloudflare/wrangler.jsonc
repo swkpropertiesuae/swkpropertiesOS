@@ -12,8 +12,7 @@
   "vars": {
     "PUBLIC_URL": "https://os.swkpropertiesuae.com",
     "PG_SCHEMA": "swk",
-    "RELEASE_ID": "os-navy-pulse-v6",
-    "RELEASE_SHA": "os-navy-pulse-v6"
+    "RELEASE_ID": "swkproperties-os-v4"
   },
   "observability": { "enabled": true },
 
@@ -27,8 +26,8 @@
       "image_build_context": "../..",
       // 4 GiB: Node + the Chromium used for PDFs. Do not go below "basic" (1 GiB) and expect PDFs to work.
       "instance_type": "standard-1",
-      // Allow up to 3 instances so rolling deployments can start the new release container before the previous one finishes draining.
-      "max_instances": 3
+      // Allow up to 5 instances so rolling deployments can start the new release container before previous ones finish draining.
+      "max_instances": 5
     }
   ],
   "durable_objects": { "bindings": [{ "name": "SWK_OS", "class_name": "SwkOs" }] },

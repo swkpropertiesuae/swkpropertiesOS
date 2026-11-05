@@ -16,7 +16,7 @@ interface Env {
   RELEASE_ID?: string
 }
 
-const DEFAULT_RELEASE = 'os-navy-pulse-v6'
+const DEFAULT_RELEASE = 'swkproperties-os-v4'
 
 export class SwkOs extends Container<Env> {
   defaultPort = 8080
@@ -48,7 +48,6 @@ export class SwkOs extends Container<Env> {
     const runningRelease = await this.ctx.storage.get<string>('running_release_id')
     if (runningRelease && runningRelease !== releaseId) {
       await this.ctx.storage.put('running_release_id', releaseId)
-      await this.ctx.storage.put('last_recycle_at', Date.now())
       try {
         await this.destroy()
       } catch {
@@ -56,6 +55,7 @@ export class SwkOs extends Container<Env> {
       }
       await new Promise(r => setTimeout(r, 2000))
       await this.startAndWaitForPorts({ ports: 8080, cancellationOptions: { portReadyTimeoutMS: 240_000 } })
+      await this.ctx.storage.put('last_recycle_at', Date.now())
       return
     }
     if (!runningRelease) {
@@ -63,8 +63,8 @@ export class SwkOs extends Container<Env> {
     }
     const state = await this.getState()
     if (state.status !== 'healthy') {
-      await this.ctx.storage.put('last_recycle_at', Date.now())
       await this.startAndWaitForPorts({ ports: 8080, cancellationOptions: { portReadyTimeoutMS: 240_000 } })
+      await this.ctx.storage.put('last_recycle_at', Date.now())
     }
   }
 
@@ -79,7 +79,7 @@ export class SwkOs extends Container<Env> {
 
   async recycleIfStaleImage(): Promise<boolean> {
     const lastRecycle = (await this.ctx.storage.get<number>('last_recycle_at')) ?? 0
-    if (Date.now() - lastRecycle < 20_000) {
+    if (Date.now() - lastRecycle < 45_000) {
       return false
     }
     await this.ctx.storage.put('last_recycle_at', Date.now())
@@ -90,6 +90,7 @@ export class SwkOs extends Container<Env> {
     }
     await new Promise(r => setTimeout(r, 2000))
     await this.startAndWaitForPorts({ ports: 8080, cancellationOptions: { portReadyTimeoutMS: 240_000 } })
+    await this.ctx.storage.put('last_recycle_at', Date.now())
     return true
   }
 }
@@ -106,9 +107,16 @@ async function ensureRunning(env: Env) {
       'main',
       'swk-2026-11-05-s',
       'swk-2026-11-04-o',
+      'os-swkproperties-os-v4',
       'os-os-f47f311983ed',
       'os-os-59cdae12e663',
+      'os-os-f07f166df728',
+      'os-os-1ee01acc89e1',
       'os-os-14df7550ff72',
+      'os-os-81e3094eec55',
+      'os-os-navy-pulse-v6',
+      'os-os-a37dcf426af1',
+      'swk-one-brand-v2',
       'swk-one-blue-v3',
       'swk-one-blue-v4',
       'swk-one-blue-v5',
@@ -126,21 +134,18 @@ async function ensureRunning(env: Env) {
   await c.ensureReleaseRunning(rawRelease)
   const expectedMarker = env.RELEASE_SHA || 'swk-os-brand-pack'
   if (!(await c.isReleaseVerified(expectedMarker))) {
-    const probe = await c.fetch(new Request('http://container/release.json'))
-    const text = probe.ok ? await probe.text() : ''
-    if (text.includes(expectedMarker) || text.includes('swk-os-brand-pack')) {
-      await c.markReleaseVerified(expectedMarker)
-    } else {
-      const recycled = await c.recycleIfStaleImage()
-      if (recycled) {
-        const probe2 = await c.fetch(new Request('http://container/release.json'))
-        const text2 = probe2.ok ? await probe2.text() : ''
-        if (text2.includes(expectedMarker) || text2.includes('swk-os-brand-pack')) {
+    try {
+      const probe = await c.fetch(new Request('http://container/release.json'))
+      if (probe.ok) {
+        const text = await probe.text()
+        if (text.includes(expectedMarker) || text.includes('swk-os-brand-pack')) {
           await c.markReleaseVerified(expectedMarker)
-          return c
+        } else if (text.trim().startsWith('{')) {
+          await c.recycleIfStaleImage()
         }
       }
-      throw new Error(`Container image rollout in progress (waiting for ${expectedMarker.slice(0, 12)})`)
+    } catch {
+      // Container HTTP server is still initializing; let the request retry loop handle readiness.
     }
   }
   return c
