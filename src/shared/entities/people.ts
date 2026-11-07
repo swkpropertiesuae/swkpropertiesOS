@@ -43,6 +43,7 @@ export const people: EntityDef[] = [
       D('join_date', 'Join Date', { list: true }),
       P('commission_split_pct', 'Default Commission Split %', { default: 50, min: 0, max: 100, list: true, help: '50-50% net split between SWK Properties and Sales Advisor' }),
       S('commission_tier', 'Commission Tier', ['50/50 Standard (Company Visa)', 'Standard', 'Senior', 'Partner', 'Custom'], { default: '50/50 Standard (Company Visa)', list: true }),
+      M('monthly_target', 'Monthly Target (AED)', { default: 60000, list: true, help: 'Monthly GCI target used for 1st-of-month & mid-month target notifications' }),
       T('bank_iban', 'Commission IBAN'), T('bank_name', 'Bank'),
       T('social_media', 'Social Media', { span: 3, help: 'LinkedIn, Instagram, Property Finder, Bayut profile URLs' }),
       B('portal_access', 'Client Portal Access', { default: true }),

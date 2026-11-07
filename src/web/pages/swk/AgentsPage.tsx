@@ -1,16 +1,17 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'motion/react'
-import { AlertTriangle, BadgeCheck, CalendarClock, Crown, GraduationCap, Medal, PauseCircle, Plus, Trophy, Users, Wallet } from 'lucide-react'
+import { AlertTriangle, BadgeCheck, BellRing, CalendarClock, Crown, FileCheck2, GraduationCap, Medal, PauseCircle, Plus, Send, Trophy, Users, Wallet } from 'lucide-react'
 import { aed, AnimatedNumber, Bar, Card, EmptyState, ModuleHeader, Pill, ProgressRing, Reveal, Segmented, StatTile, SWK, num, pct } from '../../swk/ui'
 import { Avatar, daysUntil, fmtD, INK, MUTED, toDate, useRows, type Row } from './brokerage/common'
+import { api } from '../../lib/api'
 
 type Agent = {
   id: number; name: string; no: string; brn: string; card: string; expiry?: string; status: string; tier: string; spec: string; split: number
   deals: number; gci: number; viewings: number; leads: number; listings: number; conversion: number; activities: number
-  rank: number; target: number; earned: number; pending: number; paid: number
+  rank: number; target: number; monthlyTarget: number; earned: number; pending: number; paid: number
 }
-const TIER_TARGET: Record<string, number> = { Standard: 180_000, Senior: 320_000, Partner: 500_000, Custom: 250_000 }
+const TIER_TARGET: Record<string, number> = { '50/50 Standard (Company Visa)': 180_000, Standard: 180_000, Senior: 320_000, Partner: 500_000, Custom: 250_000 }
 const quarterStart = () => { const d = new Date(); return new Date(d.getFullYear(), Math.floor(d.getMonth() / 3) * 3, 1) }
 const qLabel = () => { const d = new Date(); return `Q${Math.floor(d.getMonth() / 3) + 1} ${d.getFullYear()}` }
 
@@ -28,6 +29,38 @@ const HOURS = Array.from({ length: 14 }, (_, i) => 8 + i)
 export default function AgentsPage() {
   const agentsQ = useRows('agents'), jobsQ = useRows('jobs'), viewingsQ = useRows('viewings'), leadsQ = useRows('leads'), comQ = useRows('agent_commissions'), propsQ = useRows('properties'), actQ = useRows('activities'), empsQ = useRows('employees')
   const [sort, setSort] = useState<'gci' | 'deals' | 'viewings' | 'conversion'>('gci')
+  const [notifStatus, setNotifStatus] = useState<string | null>(null)
+  const [notifBusy, setNotifBusy] = useState(false)
+
+  async function triggerTargetNotify(mode: 'start' | 'mid') {
+    setNotifBusy(true)
+    setNotifStatus(null)
+    try {
+      const res = await api.post<any>('/swk-ops/targets/notify', { mode })
+      setNotifStatus(
+        mode === 'start'
+          ? `1st-of-month target notifications sent (${res.month_label}) · Team monthly target: ${aed(res.totals?.target || 0, { compact: true })}`
+          : `Mid-month progress updates sent (${res.month_label}) · Achieved: ${aed(res.totals?.achieved || 0, { compact: true })} (${res.totals?.attainment_pct || 0}%) · Remaining: ${aed(res.totals?.remaining || 0, { compact: true })}`,
+      )
+    } catch (e: any) {
+      setNotifStatus(`Could not send target notifications: ${e?.message || 'Error'}`)
+    } finally {
+      setNotifBusy(false)
+    }
+  }
+
+  async function triggerExpiryScan() {
+    setNotifBusy(true)
+    setNotifStatus(null)
+    try {
+      const res = await api.post<any>('/swk-ops/compliance/check-expiries', {})
+      setNotifStatus(`Visa & Document expiry scan complete: ${res.employee_alerts || 0} employee doc alert(s), ${res.document_alerts || 0} vault document alert(s) issued.`)
+    } catch (e: any) {
+      setNotifStatus(`Could not run expiry check: ${e?.message || 'Error'}`)
+    } finally {
+      setNotifBusy(false)
+    }
+  }
 
   const agents: Agent[] = useMemo(() => {
     const qs = quarterStart()
@@ -53,12 +86,19 @@ export default function AgentsPage() {
       const myLeads = leads.filter(l => (userId && l.owner_id === userId) || l.owner_id === a.employee_id).length
       const myActs = acts.filter(ac => (userId && ac.owner_id === userId) || ac.owner_id === a.employee_id).length + viewings
 
+      const qTarget = Number(a.monthly_target) > 0
+        ? Number(a.monthly_target) * 3
+        : (TIER_TARGET[a.commission_tier ?? 'Standard'] ?? 180_000)
+      const mTarget = Number(a.monthly_target) > 0
+        ? Number(a.monthly_target)
+        : Math.round(qTarget / 3)
+
       return {
         id: a.id, name: a.name, no: a.agent_no, brn: a.dld_broker_id ?? '—', card: a.rera_card_no ?? '—', expiry: a.dld_expiry, status: a.status, tier: a.commission_tier ?? 'Standard',
         spec: a.specialization ?? 'Residential', split: splitPct, deals, gci, viewings, leads: myLeads, listings,
         conversion: viewings ? (deals / viewings) * 100 : (mine.length ? (deals / mine.length) * 100 : 0),
         activities: myActs, rank: 0,
-        target: TIER_TARGET[a.commission_tier ?? 'Standard'] ?? 200_000, earned, pending, paid,
+        target: qTarget, monthlyTarget: mTarget, earned, pending, paid,
       }
     })
     const byGci = [...list].sort((x, y) => y.gci - x.gci || y.deals - aDeals(x))
@@ -96,12 +136,22 @@ export default function AgentsPage() {
   return (
     <div className="flex flex-col gap-5">
       <ModuleHeader eyebrow="People · Performance" icon={<Trophy size={22} />} title="Agent Leaderboard"
-        subtitle={`${qLabel()} league table for DLD-registered brokers — live GCI, conversions, BRN licence health and commission wallets.`}
+        subtitle={`${qLabel()} league table for DLD-registered brokers — live GCI, conversions, BRN licence health, automated target alerts (1st & 15th) and commission wallets.`}
         actions={<>
+          <button type="button" disabled={notifBusy} onClick={() => triggerTargetNotify('start')} className="swk-btn swk-btn-ghost" title="Send 1st-of-month target notifications to all active agents"><BellRing size={15} />Notify 1st Targets</button>
+          <button type="button" disabled={notifBusy} onClick={() => triggerTargetNotify('mid')} className="swk-btn swk-btn-ghost" title="Send 15th mid-month progress & remaining target updates"><Send size={15} />Mid-Month Update</button>
+          <button type="button" disabled={notifBusy} onClick={triggerExpiryScan} className="swk-btn swk-btn-ghost" title="Scan Employee Visa, Emirates ID, Passport & Document Vault expiries"><FileCheck2 size={15} />Check Doc Expiries</button>
           <Link to="/e/agent_commissions?new=1" className="swk-btn swk-btn-ghost"><Wallet size={15} />Log commission</Link>
           <Link to="/e/agents" className="swk-btn swk-btn-ghost"><Users size={15} />All agents</Link>
           <Link to="/e/agents?new=1" className="swk-btn swk-btn-primary"><Plus size={15} />New DLD agent</Link>
         </>} />
+
+      {notifStatus && (
+        <div className="rounded-xl px-4 py-2.5 text-[12.5px] font-medium flex items-center justify-between gap-3" style={{ background: '#eef7f1', border: '1px solid #cce6d4', color: '#1b5e3a' }}>
+          <span>{notifStatus}</span>
+          <button type="button" onClick={() => setNotifStatus(null)} className="text-[11px] underline">Dismiss</button>
+        </div>
+      )}
 
       <Reveal className="grid gap-4 grid-cols-2 xl:grid-cols-4">
         <StatTile tone="navy" label={`Team GCI · ${qLabel()}`} value={totalGci} format={v => aed(v, { compact: true })} icon={<Wallet size={16} />} hint="From commissions & closed deals" />
@@ -145,10 +195,12 @@ export default function AgentsPage() {
               </div>
             </Card>
 
-            <Card title="Targets vs actual" subtitle="Quarterly GCI target by commission tier">
+            <Card title="Targets vs actual" subtitle="Automated 1st-of-month target & 15th mid-month progress alerts active">
               <div className="flex flex-col gap-3.5">
                 {[...agents].sort((a, b) => b.gci / b.target - a.gci / a.target).map((a, i) => {
                   const p = (a.gci / a.target) * 100
+                  const surplus = Math.max(0, a.gci - a.target)
+                  const remaining = Math.max(0, a.target - a.gci)
                   return (
                     <div key={a.id}>
                       <div className="flex items-center gap-2 mb-1.5 text-[13px]">
@@ -156,7 +208,14 @@ export default function AgentsPage() {
                         <span className="ml-auto tabular-nums font-semibold" style={{ color: p >= 100 ? SWK.oasis : p >= 60 ? SWK.champDeep : SWK.dune }}>{pct(p, 0)}</span>
                       </div>
                       <Bar value={a.gci} max={Math.max(a.gci, a.target)} color={p >= 100 ? SWK.oasis : SWK.navy} delay={i * 0.08} />
-                      <div className="text-[11px] mt-1 tabular-nums" style={{ color: MUTED }}>{aed(a.gci, { compact: true })} of {aed(a.target, { compact: true })}</div>
+                      <div className="flex items-center justify-between text-[11px] mt-1 tabular-nums" style={{ color: MUTED }}>
+                        <span>{aed(a.gci, { compact: true })} of {aed(a.target, { compact: true })} ({aed(a.monthlyTarget, { compact: true })}/mo)</span>
+                        {surplus > 0 ? (
+                          <span className="font-semibold" style={{ color: SWK.oasis }}>+{aed(surplus, { compact: true })} above target</span>
+                        ) : (
+                          <span style={{ color: p < 60 ? SWK.dune : MUTED }}>{aed(remaining, { compact: true })} remaining</span>
+                        )}
+                      </div>
                     </div>
                   )
                 })}

@@ -9,6 +9,7 @@ import { attemptLogin, createSession, destroyUserSessions, hashPassword } from '
 import { COOKIE } from '../app'
 import { config } from '../config'
 import { canAccessSwkAdminLogic, canPrintReceptionQr, isOwnerSwkUser } from '../../shared/swk-staff-access'
+import { checkEmployeeAndDocumentExpiries, computeMonthlyTargetSummaries, notifyEmployeeTargets } from '../domain/compliance'
 
 export function computeDubaiShiftInfo(now = new Date(), clientVariableHours = false) {
   const parts = new Intl.DateTimeFormat('en-GB', {
@@ -1621,5 +1622,25 @@ export default async function swkOpsRoutes(app: FastifyInstance) {
       controlled_account: 'admin@swk.properties',
       executed_by: req.user!.email,
     }
+  })
+
+  // ------------------------------------------------------------------ 9. Automated Employee Targets (1st & 15th) & Document Expiry Notifications
+  app.get('/api/swk-ops/targets/summary', async (req) => {
+    if (!req.user) throw new HttpError(401, 'Sign in required')
+    return computeMonthlyTargetSummaries()
+  })
+
+  app.post('/api/swk-ops/targets/notify', async (req) => {
+    if (!req.user) throw new HttpError(401, 'Sign in required')
+    const body = (req.body ?? {}) as { mode?: 'start' | 'mid' | 'auto' }
+    const mode = body.mode === 'start' || body.mode === 'mid' ? body.mode : 'auto'
+    const res = notifyEmployeeTargets(mode, true)
+    return { ok: true, ...res }
+  })
+
+  app.post('/api/swk-ops/compliance/check-expiries', async (req) => {
+    if (!req.user) throw new HttpError(401, 'Sign in required')
+    const res = checkEmployeeAndDocumentExpiries(true)
+    return { ok: true, ...res }
   })
 }

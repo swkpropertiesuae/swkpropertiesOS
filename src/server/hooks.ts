@@ -15,7 +15,7 @@ import { quoteHooks, partyHooks, leadHooks, opportunityHooks, contractHooks } fr
 import { invoiceHooks, billHooks, receiptHooks, paymentHooks, journalHooks, expenseHooks, bankTxnHooks } from './domain/finance'
 import { leaseHooks, salesContractHooks, agentCommissionHooks, dealWithdrawalHooks, dldFilingHooks, kycCheckHooks, amlReportHooks } from './domain/uae'
 import { withCompliance, COMPLIANCE_KEYS } from './domain/compliance'
-import { userHooks, roleHooks, branchHooks, taskHooks, ticketHooks, leaveHooks, attendanceHooks, payslipHooks, poHooks, currencyHooks, activityHooks, apiKeyHooks, attachmentHooks } from './domain/misc'
+import { userHooks, roleHooks, branchHooks, taskHooks, ticketHooks, leaveHooks, attendanceHooks, payslipHooks, poHooks, currencyHooks, activityHooks, apiKeyHooks, attachmentHooks, employeeHooks } from './domain/misc'
 
 export interface HookArgs { def: EntityDef; rec: Rec; old: Rec | null; children: Record<string, Rec[]>; isNew: boolean; ctx: Ctx }
 export interface DeleteArgs { def: EntityDef; rec: Rec; ctx: Ctx }
@@ -41,7 +41,7 @@ const registry: Record<string, () => Hooks> = {
   attendance: () => attendanceHooks, payslips: () => payslipHooks, purchase_orders: () => poHooks, currencies: () => currencyHooks, activities: () => activityHooks,
   leases: () => leaseHooks, sales_contracts: () => salesContractHooks, agent_commissions: () => agentCommissionHooks, deal_withdrawals: () => dealWithdrawalHooks,
   dld_filings: () => dldFilingHooks, kyc_checks: () => kycCheckHooks, aml_reports: () => amlReportHooks,
-  api_keys: () => apiKeyHooks, attachments: () => attachmentHooks,
+  api_keys: () => apiKeyHooks, attachments: () => attachmentHooks, employees: () => employeeHooks,
 }
 
 const IMMUTABLE_ENTITIES = new Set(['audit_events', 'supervisor_access_logs', 'location_access_logs', 'lead_assignment_logs'])

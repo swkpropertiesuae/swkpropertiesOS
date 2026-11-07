@@ -1,7 +1,7 @@
 import { q } from '../db'
 import { getSetting } from '../settings'
 import { addDays, bad, daysBetween, nowIso, todayStr } from '../util'
-import { notifyRole } from '../notify'
+import { notify, notifyLeadership, notifyRole } from '../notify'
 import type { Hooks, HookArgs } from '../hooks'
 
 export interface Check { key: string; label: string; status: 'ok' | 'warn' | 'fail' | 'info'; detail: string; link?: string }
@@ -186,6 +186,389 @@ export function complianceDaily() {
   for (const l of q.all(`SELECT l.id, u.unit_no, l.end_date, l.ejari_no FROM leases l JOIN units u ON u.id = l.unit_id WHERE l.deleted_at IS NULL AND l.status IN ('Active','Ejari Registered') AND l.end_date BETWEEN ? AND ?`, today, addDays(today, 90))) {
     const left = daysBetween(today, l.end_date)
     notifyRole('compliance', `Lease expiring in ${left} days`, `Unit ${l.unit_no} · Ejari ${l.ejari_no || 'N/A'} · Ends ${l.end_date}`, `/e/leases/${l.id}`, left <= 30 ? 'alert' : 'warning', `lease-exp-${l.id}-${today}`)
+  }
+
+  checkEmployeeAndDocumentExpiries(false)
+  notifyEmployeeTargets('auto', false)
+}
+
+function expiryMilestoneBucket(left: number, expiryDate: string, today: string, force: boolean): string {
+  if (force) return `manual-${Date.now()}`
+  if ([60, 45, 30, 21, 14, 7, 5, 3, 2, 1, 0].includes(left)) return `day-${left}-${today}`
+  if (left < 0) return `expired-w${Math.floor(-left / 7)}-${expiryDate}`
+  if (left <= 7) return `d${left}-${today}`
+  if (left <= 14) return `w14-${expiryDate}`
+  if (left <= 30) return `w30-${expiryDate}`
+  return `w60-${expiryDate}`
+}
+
+/**
+ * Checks all active/probation/on-leave employees' Visa, Emirates ID, Passport,
+ * Work Permit / Labour Card, and Health Insurance Card expiry dates, as well as
+ * all uploaded documents in the Document Vault (`attachments`) with an `expiry_date`.
+ */
+export function checkEmployeeAndDocumentExpiries(force = false): {
+  employee_alerts: number
+  document_alerts: number
+  items: Array<{ kind: 'employee' | 'document'; label: string; doc_type: string; expiry_date: string; days_left: number; status: 'expired' | 'expiring'; link: string }>
+} {
+  const today = todayStr()
+  const cutoff = addDays(today, 60)
+  let employeeAlerts = 0
+  let documentAlerts = 0
+  const items: Array<{ kind: 'employee' | 'document'; label: string; doc_type: string; expiry_date: string; days_left: number; status: 'expired' | 'expiring'; link: string }> = []
+
+  const emps = q.all<{
+    id: number
+    emp_no: string | null
+    name: string
+    user_id: number | null
+    passport_no: string | null
+    passport_expiry: string | null
+    emirates_id: string | null
+    eid_expiry: string | null
+    visa_no: string | null
+    visa_expiry: string | null
+    labour_card_no: string | null
+    work_permit_no: string | null
+    work_permit_expiry: string | null
+    health_card_expiry: string | null
+  }>(`
+    SELECT id, emp_no, name, user_id,
+           passport_no, passport_expiry,
+           emirates_id, eid_expiry,
+           visa_no, visa_expiry,
+           labour_card_no, work_permit_no, work_permit_expiry,
+           health_card_expiry
+    FROM employees
+    WHERE deleted_at IS NULL AND status IN ('Active', 'On leave', 'Probation')
+  `)
+
+  for (const emp of emps) {
+    const docs = [
+      { key: 'visa', label: 'Residence Visa', date: emp.visa_expiry, ref: emp.visa_no },
+      { key: 'eid', label: 'Emirates ID', date: emp.eid_expiry, ref: emp.emirates_id },
+      { key: 'passport', label: 'Passport', date: emp.passport_expiry, ref: emp.passport_no },
+      { key: 'work_permit', label: 'Work Permit / Labour Card', date: emp.work_permit_expiry, ref: emp.work_permit_no || emp.labour_card_no },
+      { key: 'health_card', label: 'Health Insurance Card', date: emp.health_card_expiry, ref: null },
+    ]
+    for (const d of docs) {
+      if (!d.date || !/^\d{4}-\d{2}-\d{2}$/.test(d.date) || d.date > cutoff) continue
+      const left = daysBetween(today, d.date)
+      const isExpired = left < 0
+      const severity = isExpired || left <= 14 ? 'alert' : 'warning'
+      const title = isExpired
+        ? `Employee ${d.label} EXPIRED: ${emp.name}`
+        : `Employee ${d.label} expires in ${left} day${left === 1 ? '' : 's'}: ${emp.name}`
+      const body = `${d.label}${d.ref ? ` (${d.ref})` : ''} · ${isExpired ? `Expired ${-left} day${-left === 1 ? '' : 's'} ago (${d.date})` : `Expiry ${d.date}`}`
+      const link = `/e/employees/${emp.id}`
+      const bucket = expiryMilestoneBucket(left, d.date, today, force)
+      const dedupeBase = `emp-doc-${emp.id}-${d.key}-${bucket}`
+
+      notifyRole('hr', title, body, link, severity, dedupeBase)
+      notifyRole('compliance', title, body, link, severity, `${dedupeBase}:comp`)
+      notifyLeadership(title, body, link, severity, `${dedupeBase}:lead`)
+      if (emp.user_id) {
+        notify(
+          emp.user_id,
+          isExpired ? `Your ${d.label} EXPIRED ${-left} day${-left === 1 ? '' : 's'} ago` : `Your ${d.label} expires in ${left} day${left === 1 ? '' : 's'}`,
+          `${d.label}${d.ref ? ` (${d.ref})` : ''} · Expiry ${d.date} — please submit renewal documents to HR.`,
+          link,
+          severity,
+          `${dedupeBase}:self`,
+        )
+      }
+      employeeAlerts++
+      items.push({
+        kind: 'employee',
+        label: emp.name,
+        doc_type: d.label,
+        expiry_date: d.date,
+        days_left: left,
+        status: isExpired ? 'expired' : 'expiring',
+        link,
+      })
+    }
+  }
+
+  const atts = q.all<{
+    id: number
+    file_name: string
+    category: string | null
+    link_entity: string | null
+    link_id: number | null
+    link_label: string | null
+    expiry_date: string
+    emp_name: string | null
+    emp_user_id: number | null
+  }>(`
+    SELECT a.id, a.file_name, a.category, a.link_entity, a.link_id, a.link_label, a.expiry_date,
+           e.name AS emp_name, e.user_id AS emp_user_id
+    FROM attachments a
+    LEFT JOIN employees e ON a.link_entity = 'employees' AND e.id = a.link_id
+    WHERE a.deleted_at IS NULL AND a.expiry_date IS NOT NULL AND a.expiry_date <> '' AND a.expiry_date <= ?
+  `, cutoff)
+
+  for (const att of atts) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(att.expiry_date)) continue
+    const left = daysBetween(today, att.expiry_date)
+    const isExpired = left < 0
+    const severity = isExpired || left <= 14 ? 'alert' : 'warning'
+    const ownerLabel = att.emp_name || att.link_label || 'Company Vault'
+    const title = isExpired
+      ? `Document EXPIRED: ${att.file_name} (${ownerLabel})`
+      : `Document expires in ${left} day${left === 1 ? '' : 's'}: ${att.file_name}`
+    const body = `${att.category || 'Document'} · ${ownerLabel} · ${isExpired ? `Expired ${-left} day${-left === 1 ? '' : 's'} ago (${att.expiry_date})` : `Expiry ${att.expiry_date}`}`
+    const link = att.link_entity && att.link_id ? `/e/${att.link_entity}/${att.link_id}` : '/documents'
+    const bucket = expiryMilestoneBucket(left, att.expiry_date, today, force)
+    const dedupeBase = `att-exp-${att.id}-${bucket}`
+
+    notifyRole('hr', title, body, link, severity, dedupeBase)
+    notifyRole('compliance', title, body, link, severity, `${dedupeBase}:comp`)
+    notifyLeadership(title, body, link, severity, `${dedupeBase}:lead`)
+    if (att.emp_user_id) {
+      notify(att.emp_user_id, title, body, link, severity, `${dedupeBase}:self`)
+    }
+    documentAlerts++
+    items.push({
+      kind: 'document',
+      label: `${att.file_name} (${ownerLabel})`,
+      doc_type: att.category || 'Uploaded Document',
+      expiry_date: att.expiry_date,
+      days_left: left,
+      status: isExpired ? 'expired' : 'expiring',
+      link,
+    })
+  }
+
+  return { employee_alerts: employeeAlerts, document_alerts: documentAlerts, items }
+}
+
+export const TIER_MONTHLY_TARGETS: Record<string, number> = {
+  '50/50 Standard (Company Visa)': 60_000,
+  Standard: 60_000,
+  Senior: 106_667,
+  Partner: 166_667,
+  Custom: 83_333,
+}
+
+export interface AgentTargetSummary {
+  agent_id: number
+  agent_no: string
+  name: string
+  user_id: number | null
+  tier: string
+  monthly_target: number
+  achieved_gci: number
+  deals_closed: number
+  attainment_pct: number
+  remaining_gci: number
+  surplus_gci: number
+  status: 'exceeded' | 'on_track' | 'below_target'
+}
+
+export function computeMonthlyTargetSummaries(today = todayStr()): {
+  period: string
+  month_label: string
+  agents: AgentTargetSummary[]
+  totals: { target: number; achieved: number; remaining: number; surplus: number; attainment_pct: number; exceeded_count: number; below_count: number }
+} {
+  const ym = today.slice(0, 7)
+  const dt = new Date(`${ym}-01T00:00:00Z`)
+  const monthLabel = dt.toLocaleDateString('en-AE', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+
+  const activeAgents = q.all<{
+    id: number
+    agent_no: string | null
+    name: string
+    email: string | null
+    employee_id: number | null
+    commission_tier: string | null
+    monthly_target: number | null
+    emp_user_id: number | null
+    emp_email: string | null
+  }>(`
+    SELECT a.id, a.agent_no, a.name, a.email, a.employee_id, a.commission_tier, a.monthly_target,
+           e.user_id AS emp_user_id, e.email AS emp_email
+    FROM agents a
+    LEFT JOIN employees e ON e.id = a.employee_id
+    WHERE a.deleted_at IS NULL AND a.status = 'Active'
+    ORDER BY a.name ASC
+  `)
+
+  const summaries: AgentTargetSummary[] = []
+  for (const a of activeAgents) {
+    let userId = a.emp_user_id
+    if (!userId && (a.email || a.emp_email)) {
+      userId = q.val<number>(
+        `SELECT id FROM users WHERE deleted_at IS NULL AND active = 1 AND lower(email) IN (lower(?), lower(?)) LIMIT 1`,
+        a.email || '',
+        a.emp_email || '',
+      ) ?? null
+    }
+    if (!userId && a.name) {
+      userId = q.val<number>(
+        `SELECT id FROM users WHERE deleted_at IS NULL AND active = 1 AND lower(name) = lower(?) LIMIT 1`,
+        a.name,
+      ) ?? null
+    }
+
+    const tier = a.commission_tier || 'Standard'
+    const monthlyTarget = Number(a.monthly_target) > 0
+      ? Math.round(Number(a.monthly_target))
+      : (TIER_MONTHLY_TARGETS[tier] ?? 60_000)
+
+    const comRow = q.get<{ gci: number; cnt: number }>(`
+      SELECT COALESCE(SUM(gross_commission), 0) AS gci, COUNT(*) AS cnt
+      FROM agent_commissions
+      WHERE agent_id = ? AND status <> 'Cancelled' AND deleted_at IS NULL
+        AND substr(COALESCE(transaction_date, created_at), 1, 7) = ?
+    `, a.id, ym)
+
+    const closedJobs = q.all<{ deal_value: number | null; commission_pct: number | null }>(`
+      SELECT deal_value, commission_pct
+      FROM jobs
+      WHERE (agent_id = ? OR buyer_agent_id = ?)
+        AND (operational_status = 'Closed' OR job_status IN ('Completed', 'Title Deed Issued'))
+        AND deleted_at IS NULL
+        AND substr(COALESCE(actual_close, deal_date, created_at), 1, 7) = ?
+    `, a.id, a.id, ym)
+
+    const dealsClosed = closedJobs.length || Number(comRow?.cnt || 0)
+    const achievedFromJobs = closedJobs.reduce((s, j) => s + Number(j.deal_value || 0) * Number(j.commission_pct || 2) / 100, 0)
+    const achievedGci = Math.round(Number(comRow?.gci || 0) > 0 ? Number(comRow!.gci) : achievedFromJobs)
+    const remainingGci = Math.max(0, monthlyTarget - achievedGci)
+    const surplusGci = Math.max(0, achievedGci - monthlyTarget)
+    const attainmentPct = monthlyTarget > 0 ? Math.round((achievedGci / monthlyTarget) * 100) : 0
+    const status: AgentTargetSummary['status'] = attainmentPct >= 100 ? 'exceeded' : attainmentPct >= 50 ? 'on_track' : 'below_target'
+
+    summaries.push({
+      agent_id: a.id,
+      agent_no: a.agent_no || `AGT-${a.id}`,
+      name: a.name,
+      user_id: userId,
+      tier,
+      monthly_target: monthlyTarget,
+      achieved_gci: achievedGci,
+      deals_closed: dealsClosed,
+      attainment_pct: attainmentPct,
+      remaining_gci: remainingGci,
+      surplus_gci: surplusGci,
+      status,
+    })
+  }
+
+  const totalTarget = summaries.reduce((s, x) => s + x.monthly_target, 0)
+  const totalAchieved = summaries.reduce((s, x) => s + x.achieved_gci, 0)
+  const totalRemaining = Math.max(0, totalTarget - totalAchieved)
+  const totalSurplus = Math.max(0, totalAchieved - totalTarget)
+  const totalPct = totalTarget > 0 ? Math.round((totalAchieved / totalTarget) * 100) : 0
+  const exceededCount = summaries.filter(x => x.attainment_pct >= 100).length
+  const belowCount = summaries.filter(x => x.attainment_pct < 100).length
+
+  return {
+    period: ym,
+    month_label: monthLabel,
+    agents: summaries,
+    totals: {
+      target: totalTarget,
+      achieved: totalAchieved,
+      remaining: totalRemaining,
+      surplus: totalSurplus,
+      attainment_pct: totalPct,
+      exceeded_count: exceededCount,
+      below_count: belowCount,
+    },
+  }
+}
+
+/**
+ * Sends automated or on-demand Employee Target Tracking notifications:
+ * - `'start'` (1st of month): Notifies every active agent of their monthly target at the beginning of the month.
+ * - `'mid'` (15th of month): Sends mid-month progress updates showing how much has been achieved and how much is remaining (or exceeded).
+ * - `'auto'`: Runs automatically in the daily scheduler — ensures 1st-of-month notifications are sent from day 1 onwards, and mid-month updates are sent from day 15 onwards (or on exact milestone days 1 and 15).
+ */
+export function notifyEmployeeTargets(mode: 'start' | 'mid' | 'auto' = 'auto', force = false): {
+  mode_executed: string[]
+  period: string
+  month_label: string
+  notified_agents: number
+  agents: AgentTargetSummary[]
+  totals: { target: number; achieved: number; remaining: number; surplus: number; attainment_pct: number; exceeded_count: number; below_count: number }
+} {
+  const today = todayStr()
+  const dayOfMonth = Number(today.slice(8, 10))
+  const summary = computeMonthlyTargetSummaries(today)
+  const { period, month_label: monthLabel, agents, totals } = summary
+
+  const modesToRun: Array<'start' | 'mid'> = []
+  if (mode === 'start') {
+    modesToRun.push('start')
+  } else if (mode === 'mid') {
+    modesToRun.push('mid')
+  } else {
+    // 'auto' mode:
+    // 1. Always ensure beginning-of-month ('start') target notification has been issued for the current month (runs on the 1st, or catches up if server started later in the month).
+    modesToRun.push('start')
+    // 2. From the 15th onwards (mid-month), automatically issue the mid-month progress & remaining target notification.
+    if (dayOfMonth >= 15) modesToRun.push('mid')
+  }
+
+  const suffix = force ? `-${Date.now()}` : ''
+  let notifiedCount = 0
+
+  for (const m of modesToRun) {
+    if (m === 'start') {
+      for (const ag of agents) {
+        const title = `Monthly Target (${monthLabel}): AED ${ag.monthly_target.toLocaleString('en-US')}`
+        const body = `Your assigned monthly GCI target for ${monthLabel} is AED ${ag.monthly_target.toLocaleString('en-US')} (${ag.tier}). Track your live progress and closures on the Leaderboard.`
+        if (ag.user_id) {
+          notify(ag.user_id, title, body, '/agents', 'target', `target-start-${ag.agent_id}-${period}${suffix}`)
+          notifiedCount++
+        }
+      }
+      if (agents.length > 0) {
+        notifyLeadership(
+          `Monthly Targets Issued (${monthLabel})`,
+          `${agents.length} active agent(s) assigned targets · Total monthly team target: AED ${totals.target.toLocaleString('en-US')}`,
+          '/agents',
+          'target',
+          `target-start-lead-${period}${suffix}`,
+        )
+      }
+    } else if (m === 'mid') {
+      for (const ag of agents) {
+        const exceeded = ag.achieved_gci >= ag.monthly_target
+        const title = exceeded
+          ? `Mid-Month Target Update (${monthLabel}): ${ag.attainment_pct}% Achieved!`
+          : `Mid-Month Target Update (${monthLabel}): ${ag.attainment_pct}% Achieved`
+        const body = exceeded
+          ? `Target exceeded! Achieved: AED ${ag.achieved_gci.toLocaleString('en-US')} of AED ${ag.monthly_target.toLocaleString('en-US')}${ag.surplus_gci > 0 ? ` (+AED ${ag.surplus_gci.toLocaleString('en-US')} additional achievement above target)` : ''} across ${ag.deals_closed} closure(s).`
+          : `Achieved so far: AED ${ag.achieved_gci.toLocaleString('en-US')} (${ag.attainment_pct}%) across ${ag.deals_closed} closure(s) · Remaining to reach target: AED ${ag.remaining_gci.toLocaleString('en-US')} (Target: AED ${ag.monthly_target.toLocaleString('en-US')}).`
+        if (ag.user_id) {
+          notify(ag.user_id, title, body, '/agents', 'target', `target-mid-${ag.agent_id}-${period}${suffix}`)
+          notifiedCount++
+        }
+      }
+      if (agents.length > 0) {
+        notifyLeadership(
+          `Mid-Month Team Target Update (${monthLabel}): ${totals.attainment_pct}% Achieved`,
+          `Achieved: AED ${totals.achieved.toLocaleString('en-US')} of AED ${totals.target.toLocaleString('en-US')} · Remaining: AED ${totals.remaining.toLocaleString('en-US')} (${totals.exceeded_count} exceeding, ${totals.below_count} below target).`,
+          '/agents',
+          'target',
+          `target-mid-lead-${period}${suffix}`,
+        )
+      }
+    }
+  }
+
+  return {
+    mode_executed: modesToRun,
+    period,
+    month_label: monthLabel,
+    notified_agents: notifiedCount,
+    agents,
+    totals,
   }
 }
 

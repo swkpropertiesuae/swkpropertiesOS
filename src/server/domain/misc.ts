@@ -4,7 +4,8 @@ import type { Hooks } from '../hooks'
 import { bad, r2, todayStr, nowLocal, addDays, safeJson } from '../util'
 import { labelsFor, type Rec, type Perms } from '../engine'
 import { hashPassword, destroyUserSessions, validatePasswordStrength, newApiKey } from '../auth'
-import { notify } from '../notify'
+import { notify, notifyLeadership, notifyRole } from '../notify'
+import { checkEmployeeAndDocumentExpiries } from './compliance'
 import { MODULE_DEFS } from '../../shared/entities'
 import { ACTIONS } from '../../shared/types'
 import { isOwnerSwkUser } from '../../shared/swk-staff-access'
@@ -97,7 +98,18 @@ export const apiKeyHooks: Hooks = {
     if (isNew) { const k = newApiKey(); rec.key_hash = k.hash; rec.prefix = k.prefix; lastIssued.key = k.key }
   },
 }
-export const attachmentHooks: Hooks = {}
+export const attachmentHooks: Hooks = {
+  afterSave({ rec }) {
+    if (rec.expiry_date) checkEmployeeAndDocumentExpiries(false)
+  },
+}
+export const employeeHooks: Hooks = {
+  afterSave({ rec }) {
+    if (rec.visa_expiry || rec.eid_expiry || rec.passport_expiry || rec.work_permit_expiry || rec.health_card_expiry) {
+      checkEmployeeAndDocumentExpiries(false)
+    }
+  },
+}
 
 // ---------------------------------------------------------------- tasks, tickets, activities
 export const taskHooks: Hooks = {
@@ -152,7 +164,17 @@ export const leaveHooks: Hooks = {
     }
   },
   afterSave({ rec, isNew }) {
-    if (isNew) { const e = q.get(`SELECT manager_id FROM employees WHERE id = ?`, rec.employee_id); const m = e?.manager_id ? q.get(`SELECT user_id FROM employees WHERE id = ?`, e.manager_id) : null; notify(m?.user_id, 'Leave request awaiting approval', `${rec.from_date} → ${rec.to_date}`, `/e/leave_requests/${rec.id}`, 'approval') }
+    if (isNew) {
+      const e = q.get(`SELECT name, manager_id FROM employees WHERE id = ?`, rec.employee_id)
+      const m = e?.manager_id ? q.get(`SELECT user_id FROM employees WHERE id = ?`, e.manager_id) : null
+      const empLabel = e?.name ? ` (${e.name})` : ''
+      const title = `Leave request awaiting approval${empLabel}`
+      const body = `${rec.type || 'Leave'}: ${rec.from_date} → ${rec.to_date} (${rec.days} day${rec.days === 1 ? '' : 's'})`
+      const link = `/e/leave_requests/${rec.id}`
+      notify(m?.user_id, title, body, link, 'approval', `leave-req-${rec.id}:mgr`)
+      notifyRole('hr', title, body, link, 'approval', `leave-req-${rec.id}:hr`)
+      notifyLeadership(title, body, link, 'approval', `leave-req-${rec.id}:lead`)
+    }
   },
 }
 export const attendanceHooks: Hooks = {
