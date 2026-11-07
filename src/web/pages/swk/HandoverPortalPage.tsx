@@ -81,6 +81,22 @@ export default function HandoverPortalPage() {
                 <ArrowLeft size={14} /> Back to Workspace
               </Link>
               <a
+                href="/handover/SWK_Properties_OS_Complete_Workflow_And_Logic_Booklet.pdf"
+                download
+                className="px-4 py-2.5 rounded-xl font-bold text-xs text-[#08142a] no-underline inline-flex items-center gap-2 shadow-lg"
+                style={{ background: 'linear-gradient(135deg, #f1e3c2 0%, #c9a96e 100%)' }}
+              >
+                <BookOpen size={15} /> Download Workflow &amp; Logic Booklet (PDF)
+              </a>
+              <a
+                href="/handover/SWK_Properties_OS_Interactive_Workflow_Booklet.html"
+                target="_blank"
+                rel="noreferrer"
+                className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-[#c9a96e]/50 text-[#f3dfb8] text-xs font-bold no-underline inline-flex items-center gap-1.5"
+              >
+                <Workflow size={14} /> Open Interactive Booklet
+              </a>
+              <a
                 href="/handover/SWK_OS_Office_Attendance_QR_Code_And_Method.pdf"
                 download
                 className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-[#c9a96e]/50 text-[#f3dfb8] text-xs font-bold no-underline inline-flex items-center gap-1.5"
